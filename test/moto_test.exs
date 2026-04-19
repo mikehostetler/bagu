@@ -4,6 +4,7 @@ defmodule MotoTest do
 
   alias Moto.DynamicAgent
   alias MotoTest.Support.{Accounts, AshResourceAgent, User}
+  alias Jido.AI.Reasoning.ReAct.{Config, State}
 
   defmodule ChatAgent do
     use Moto.Agent
@@ -20,6 +21,41 @@ defmodule MotoTest do
     agent do
       model("openai:gpt-4.1")
       system_prompt("You are a concise assistant.")
+    end
+  end
+
+  defmodule TenantPrompt do
+    @behaviour Moto.Agent.SystemPrompt
+
+    @impl true
+    def resolve_system_prompt(%{context: context}) do
+      tenant = Map.get(context, :tenant, Map.get(context, "tenant", "unknown"))
+      "You are helping tenant #{tenant}."
+    end
+  end
+
+  defmodule PromptCallbacks do
+    def build(%{context: context}, prefix) do
+      tenant = Map.get(context, :tenant, Map.get(context, "tenant", "unknown"))
+      {:ok, "#{prefix} #{tenant}."}
+    end
+  end
+
+  defmodule ModulePromptAgent do
+    use Moto.Agent
+
+    agent do
+      model(:fast)
+      system_prompt(TenantPrompt)
+    end
+  end
+
+  defmodule MfaPromptAgent do
+    use Moto.Agent
+
+    agent do
+      model(:fast)
+      system_prompt({PromptCallbacks, :build, ["Serve tenant"]})
     end
   end
 
@@ -111,6 +147,57 @@ defmodule MotoTest do
 
   test "exposes the configured system prompt" do
     assert ChatAgent.system_prompt() == "You are a concise assistant."
+    assert ChatAgent.request_transformer() == nil
+  end
+
+  test "supports module-based dynamic system prompts" do
+    assert ModulePromptAgent.system_prompt() == TenantPrompt
+
+    assert ModulePromptAgent.request_transformer() ==
+             MotoTest.ModulePromptAgent.RuntimeRequestTransformer
+
+    request = react_request([%{role: :user, content: "hello"}])
+    state = react_state()
+    config = react_config(ModulePromptAgent.request_transformer())
+
+    assert {:ok, %{messages: messages}} =
+             ModulePromptAgent.request_transformer().transform_request(
+               request,
+               state,
+               config,
+               %{tenant: "acme"}
+             )
+
+    assert messages == [
+             %{role: :system, content: "You are helping tenant acme."},
+             %{role: :user, content: "hello"}
+           ]
+  end
+
+  test "supports MFA-based dynamic system prompts" do
+    assert MfaPromptAgent.system_prompt() == {PromptCallbacks, :build, ["Serve tenant"]}
+
+    assert MfaPromptAgent.request_transformer() ==
+             MotoTest.MfaPromptAgent.RuntimeRequestTransformer
+
+    request =
+      react_request([%{role: :system, content: "stale"}, %{role: :user, content: "hello"}])
+
+    state = react_state()
+    config = react_config(MfaPromptAgent.request_transformer())
+
+    assert {:ok, %{messages: messages}} =
+             MfaPromptAgent.request_transformer().transform_request(
+               request,
+               state,
+               config,
+               %{"tenant" => "beta"}
+             )
+
+    assert messages == [
+             %{role: :system, content: "Serve tenant beta."},
+             %{role: :user, content: "hello"}
+           ]
   end
 
   test "resolves Moto-owned aliases and falls back to Jido.AI aliases" do
@@ -219,6 +306,20 @@ defmodule MotoTest do
         agent do
           model 123
           system_prompt "This should fail."
+        end
+      end
+      """)
+    end
+  end
+
+  test "rejects anonymous functions as system prompts at compile time" do
+    assert_raise Spark.Error.DslError, ~r/does not support anonymous functions/, fn ->
+      Code.compile_string("""
+      defmodule MotoTest.InvalidDynamicPromptAgent do
+        use Moto.Agent
+
+        agent do
+          system_prompt fn _input -> "This should fail." end
         end
       end
       """)
@@ -547,5 +648,22 @@ defmodule MotoTest do
 
   test "Moto.chat returns not_found for missing ids" do
     assert {:error, :not_found} = Moto.chat("missing-agent-id", "hello")
+  end
+
+  defp react_request(messages) when is_list(messages) do
+    %{messages: messages, llm_opts: [], tools: %{}}
+  end
+
+  defp react_state do
+    State.new("hello", nil, request_id: "req-test", run_id: "run-test")
+  end
+
+  defp react_config(request_transformer) do
+    Config.new(
+      model: :fast,
+      system_prompt: nil,
+      request_transformer: request_transformer,
+      streaming: false
+    )
   end
 end

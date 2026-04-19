@@ -4,6 +4,34 @@ Minimal layer over Jido and Jido.AI for defining and starting chat agents.
 
 This first implementation keeps the Spark DSL deliberately tiny.
 
+## Overview
+
+Moto currently gives you a narrow, developer-friendly way to build chat-style
+LLM agents on top of Jido and Jido.AI.
+
+Today, Moto can:
+
+- define agents with a small Spark DSL via `use Moto.Agent`
+- configure agent `name`, `model`, `system_prompt`, `tools`, and `plugins`
+- resolve models through Moto-owned aliases like `:fast`, direct model strings,
+  inline maps, and `%LLMDB.Model{}`
+- support static or dynamic system prompts through strings, module callbacks,
+  and MFA tuples
+- define tools with `use Moto.Tool` as a thin, Zoi-only wrapper over `Jido.Action`
+- attach tools directly or expose all generated `AshJido` actions for an Ash
+  resource with `ash_resource`
+- define plugins with `use Moto.Plugin` and let them contribute tools into the
+  agent's visible tool registry
+- start many runtime instances from the same agent module under the shared
+  `Moto.Runtime`
+- import constrained agents from JSON or YAML at runtime with explicit
+  allowlists for tools and plugins
+- run local demo scripts that exercise full LLM + tool-call loops
+
+Moto is intentionally opinionated. It keeps the public surface focused on
+common agent authoring and hides most low-level Jido runtime machinery by
+default.
+
 ## Setup
 
 Set your Anthropic API key:
@@ -72,6 +100,58 @@ defmodule MyApp.SupportAgent do
   end
 end
 ```
+
+`system_prompt` supports three forms:
+
+- a static string
+- a module implementing `resolve_system_prompt/1`
+- an MFA tuple like `{MyApp.SupportPrompt, :build, ["prefix"]}`
+
+Module-based dynamic prompt:
+
+```elixir
+defmodule MyApp.SupportPrompt do
+  @behaviour Moto.Agent.SystemPrompt
+
+  @impl true
+  def resolve_system_prompt(%{context: context}) do
+    tenant = Map.get(context, :tenant, "unknown")
+    "You help support users for tenant #{tenant}."
+  end
+end
+
+defmodule MyApp.SupportAgent do
+  use Moto.Agent
+
+  agent do
+    model :fast
+    system_prompt MyApp.SupportPrompt
+  end
+end
+```
+
+MFA-based dynamic prompt:
+
+```elixir
+defmodule MyApp.SupportPrompts do
+  def build(%{context: context}, prefix) do
+    tenant = Map.get(context, :tenant, "unknown")
+    {:ok, "#{prefix} #{tenant}."}
+  end
+end
+
+defmodule MyApp.SupportAgent do
+  use Moto.Agent
+
+  agent do
+    model :fast
+    system_prompt {MyApp.SupportPrompts, :build, ["Support tenant"]}
+  end
+end
+```
+
+Dynamic system prompts resolve once per turn through Jido.AI's request
+transformer hook, using the current runtime context.
 
 ## Define A Tool
 
@@ -298,6 +378,8 @@ The dynamic import path is intentionally narrower than the Elixir DSL:
 
 The imported path does not currently support the `ash_resource` shorthand
 directly, because JSON/YAML specs cannot safely encode Elixir resource modules.
+It also does not support dynamic `system_prompt` callbacks yet, because the
+constrained JSON/YAML format intentionally avoids executable Elixir references.
 
 The top-level helpers are:
 

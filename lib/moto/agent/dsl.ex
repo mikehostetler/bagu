@@ -41,9 +41,17 @@ defmodule Moto.Agent.Dsl do
         """
       ],
       system_prompt: [
-        type: :string,
+        type: :any,
         required: true,
-        doc: "The system prompt used for the generated Jido.AI runtime module."
+        doc: """
+        The system prompt used for this agent.
+
+        Supports:
+
+        - a static string
+        - a module implementing `resolve_system_prompt/1`
+        - an MFA tuple like `{MyApp.Prompts.Support, :build, ["prefix"]}`
+        """
       ]
     ]
   }

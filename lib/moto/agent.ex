@@ -23,7 +23,7 @@ defmodule Moto.Agent do
 
   - `name`
   - `model`
-  - `system_prompt`
+  - `system_prompt` as a string, module callback, or MFA tuple
   - `tools`
   - `plugins`
 
@@ -43,6 +43,20 @@ defmodule Moto.Agent do
         message: Exception.message(error),
         path: [:agent, :model],
         module: owner_module
+  end
+
+  @doc false
+  def resolve_system_prompt!(owner_module, system_prompt) do
+    case Moto.Agent.SystemPrompt.normalize(owner_module, system_prompt) do
+      {:ok, normalized} ->
+        normalized
+
+      {:error, message} ->
+        raise Spark.Error.DslError,
+          message: message,
+          path: [:agent, :system_prompt],
+          module: owner_module
+    end
   end
 
   @doc false
@@ -110,7 +124,7 @@ defmodule Moto.Agent do
     name = Spark.Dsl.Extension.get_opt(env.module, [:agent], :name, default_name)
     configured_model = Spark.Dsl.Extension.get_opt(env.module, [:agent], :model, :fast)
     resolved_model = __MODULE__.resolve_model!(env.module, configured_model)
-    system_prompt = Spark.Dsl.Extension.get_opt(env.module, [:agent], :system_prompt)
+    configured_system_prompt = Spark.Dsl.Extension.get_opt(env.module, [:agent], :system_prompt)
 
     tool_entities =
       env.module
@@ -231,22 +245,61 @@ defmodule Moto.Agent do
       end
 
     runtime_module = Module.concat(env.module, Runtime)
+    request_transformer_module = Module.concat(env.module, RuntimeRequestTransformer)
 
-    if is_nil(system_prompt) do
+    if is_nil(configured_system_prompt) do
       raise CompileError,
         file: env.file,
         line: env.line,
         description: "Moto.Agent requires `system_prompt` inside `agent do ... end`."
     end
 
+    {runtime_system_prompt, runtime_request_transformer, dynamic_system_prompt} =
+      case __MODULE__.resolve_system_prompt!(env.module, configured_system_prompt) do
+        {:static, prompt} ->
+          {prompt, nil, nil}
+
+        {:dynamic, spec} ->
+          {nil, request_transformer_module, spec}
+      end
+
+    request_transformer_definition =
+      if is_nil(dynamic_system_prompt) do
+        quote do
+        end
+      else
+        quote location: :keep do
+          defmodule unquote(request_transformer_module) do
+            @moduledoc false
+            @behaviour Jido.AI.Reasoning.ReAct.RequestTransformer
+
+            @system_prompt_spec unquote(Macro.escape(dynamic_system_prompt))
+
+            @impl true
+            def transform_request(request, state, config, runtime_context) do
+              Moto.Agent.SystemPrompt.transform_request(
+                @system_prompt_spec,
+                request,
+                state,
+                config,
+                runtime_context
+              )
+            end
+          end
+        end
+      end
+
     quote location: :keep do
+      unquote(request_transformer_definition)
+
       defmodule unquote(runtime_module) do
         use Jido.AI.Agent,
           name: unquote(name),
-          system_prompt: unquote(system_prompt),
+          system_prompt: unquote(runtime_system_prompt),
           model: unquote(Macro.escape(resolved_model)),
           tools: unquote(Macro.escape(tool_modules)),
-          plugins: unquote(Macro.escape(runtime_plugins))
+          plugins: unquote(Macro.escape(runtime_plugins)),
+          request_transformer: unquote(runtime_request_transformer)
       end
 
       @doc """
@@ -283,8 +336,14 @@ defmodule Moto.Agent do
       @doc """
       Returns the configured system prompt.
       """
-      @spec system_prompt() :: String.t()
-      def system_prompt, do: unquote(system_prompt)
+      @spec system_prompt() :: Moto.Agent.SystemPrompt.spec()
+      def system_prompt, do: unquote(Macro.escape(configured_system_prompt))
+
+      @doc """
+      Returns the generated request transformer used for a dynamic system prompt, if any.
+      """
+      @spec request_transformer() :: module() | nil
+      def request_transformer, do: unquote(runtime_request_transformer)
 
       @doc """
       Returns the configured model before alias resolution.
