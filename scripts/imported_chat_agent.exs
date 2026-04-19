@@ -1,25 +1,22 @@
-defmodule Moto.Scripts.Imported.AddNumbers do
-  use Moto.Tool,
-    description: "Adds two integers together.",
-    schema: Zoi.object(%{a: Zoi.integer(), b: Zoi.integer()})
-
-  @impl true
-  def run(%{a: a, b: b}, _context) do
-    sum = a + b
-    IO.puts("[tool:add_numbers] #{a} + #{b} = #{sum}")
-    {:ok, %{sum: sum}}
-  end
+for pattern <- ["tools/*.ex", "plugins/*.ex", "agents/*.ex"] do
+  __DIR__
+  |> Path.join("demo")
+  |> Path.join(pattern)
+  |> Path.wildcard()
+  |> Enum.sort()
+  |> Enum.each(&Code.require_file/1)
 end
 
 defmodule Moto.Scripts.ImportedChatAgentCLI do
   alias Moto.DynamicAgent
+  alias Moto.Scripts.Demo.Tools.AddNumbers
   require Logger
 
   def main(argv) do
     argv = normalize_argv(argv)
     anthropic_api_key = Application.get_env(:req_llm, :anthropic_api_key)
     spec_path = sample_spec_path()
-    available_tools = [Moto.Scripts.Imported.AddNumbers]
+    available_tools = [AddNumbers]
     {:ok, tool_registry} = Moto.Tool.normalize_available_tools(available_tools)
 
     demo_prompt =

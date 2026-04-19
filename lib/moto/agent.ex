@@ -25,10 +25,13 @@ defmodule Moto.Agent do
   - `model`
   - `system_prompt`
   - `tools`
+  - `plugins`
 
   A nested runtime module is generated automatically and uses `Jido.AI.Agent`
   with the configured tool modules. The `tools` block currently supports
   explicit `Moto.Tool` modules and `ash_resource` expansion via `AshJido`.
+  The `plugins` block accepts `Moto.Plugin` modules and merges their declared
+  action-backed tools into the same LLM-visible tool registry.
   """
 
   @doc false
@@ -113,6 +116,10 @@ defmodule Moto.Agent do
       env.module
       |> Spark.Dsl.Extension.get_entities([:tools])
 
+    plugin_entities =
+      env.module
+      |> Spark.Dsl.Extension.get_entities([:plugins])
+
     direct_tool_modules =
       tool_entities
       |> Enum.filter(&match?(%Moto.Agent.Dsl.Tool{}, &1))
@@ -123,6 +130,11 @@ defmodule Moto.Agent do
       |> Enum.filter(&match?(%Moto.Agent.Dsl.AshResource{}, &1))
       |> Enum.map(& &1.resource)
 
+    plugin_modules =
+      plugin_entities
+      |> Enum.filter(&match?(%Moto.Agent.Dsl.Plugin{}, &1))
+      |> Enum.map(& &1.module)
+
     direct_tool_names =
       case Moto.Tool.tool_names(direct_tool_modules) do
         {:ok, tool_names} ->
@@ -132,6 +144,42 @@ defmodule Moto.Agent do
           raise Spark.Error.DslError,
             message: message,
             path: [:tools, :tool],
+            module: env.module
+      end
+
+    plugin_names =
+      case Moto.Plugin.plugin_names(plugin_modules) do
+        {:ok, plugin_names} ->
+          plugin_names
+
+        {:error, message} ->
+          raise Spark.Error.DslError,
+            message: message,
+            path: [:plugins, :plugin],
+            module: env.module
+      end
+
+    plugin_tool_modules =
+      case Moto.Plugin.plugin_actions(plugin_modules) do
+        {:ok, plugin_tool_modules} ->
+          plugin_tool_modules
+
+        {:error, message} ->
+          raise Spark.Error.DslError,
+            message: message,
+            path: [:plugins, :plugin],
+            module: env.module
+      end
+
+    plugin_tool_names =
+      case Moto.Tool.action_names(plugin_tool_modules) do
+        {:ok, plugin_tool_names} ->
+          plugin_tool_names
+
+        {:error, message} ->
+          raise Spark.Error.DslError,
+            message: message,
+            path: [:plugins, :plugin],
             module: env.module
       end
 
@@ -147,8 +195,13 @@ defmodule Moto.Agent do
             module: env.module
       end
 
-    tool_modules = direct_tool_modules ++ ash_resource_info.tool_modules
-    tool_names = direct_tool_names ++ ash_resource_info.tool_names
+    runtime_plugins = [Moto.Plugins.RuntimeCompat | plugin_modules]
+
+    tool_modules =
+      direct_tool_modules ++ ash_resource_info.tool_modules ++ plugin_tool_modules
+
+    tool_names =
+      direct_tool_names ++ ash_resource_info.tool_names ++ plugin_tool_names
 
     if Enum.uniq(tool_names) != tool_names do
       duplicates =
@@ -192,7 +245,8 @@ defmodule Moto.Agent do
           name: unquote(name),
           system_prompt: unquote(system_prompt),
           model: unquote(Macro.escape(resolved_model)),
-          tools: unquote(Macro.escape(tool_modules))
+          tools: unquote(Macro.escape(tool_modules)),
+          plugins: unquote(Macro.escape(runtime_plugins))
       end
 
       @doc """
@@ -255,6 +309,18 @@ defmodule Moto.Agent do
       """
       @spec tool_names() :: [String.t()]
       def tool_names, do: unquote(Macro.escape(tool_names))
+
+      @doc """
+      Returns the configured Moto plugin modules.
+      """
+      @spec plugins() :: [module()]
+      def plugins, do: unquote(Macro.escape(plugin_modules))
+
+      @doc """
+      Returns the configured published Moto plugin names.
+      """
+      @spec plugin_names() :: [String.t()]
+      def plugin_names, do: unquote(Macro.escape(plugin_names))
 
       @doc """
       Returns any Ash resources registered through `ash_resource`.

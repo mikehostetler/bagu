@@ -21,6 +21,12 @@ defmodule Moto.DynamicAgent.Spec do
                     |> Zoi.max(128)
                     |> Zoi.regex(~r/^[a-z][a-z0-9_]*$/)
 
+  @plugin_name_schema Zoi.string()
+                      |> Zoi.trim()
+                      |> Zoi.min(1)
+                      |> Zoi.max(128)
+                      |> Zoi.regex(~r/^[a-z][a-z0-9_]*$/)
+
   @model_map_schema Zoi.object(
                       %{
                         provider:
@@ -54,7 +60,8 @@ defmodule Moto.DynamicAgent.Spec do
                   Zoi.string() |> Zoi.trim() |> Zoi.min(1) |> Zoi.max(256),
                   @model_map_schema
                 ]),
-              tools: Zoi.list(@tool_name_schema) |> Zoi.default([])
+              tools: Zoi.list(@tool_name_schema) |> Zoi.default([]),
+              plugins: Zoi.list(@plugin_name_schema) |> Zoi.default([])
             },
             coerce: true,
             unrecognized_keys: :error
@@ -72,18 +79,21 @@ defmodule Moto.DynamicAgent.Spec do
           name: String.t(),
           system_prompt: String.t(),
           model: model_input(),
-          tools: [String.t()]
+          tools: [String.t()],
+          plugins: [String.t()]
         }
 
   @enforce_keys [:name, :system_prompt, :model]
-  defstruct [:name, :system_prompt, :model, tools: []]
+  defstruct [:name, :system_prompt, :model, tools: [], plugins: []]
 
   @spec schema() :: Zoi.schema()
   def schema, do: @schema
 
   @spec new(map() | t(), keyword()) :: {:ok, t()} | {:error, term()}
   def new(%__MODULE__{} = spec, opts) do
-    validate_tools(spec, Keyword.get(opts, :available_tools, %{}))
+    with {:ok, spec} <- validate_tools(spec, Keyword.get(opts, :available_tools, %{})) do
+      validate_plugins(spec, Keyword.get(opts, :available_plugins, %{}))
+    end
   end
 
   def new(attrs, opts) when is_map(attrs) do
@@ -94,6 +104,11 @@ defmodule Moto.DynamicAgent.Spec do
            validate_tools(
              %{spec | model: normalized_model},
              Keyword.get(opts, :available_tools, %{})
+           ),
+         {:ok, normalized_spec} <-
+           validate_plugins(
+             normalized_spec,
+             Keyword.get(opts, :available_plugins, %{})
            ) do
       {:ok, normalized_spec}
     else
@@ -114,7 +129,8 @@ defmodule Moto.DynamicAgent.Spec do
       "name" => spec.name,
       "model" => externalize_model(spec.model),
       "system_prompt" => spec.system_prompt,
-      "tools" => spec.tools
+      "tools" => spec.tools,
+      "plugins" => spec.plugins
     }
   end
 
@@ -197,6 +213,25 @@ defmodule Moto.DynamicAgent.Spec do
       true ->
         case Moto.Tool.resolve_tool_names(spec.tools, available_tools) do
           {:ok, _tool_modules} -> {:ok, spec}
+          {:error, reason} -> {:error, reason}
+        end
+    end
+  end
+
+  defp validate_plugins(%__MODULE__{} = spec, available_plugins) when is_map(available_plugins) do
+    cond do
+      Enum.uniq(spec.plugins) != spec.plugins ->
+        {:error, "plugins must be unique"}
+
+      spec.plugins == [] ->
+        {:ok, spec}
+
+      map_size(available_plugins) == 0 ->
+        {:error, "plugins require an available_plugins registry when importing Moto agents"}
+
+      true ->
+        case Moto.Plugin.resolve_plugin_names(spec.plugins, available_plugins) do
+          {:ok, _plugin_modules} -> {:ok, spec}
           {:error, reason} -> {:error, reason}
         end
     end

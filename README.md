@@ -24,6 +24,7 @@ The generated runtime currently uses:
 
 - the DSL-configured `model` value, defaulting to `:fast`
 - the DSL-configured `tools`
+- the DSL-configured `plugins`
 
 Model configuration lives in:
 
@@ -49,6 +50,7 @@ The DSL currently supports:
 - `model`
 - `system_prompt`
 - `tools`
+- `plugins`
 
 `model` accepts the same shapes Jido.AI and ReqLLM support:
 
@@ -142,6 +144,44 @@ Example:
   MyApp.UserAgent.chat(pid, "List users.", tool_context: %{actor: current_user})
 ```
 
+## Define A Plugin
+
+```elixir
+defmodule MyApp.Plugins.Math do
+  use Moto.Plugin,
+    description: "Provides extra math tools.",
+    tools: [MyApp.Tools.MultiplyNumbers]
+end
+```
+
+`Moto.Plugin` is a thin wrapper over `Jido.Plugin`. In this first pass, the
+Moto-facing plugin contract is intentionally small:
+
+- publish a stable plugin name
+- register action-backed tools
+- let Moto merge those tools into the agent's LLM-visible tool registry
+
+## Attach Plugins To An Agent
+
+```elixir
+defmodule MyApp.MathAgent do
+  use Moto.Agent
+
+  agent do
+    model :fast
+    system_prompt "You can use math tools."
+  end
+
+  plugins do
+    plugin MyApp.Plugins.Math
+  end
+end
+```
+
+Plugin-provided tools are merged into `MyApp.MathAgent.tools/0` and exposed to
+the underlying Jido.AI runtime just like tools registered directly in the
+`tools do ... end` block.
+
 ## Start And Chat
 
 ```elixir
@@ -203,11 +243,16 @@ json = ~S"""
   "name": "json_agent",
   "model": "fast",
   "system_prompt": "You are a concise assistant.",
-  "tools": ["add_numbers"]
+  "plugins": ["math_plugin"]
 }
 """
 
-{:ok, agent} = Moto.import_agent(json, available_tools: [MyApp.Tools.AddNumbers])
+{:ok, agent} =
+  Moto.import_agent(
+    json,
+    available_plugins: [MyApp.Plugins.Math]
+  )
+
 {:ok, pid} = Moto.start_agent(agent, id: "json-agent")
 {:ok, reply} = Moto.chat(pid, "Say hello.")
 ```
@@ -222,13 +267,13 @@ model:
   id: "gpt-4.1"
 system_prompt: |-
   You are a concise assistant.
-tools:
-  - "add_numbers"
+plugins:
+  - "math_plugin"
 """
 
 {:ok, agent} = Moto.import_agent(yaml,
   format: :yaml,
-  available_tools: [MyApp.Tools.AddNumbers]
+  available_plugins: [MyApp.Plugins.Math]
 )
 ```
 
@@ -238,6 +283,7 @@ The dynamic import path is intentionally narrower than the Elixir DSL:
 - only `model`
 - only `system_prompt`
 - only published tool names through `tools`
+- only published plugin names through `plugins`
 - `model` supports:
   - alias strings like `"fast"`
   - direct model strings like `"anthropic:claude-haiku-4-5"`
@@ -246,6 +292,9 @@ The dynamic import path is intentionally narrower than the Elixir DSL:
   - string names like `["add_numbers"]`
   - explicit resolution through `available_tools: [MyApp.Tools.AddNumbers]`
   - action-backed tool modules, including generated `AshJido` actions
+- `plugins` supports:
+  - string names like `["math_plugin"]`
+  - explicit resolution through `available_plugins: [MyApp.Plugins.Math]`
 
 The imported path does not currently support the `ash_resource` shorthand
 directly, because JSON/YAML specs cannot safely encode Elixir resource modules.
@@ -262,7 +311,8 @@ The top-level helpers are:
 - The shared runtime lives in `Moto.Runtime` and is started by `Moto.Application`.
 - `Moto.Agent` uses a very small Spark DSL and generates a nested runtime module.
 - `Moto.Tool` is a thin wrapper over `Jido.Action`, but it restricts tool schemas to Zoi.
+- `Moto.Plugin` is a thin wrapper over `Jido.Plugin` and currently focuses on contributing tools.
 - `Moto.model/1` resolves Moto-owned aliases first, then delegates to Jido.AI.
 - Dynamic imports use a hidden runtime module generated from a validated Zoi spec.
-- Imported tools are constrained to an explicit allowlist registry.
+- Imported tools and plugins are constrained to explicit allowlist registries.
 - The nested runtime module still uses `Jido.AI.Agent` underneath.

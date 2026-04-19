@@ -64,11 +64,11 @@ defmodule Moto do
   @doc """
   Imports a constrained dynamic Moto agent from a map, JSON string, or YAML string.
 
-  The imported format currently supports `name`, `model`, `system_prompt`, and
-  published tool names via `tools`.
+  The imported format currently supports `name`, `model`, `system_prompt`,
+  published tool names via `tools`, and published plugin names via `plugins`.
 
-  Imported tools must be resolved through the explicit `:available_tools`
-  registry passed in `opts`.
+  Imported tools and plugins must be resolved through the explicit
+  `:available_tools` and `:available_plugins` registries passed in `opts`.
   """
   @spec import_agent(map() | binary(), keyword()) :: {:ok, DynamicAgent.t()} | {:error, term()}
   def import_agent(source, opts \\ []), do: DynamicAgent.import(source, opts)

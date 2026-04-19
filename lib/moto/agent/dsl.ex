@@ -13,6 +13,12 @@ defmodule Moto.Agent.Dsl do
     defstruct [:resource, :__spark_metadata__]
   end
 
+  defmodule Plugin do
+    @moduledoc false
+
+    defstruct [:module, :__spark_metadata__]
+  end
+
   @agent_section %Spark.Dsl.Section{
     name: :agent,
     describe: """
@@ -82,11 +88,36 @@ defmodule Moto.Agent.Dsl do
     entities: [@tool_entity, @ash_resource_entity]
   }
 
+  @plugin_entity %Spark.Dsl.Entity{
+    name: :plugin,
+    describe: """
+    Register a Moto plugin module for this agent.
+    """,
+    target: Plugin,
+    args: [:module],
+    schema: [
+      module: [
+        type: :atom,
+        required: true,
+        doc: "A module defined with `use Moto.Plugin`."
+      ]
+    ]
+  }
+
+  @plugins_section %Spark.Dsl.Section{
+    name: :plugins,
+    describe: """
+    Register Moto plugins for this agent.
+    """,
+    entities: [@plugin_entity]
+  }
+
   use Spark.Dsl.Extension,
-    sections: [@agent_section, @tools_section],
+    sections: [@agent_section, @tools_section, @plugins_section],
     verifiers: [
       Moto.Agent.Verifiers.VerifyModel,
       Moto.Agent.Verifiers.VerifyTools,
-      Moto.Agent.Verifiers.VerifyAshResources
+      Moto.Agent.Verifiers.VerifyAshResources,
+      Moto.Agent.Verifiers.VerifyPlugins
     ]
 end

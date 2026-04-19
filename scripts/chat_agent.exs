@@ -1,37 +1,14 @@
-defmodule Moto.Scripts.AddNumbers do
-  use Moto.Tool,
-    description: "Adds two integers together.",
-    schema: Zoi.object(%{a: Zoi.integer(), b: Zoi.integer()})
-
-  @impl true
-  def run(%{a: a, b: b}, _context) do
-    sum = a + b
-    IO.puts("[tool:add_numbers] #{a} + #{b} = #{sum}")
-    {:ok, %{sum: sum}}
-  end
-end
-
-defmodule Moto.Scripts.ChatAgent do
-  use Moto.Agent
-
-  agent do
-    name "script_chat_agent"
-    model :fast
-    system_prompt """
-    You are a concise assistant.
-    Keep answers short and direct.
-    For any addition or arithmetic request, you must use the add_numbers tool.
-    Do not do arithmetic in your head when that tool applies.
-    """
-  end
-
-  tools do
-    tool Moto.Scripts.AddNumbers
-  end
+for pattern <- ["tools/*.ex", "plugins/*.ex", "agents/*.ex"] do
+  __DIR__
+  |> Path.join("demo")
+  |> Path.join(pattern)
+  |> Path.wildcard()
+  |> Enum.sort()
+  |> Enum.each(&Code.require_file/1)
 end
 
 defmodule Moto.Scripts.ChatAgentCLI do
-  alias Moto.Scripts.ChatAgent
+  alias Moto.Scripts.Demo.Agents.ChatAgent
   require Logger
 
   def main(argv) do
@@ -46,6 +23,7 @@ defmodule Moto.Scripts.ChatAgentCLI do
     IO.puts("Moto demo agent")
     IO.puts("Configured model: #{inspect(ChatAgent.configured_model())}")
     IO.puts("Resolved model: #{inspect(resolved_model)}")
+    IO.puts("Plugins: #{Enum.join(ChatAgent.plugin_names(), ", ")}")
     IO.puts("Tools: #{Enum.join(ChatAgent.tool_names(), ", ")}")
     IO.puts("")
 

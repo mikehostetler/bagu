@@ -25,6 +25,12 @@ The bias here is:
   Keep this very simple at first: no dynamic gating, no extra metadata beyond
   what the tool module already exposes.
 
+- [x] `plugins`
+  Add a small `plugins do ... end` section for registering `Moto.Plugin`
+  modules.
+  Keep this first pass narrow: plugins can contribute action-backed tools to
+  the agent runtime without exposing broader plugin lifecycle/config hooks yet.
+
 - [ ] `output`
   Add a first-class output concept.
   Start with:
@@ -35,10 +41,6 @@ The bias here is:
   Add explicit runtime-only context, separate from model-visible conversation
   history.
   This should become the Moto name for request-scoped runtime data.
-
-- [ ] `middleware`
-  Expose extension points with the public term `middleware`, even if the
-  implementation maps to Jido plugins underneath.
 
 ## Soon After
 
