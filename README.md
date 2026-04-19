@@ -2,6 +2,14 @@
 
 Minimal layer over Jido and Jido.AI for defining and starting chat agents.
 
+## Status
+
+`moto` is currently an experimental spike only.
+
+It is a design/prototyping repo, not a stable package. The API is expected to
+change, large parts may be rewritten, and the repository may disappear entirely
+if the spike does not hold up.
+
 This first implementation keeps the Spark DSL deliberately tiny.
 
 ## Overview
