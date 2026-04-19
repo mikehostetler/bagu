@@ -19,6 +19,24 @@ defmodule Moto.Agent.Dsl do
     defstruct [:module, :__spark_metadata__]
   end
 
+  defmodule BeforeTurnHook do
+    @moduledoc false
+
+    defstruct [:hook, :__spark_metadata__]
+  end
+
+  defmodule AfterTurnHook do
+    @moduledoc false
+
+    defstruct [:hook, :__spark_metadata__]
+  end
+
+  defmodule InterruptHook do
+    @moduledoc false
+
+    defstruct [:hook, :__spark_metadata__]
+  end
+
   @agent_section %Spark.Dsl.Section{
     name: :agent,
     describe: """
@@ -120,12 +138,69 @@ defmodule Moto.Agent.Dsl do
     entities: [@plugin_entity]
   }
 
+  @before_turn_hook_entity %Spark.Dsl.Entity{
+    name: :before_turn,
+    describe: """
+    Register a hook that runs before a Moto chat turn starts.
+    """,
+    target: BeforeTurnHook,
+    args: [:hook],
+    schema: [
+      hook: [
+        type: :any,
+        required: true,
+        doc: "A Moto.Hook module or MFA tuple."
+      ]
+    ]
+  }
+
+  @after_turn_hook_entity %Spark.Dsl.Entity{
+    name: :after_turn,
+    describe: """
+    Register a hook that runs after a Moto chat turn completes.
+    """,
+    target: AfterTurnHook,
+    args: [:hook],
+    schema: [
+      hook: [
+        type: :any,
+        required: true,
+        doc: "A Moto.Hook module or MFA tuple."
+      ]
+    ]
+  }
+
+  @interrupt_hook_entity %Spark.Dsl.Entity{
+    name: :on_interrupt,
+    describe: """
+    Register a hook that runs when a Moto turn interrupts.
+    """,
+    target: InterruptHook,
+    args: [:hook],
+    schema: [
+      hook: [
+        type: :any,
+        required: true,
+        doc: "A Moto.Hook module or MFA tuple."
+      ]
+    ]
+  }
+
+  @hooks_section %Spark.Dsl.Section{
+    name: :hooks,
+    describe: """
+    Register Moto hooks for this agent.
+    """,
+    entities: [@before_turn_hook_entity, @after_turn_hook_entity, @interrupt_hook_entity]
+  }
+
   use Spark.Dsl.Extension,
-    sections: [@agent_section, @tools_section, @plugins_section],
+    sections: [@agent_section, @tools_section, @plugins_section, @hooks_section],
     verifiers: [
       Moto.Agent.Verifiers.VerifyModel,
       Moto.Agent.Verifiers.VerifyTools,
       Moto.Agent.Verifiers.VerifyAshResources,
-      Moto.Agent.Verifiers.VerifyPlugins
+      Moto.Agent.Verifiers.VerifyPlugins,
+      Moto.Agent.Verifiers.VerifyHooks
     ]
 end

@@ -12,7 +12,7 @@ LLM agents on top of Jido and Jido.AI.
 Today, Moto can:
 
 - define agents with a small Spark DSL via `use Moto.Agent`
-- configure agent `name`, `model`, `system_prompt`, `tools`, and `plugins`
+- configure agent `name`, `model`, `system_prompt`, `tools`, `plugins`, and `hooks`
 - resolve models through Moto-owned aliases like `:fast`, direct model strings,
   inline maps, and `%LLMDB.Model{}`
 - support static or dynamic system prompts through strings, module callbacks,
@@ -22,10 +22,12 @@ Today, Moto can:
   resource with `ash_resource`
 - define plugins with `use Moto.Plugin` and let them contribute tools into the
   agent's visible tool registry
+- define reusable `Moto.Hook` modules and attach them as default turn hooks or
+  per-request overrides
 - start many runtime instances from the same agent module under the shared
   `Moto.Runtime`
 - import constrained agents from JSON or YAML at runtime with explicit
-  allowlists for tools and plugins
+  allowlists for tools, plugins, and hooks
 - run local demo scripts that exercise full LLM + tool-call loops
 
 Moto is intentionally opinionated. It keeps the public surface focused on
@@ -53,6 +55,7 @@ The generated runtime currently uses:
 - the DSL-configured `model` value, defaulting to `:fast`
 - the DSL-configured `tools`
 - the DSL-configured `plugins`
+- the DSL-configured `hooks`
 
 Model configuration lives in:
 
@@ -79,6 +82,7 @@ The DSL currently supports:
 - `system_prompt`
 - `tools`
 - `plugins`
+- `hooks`
 
 `model` accepts the same shapes Jido.AI and ReqLLM support:
 
@@ -262,6 +266,94 @@ Plugin-provided tools are merged into `MyApp.MathAgent.tools/0` and exposed to
 the underlying Jido.AI runtime just like tools registered directly in the
 `tools do ... end` block.
 
+## Define A Hook
+
+```elixir
+defmodule MyApp.Hooks.ReplyWithFinalAnswer do
+  use Moto.Hook, name: "reply_with_final_answer"
+
+  @impl true
+  def call(%Moto.Hooks.BeforeTurn{} = input) do
+    {:ok, %{message: "#{input.message}\n\nReply with only the final answer."}}
+  end
+end
+```
+
+`Moto.Hook` is a thin wrapper for turn-scoped callouts. A hook publishes a
+stable name and exposes a single `call/1` callback.
+
+Moto currently supports three hook stages:
+
+- `before_turn`
+- `after_turn`
+- `on_interrupt`
+
+DSL hooks accept Moto hook modules or MFA tuples. Request-scoped `chat/3`
+hooks also accept anonymous arity-1 functions.
+
+## Attach Hooks To An Agent
+
+```elixir
+defmodule MyApp.ChatAgent do
+  use Moto.Agent
+
+  agent do
+    model :fast
+    system_prompt "You are a concise assistant."
+  end
+
+  hooks do
+    before_turn MyApp.Hooks.ReplyWithFinalAnswer
+    before_turn {MyApp.Hooks.AuditTurn, :call, [:support]}
+    after_turn MyApp.Hooks.NormalizeReply
+    on_interrupt MyApp.Hooks.NotifyOps
+  end
+end
+```
+
+Multiple hooks are allowed per stage. Moto stores them stage-by-stage and runs:
+
+- `before_turn` hooks in declaration order
+- `after_turn` hooks in reverse order
+- `on_interrupt` hooks in reverse order
+
+Generated agents expose:
+
+- `MyApp.ChatAgent.hooks/0`
+- `MyApp.ChatAgent.before_turn_hooks/0`
+- `MyApp.ChatAgent.after_turn_hooks/0`
+- `MyApp.ChatAgent.interrupt_hooks/0`
+
+## Per-Turn Hook Overrides
+
+You can also pass hooks directly to `chat/3`:
+
+```elixir
+runtime_before_turn = fn %Moto.Hooks.BeforeTurn{} = input ->
+  {:ok, %{tool_context: Map.put(input.tool_context, :tenant, "acme")}}
+end
+
+{:ok, pid} = MyApp.ChatAgent.start_link(id: "chat-1")
+
+{:ok, reply} =
+  MyApp.ChatAgent.chat(pid, "Say hello.",
+    hooks: [
+      before_turn: [
+        MyApp.Hooks.ReplyWithFinalAnswer,
+        {MyApp.Hooks.AuditTurn, :call, [:support]},
+        runtime_before_turn
+      ]
+    ]
+  )
+```
+
+`chat/3` hook overrides append to the agent's default DSL hooks for that turn.
+If a hook interrupts the turn, Moto returns:
+
+```elixir
+{:interrupt, %Moto.Interrupt{}}
+```
+
 ## Start And Chat
 
 ```elixir
@@ -323,14 +415,18 @@ json = ~S"""
   "name": "json_agent",
   "model": "fast",
   "system_prompt": "You are a concise assistant.",
-  "plugins": ["math_plugin"]
+  "plugins": ["math_plugin"],
+  "hooks": {
+    "before_turn": ["reply_with_final_answer"]
+  }
 }
 """
 
 {:ok, agent} =
   Moto.import_agent(
     json,
-    available_plugins: [MyApp.Plugins.Math]
+    available_plugins: [MyApp.Plugins.Math],
+    available_hooks: [MyApp.Hooks.ReplyWithFinalAnswer]
   )
 
 {:ok, pid} = Moto.start_agent(agent, id: "json-agent")
@@ -349,11 +445,15 @@ system_prompt: |-
   You are a concise assistant.
 plugins:
   - "math_plugin"
+hooks:
+  before_turn:
+    - "reply_with_final_answer"
 """
 
 {:ok, agent} = Moto.import_agent(yaml,
   format: :yaml,
-  available_plugins: [MyApp.Plugins.Math]
+  available_plugins: [MyApp.Plugins.Math],
+  available_hooks: [MyApp.Hooks.ReplyWithFinalAnswer]
 )
 ```
 
@@ -364,6 +464,7 @@ The dynamic import path is intentionally narrower than the Elixir DSL:
 - only `system_prompt`
 - only published tool names through `tools`
 - only published plugin names through `plugins`
+- only published hook names through `hooks`
 - `model` supports:
   - alias strings like `"fast"`
   - direct model strings like `"anthropic:claude-haiku-4-5"`
@@ -375,6 +476,10 @@ The dynamic import path is intentionally narrower than the Elixir DSL:
 - `plugins` supports:
   - string names like `["math_plugin"]`
   - explicit resolution through `available_plugins: [MyApp.Plugins.Math]`
+- `hooks` supports:
+  - a stage-keyed map like `%{"before_turn" => ["reply_with_final_answer"]}`
+  - multiple names per stage
+  - explicit resolution through `available_hooks: [MyApp.Hooks.ReplyWithFinalAnswer]`
 
 The imported path does not currently support the `ash_resource` shorthand
 directly, because JSON/YAML specs cannot safely encode Elixir resource modules.
@@ -394,7 +499,8 @@ The top-level helpers are:
 - `Moto.Agent` uses a very small Spark DSL and generates a nested runtime module.
 - `Moto.Tool` is a thin wrapper over `Jido.Action`, but it restricts tool schemas to Zoi.
 - `Moto.Plugin` is a thin wrapper over `Jido.Plugin` and currently focuses on contributing tools.
+- `Moto.Hook` is a thin wrapper for turn-scoped hook modules and interrupt-aware callbacks.
 - `Moto.model/1` resolves Moto-owned aliases first, then delegates to Jido.AI.
 - Dynamic imports use a hidden runtime module generated from a validated Zoi spec.
-- Imported tools and plugins are constrained to explicit allowlist registries.
+- Imported tools, plugins, and hooks are constrained to explicit allowlist registries.
 - The nested runtime module still uses `Jido.AI.Agent` underneath.

@@ -1,4 +1,4 @@
-for pattern <- ["tools/*.ex", "plugins/*.ex", "agents/*.ex"] do
+for pattern <- ["tools/*.ex", "plugins/*.ex", "hooks/*.ex", "agents/*.ex"] do
   __DIR__
   |> Path.join("demo")
   |> Path.join(pattern)
@@ -10,6 +10,7 @@ end
 defmodule Moto.Scripts.ImportedChatAgentCLI do
   alias Moto.DynamicAgent
   alias Moto.Scripts.Demo.Tools.AddNumbers
+  alias Moto.Scripts.Demo.Hooks.ReplyWithFinalAnswer
   require Logger
 
   def main(argv) do
@@ -17,7 +18,9 @@ defmodule Moto.Scripts.ImportedChatAgentCLI do
     anthropic_api_key = Application.get_env(:req_llm, :anthropic_api_key)
     spec_path = sample_spec_path()
     available_tools = [AddNumbers]
+    available_hooks = [ReplyWithFinalAnswer]
     {:ok, tool_registry} = Moto.Tool.normalize_available_tools(available_tools)
+    {:ok, hook_registry} = Moto.Hook.normalize_available_hooks(available_hooks)
 
     demo_prompt =
       "Use the add_numbers tool to add 17 and 25. Do not do the math yourself. Reply with only the sum."
@@ -27,6 +30,7 @@ defmodule Moto.Scripts.ImportedChatAgentCLI do
     IO.puts("Moto imported-agent demo")
     IO.puts("Spec file: #{spec_path}")
     IO.puts("Available tools: #{Enum.join(Map.keys(tool_registry), ", ")}")
+    IO.puts("Available hooks: #{Enum.join(Map.keys(hook_registry), ", ")}")
     IO.puts("")
 
     if is_nil(anthropic_api_key) or anthropic_api_key == "" do
@@ -35,7 +39,11 @@ defmodule Moto.Scripts.ImportedChatAgentCLI do
       System.halt(1)
     end
 
-    agent = Moto.import_agent_file!(spec_path, available_tools: available_tools)
+    agent =
+      Moto.import_agent_file!(spec_path,
+        available_tools: available_tools,
+        available_hooks: available_hooks
+      )
     print_agent_details(agent)
 
     {:ok, pid} = Moto.start_agent(agent, id: "imported-script-chat-agent")
@@ -61,13 +69,37 @@ defmodule Moto.Scripts.ImportedChatAgentCLI do
     |> Path.join("moto/sample_math_agent.json")
   end
 
-  defp print_agent_details(%DynamicAgent{spec: spec, tool_modules: tool_modules}) do
+  defp print_agent_details(%DynamicAgent{spec: spec, tool_modules: tool_modules, hook_modules: hook_modules}) do
     IO.puts("Imported agent: #{spec.name}")
     IO.puts("Configured model: #{inspect(spec.model)}")
     IO.puts("Resolved model: #{inspect(Moto.model(spec.model))}")
     IO.puts("Imported tools: #{Enum.join(spec.tools, ", ")}")
+    IO.puts("Imported hooks: #{format_imported_hooks(spec.hooks)}")
     IO.puts("Tool modules: #{Enum.map_join(tool_modules, ", ", &inspect/1)}")
+    IO.puts("Hook modules: #{format_hook_modules(hook_modules)}")
     IO.puts("")
+  end
+
+  defp format_imported_hooks(hooks) do
+    hooks
+    |> Enum.filter(fn {_stage, names} -> names != [] end)
+    |> Enum.map_join(", ", fn {stage, names} -> "#{stage}=#{Enum.join(names, "|")}" end)
+    |> case do
+      "" -> "(none)"
+      value -> value
+    end
+  end
+
+  defp format_hook_modules(hooks) do
+    hooks
+    |> Enum.filter(fn {_stage, modules} -> modules != [] end)
+    |> Enum.map_join(", ", fn {stage, modules} ->
+      "#{stage}=#{Enum.map_join(modules, "|", &inspect/1)}"
+    end)
+    |> case do
+      "" -> "(none)"
+      value -> value
+    end
   end
 
   defp normalize_argv(["--" | rest]), do: rest

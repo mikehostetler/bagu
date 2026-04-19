@@ -65,10 +65,12 @@ defmodule Moto do
   Imports a constrained dynamic Moto agent from a map, JSON string, or YAML string.
 
   The imported format currently supports `name`, `model`, `system_prompt`,
-  published tool names via `tools`, and published plugin names via `plugins`.
+  published tool names via `tools`, published plugin names via `plugins`,
+  and published hook names via `hooks`.
 
   Imported tools and plugins must be resolved through the explicit
-  `:available_tools` and `:available_plugins` registries passed in `opts`.
+  `:available_tools`, `:available_plugins`, and `:available_hooks` registries
+  passed in `opts`.
   """
   @spec import_agent(map() | binary(), keyword()) :: {:ok, DynamicAgent.t()} | {:error, term()}
   def import_agent(source, opts \\ []), do: DynamicAgent.import(source, opts)
@@ -124,17 +126,26 @@ defmodule Moto do
   Accepts a PID, server reference, or Moto agent ID string.
   """
   @spec chat(pid() | atom() | {:via, module(), term()} | String.t(), String.t(), keyword()) ::
-          {:ok, term()} | {:error, term()}
+          {:ok, term()} | {:error, term()} | {:interrupt, Moto.Interrupt.t()}
   def chat(server_or_id, message, opts \\ []) when is_binary(message) do
-    with {:ok, server} <- resolve_server(server_or_id, opts) do
-      Request.send_and_await(
-        server,
-        message,
-        Keyword.merge(opts,
-          signal_type: "ai.react.query",
-          source: "/moto/agent"
-        )
-      )
+    with {:ok, server} <- resolve_server(server_or_id, opts),
+         {:ok, prepared_opts} <- Moto.Agent.prepare_chat_opts(opts, nil) do
+      chat_request(server, message, prepared_opts)
+      |> Moto.Hooks.translate_chat_result()
+    end
+  end
+
+  @doc false
+  @spec chat_request(pid() | atom() | {:via, module(), term()}, String.t(), keyword()) ::
+          {:ok, term()} | {:error, term()}
+  def chat_request(server, message, opts) when is_binary(message) and is_list(opts) do
+    timeout = Keyword.get(opts, :timeout, 30_000)
+
+    request_opts = Keyword.merge(opts, signal_type: "ai.react.query", source: "/moto/agent")
+
+    with {:ok, request} <- Request.create_and_send(server, message, request_opts),
+         await_result <- Request.await(request, timeout: timeout) do
+      finalize_request_result(server, request, await_result)
     end
   end
 
@@ -146,4 +157,30 @@ defmodule Moto do
   end
 
   defp resolve_server(server, _opts), do: {:ok, server}
+
+  defp finalize_request_result(_server, _request, {:error, :timeout} = error), do: error
+
+  defp finalize_request_result(
+         server,
+         %Request.Handle{id: request_id} = _request,
+         fallback_result
+       ) do
+    case Jido.AgentServer.state(server) do
+      {:ok, %{agent: agent}} ->
+        case Request.get_request(agent, request_id) do
+          %{meta: %{moto_hooks: %{interrupt: interrupt}}} ->
+            {:error, {:interrupt, interrupt}}
+
+          _request ->
+            case Request.get_result(agent, request_id) do
+              {:pending, _request} -> fallback_result
+              nil -> fallback_result
+              result -> result
+            end
+        end
+
+      {:error, _reason} ->
+        fallback_result
+    end
+  end
 end

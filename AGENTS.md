@@ -50,6 +50,7 @@ Right now the shared public agent shape is intentionally minimal:
 - `system_prompt`
 - `tools`
 - `plugins`
+- `hooks`
 
 The Elixir DSL may expose richer compile-time ergonomics, but the imported
 agent format should stay aligned on capability as features are added.

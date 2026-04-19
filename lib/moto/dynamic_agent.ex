@@ -3,14 +3,15 @@ defmodule Moto.DynamicAgent do
 
   alias Moto.DynamicAgent.Spec
 
-  @enforce_keys [:spec, :runtime_module, :tool_modules, :plugin_modules]
-  defstruct [:spec, :runtime_module, :tool_modules, :plugin_modules]
+  @enforce_keys [:spec, :runtime_module, :tool_modules, :plugin_modules, :hook_modules]
+  defstruct [:spec, :runtime_module, :tool_modules, :plugin_modules, :hook_modules]
 
   @type t :: %__MODULE__{
           spec: Spec.t(),
           runtime_module: module(),
           tool_modules: [module()],
-          plugin_modules: [module()]
+          plugin_modules: [module()],
+          hook_modules: Moto.Hooks.stage_map()
         }
 
   @spec import(map() | binary() | Spec.t(), keyword()) :: {:ok, t()} | {:error, term()}
@@ -19,18 +20,28 @@ defmodule Moto.DynamicAgent do
   def import(%Spec{} = spec, opts) do
     with {:ok, tool_registry} <- available_tool_registry(opts),
          {:ok, plugin_registry} <- available_plugin_registry(opts),
+         {:ok, hook_registry} <- available_hook_registry(opts),
          {:ok, validated_spec} <-
-           Spec.new(spec, available_tools: tool_registry, available_plugins: plugin_registry) do
-      build(validated_spec, tool_registry, plugin_registry)
+           Spec.new(spec,
+             available_tools: tool_registry,
+             available_plugins: plugin_registry,
+             available_hooks: hook_registry
+           ) do
+      build(validated_spec, tool_registry, plugin_registry, hook_registry)
     end
   end
 
   def import(source, opts) when is_map(source) do
     with {:ok, tool_registry} <- available_tool_registry(opts),
          {:ok, plugin_registry} <- available_plugin_registry(opts),
+         {:ok, hook_registry} <- available_hook_registry(opts),
          {:ok, spec} <-
-           Spec.new(source, available_tools: tool_registry, available_plugins: plugin_registry) do
-      build(spec, tool_registry, plugin_registry)
+           Spec.new(source,
+             available_tools: tool_registry,
+             available_plugins: plugin_registry,
+             available_hooks: hook_registry
+           ) do
+      build(spec, tool_registry, plugin_registry, hook_registry)
     end
   end
 
@@ -38,9 +49,14 @@ defmodule Moto.DynamicAgent do
     with {:ok, attrs} <- decode(source, Keyword.get(opts, :format, :auto)),
          {:ok, tool_registry} <- available_tool_registry(opts),
          {:ok, plugin_registry} <- available_plugin_registry(opts),
+         {:ok, hook_registry} <- available_hook_registry(opts),
          {:ok, spec} <-
-           Spec.new(attrs, available_tools: tool_registry, available_plugins: plugin_registry) do
-      build(spec, tool_registry, plugin_registry)
+           Spec.new(attrs,
+             available_tools: tool_registry,
+             available_plugins: plugin_registry,
+             available_hooks: hook_registry
+           ) do
+      build(spec, tool_registry, plugin_registry, hook_registry)
     end
   end
 
@@ -86,19 +102,22 @@ defmodule Moto.DynamicAgent do
   def format_error(%{message: message}) when is_binary(message), do: message
   def format_error(reason), do: inspect(reason)
 
-  defp build(%Spec{} = spec, tool_registry, plugin_registry) do
+  defp build(%Spec{} = spec, tool_registry, plugin_registry, hook_registry) do
     with {:ok, direct_tool_modules} <- Moto.Tool.resolve_tool_names(spec.tools, tool_registry),
          {:ok, plugin_modules} <- Moto.Plugin.resolve_plugin_names(spec.plugins, plugin_registry),
          {:ok, plugin_tool_modules} <- Moto.Plugin.plugin_actions(plugin_modules),
+         {:ok, hook_modules} <- resolve_imported_hooks(spec.hooks, hook_registry),
          tool_modules = direct_tool_modules ++ plugin_tool_modules,
          {:ok, _tool_names} <- Moto.Tool.action_names(tool_modules),
-         {:ok, runtime_module} <- ensure_runtime_module(spec, tool_modules, plugin_modules) do
+         {:ok, runtime_module} <-
+           ensure_runtime_module(spec, tool_modules, plugin_modules, hook_modules) do
       {:ok,
        %__MODULE__{
          spec: spec,
          runtime_module: runtime_module,
          tool_modules: tool_modules,
-         plugin_modules: plugin_modules
+         plugin_modules: plugin_modules,
+         hook_modules: hook_modules
        }}
     end
   end
@@ -167,23 +186,27 @@ defmodule Moto.DynamicAgent do
   defp detect_file_format(_path, other),
     do: {:error, "unsupported format #{inspect(other)}; expected :json or :yaml"}
 
-  defp ensure_runtime_module(%Spec{} = spec, tool_modules, plugin_modules) do
+  defp ensure_runtime_module(%Spec{} = spec, tool_modules, plugin_modules, hook_modules) do
     runtime_plugins = runtime_plugins(plugin_modules)
-    runtime_module = generated_module(spec, tool_modules, runtime_plugins)
+    runtime_module = generated_module(spec, tool_modules, runtime_plugins, hook_modules)
 
     if Code.ensure_loaded?(runtime_module) do
       {:ok, runtime_module}
     else
-      create_runtime_module(runtime_module, spec, tool_modules, runtime_plugins)
+      create_runtime_module(runtime_module, spec, tool_modules, runtime_plugins, hook_modules)
     end
   end
 
-  defp generated_module(%Spec{} = spec, tool_modules, runtime_plugins) do
+  defp generated_module(%Spec{} = spec, tool_modules, runtime_plugins, hook_modules) do
     suffix =
       %{
         spec: Spec.to_external_map(spec),
         tools: Enum.map(tool_modules, &inspect/1),
-        plugins: Enum.map(runtime_plugins, &inspect/1)
+        plugins: Enum.map(runtime_plugins, &inspect/1),
+        hooks:
+          Enum.into(hook_modules, %{}, fn {stage, modules} ->
+            {stage, Enum.map(modules, &inspect/1)}
+          end)
       }
       |> Jason.encode!()
       |> then(&:crypto.hash(:sha256, &1))
@@ -194,7 +217,13 @@ defmodule Moto.DynamicAgent do
     Module.concat([__MODULE__, Generated, "Runtime#{suffix}"])
   end
 
-  defp create_runtime_module(runtime_module, %Spec{} = spec, tool_modules, runtime_plugins) do
+  defp create_runtime_module(
+         runtime_module,
+         %Spec{} = spec,
+         tool_modules,
+         runtime_plugins,
+         hook_modules
+       ) do
     quoted =
       quote location: :keep do
         use Jido.AI.Agent,
@@ -203,6 +232,8 @@ defmodule Moto.DynamicAgent do
           model: unquote(Macro.escape(spec.model)),
           tools: unquote(Macro.escape(tool_modules)),
           plugins: unquote(Macro.escape(runtime_plugins))
+
+        unquote(Moto.Agent.hook_runtime_ast(hook_modules))
       end
 
     case Module.create(runtime_module, quoted, Macro.Env.location(__ENV__)) do
@@ -231,6 +262,23 @@ defmodule Moto.DynamicAgent do
     opts
     |> Keyword.get(:available_plugins, [])
     |> Moto.Plugin.normalize_available_plugins()
+  end
+
+  defp available_hook_registry(opts) do
+    opts
+    |> Keyword.get(:available_hooks, [])
+    |> Moto.Hook.normalize_available_hooks()
+  end
+
+  defp resolve_imported_hooks(hooks, hook_registry) do
+    hooks
+    |> Enum.reduce_while({:ok, Moto.Hooks.default_stage_map()}, fn {stage, hook_names},
+                                                                   {:ok, acc} ->
+      case Moto.Hook.resolve_hook_names(hook_names, hook_registry) do
+        {:ok, modules} -> {:cont, {:ok, Map.put(acc, stage, modules)}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
   end
 
   defp runtime_plugins(plugin_modules), do: [Moto.Plugins.RuntimeCompat | plugin_modules]
@@ -262,7 +310,9 @@ defmodule Moto.DynamicAgent do
       "tools:",
       encode_yaml_tools(spec.tools),
       "plugins:",
-      encode_yaml_plugins(spec.plugins)
+      encode_yaml_plugins(spec.plugins),
+      "hooks:",
+      encode_yaml_hooks(spec.hooks)
     ]
     |> Enum.join("\n")
     |> Kernel.<>("\n")
@@ -273,4 +323,19 @@ defmodule Moto.DynamicAgent do
 
   defp encode_yaml_plugins([]), do: "  []"
   defp encode_yaml_plugins(plugins), do: Enum.map_join(plugins, "\n", &"  - #{Jason.encode!(&1)}")
+
+  defp encode_yaml_hooks(hooks) do
+    Enum.map_join([:before_turn, :after_turn, :on_interrupt], "\n", fn stage ->
+      hook_names = Map.get(hooks, stage, [])
+
+      [
+        "  #{stage}:",
+        if(hook_names == [],
+          do: "    []",
+          else: Enum.map_join(hook_names, "\n", &"    - #{Jason.encode!(&1)}")
+        )
+      ]
+      |> Enum.join("\n")
+    end)
+  end
 end

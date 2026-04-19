@@ -27,6 +27,14 @@ defmodule Moto.DynamicAgent.Spec do
                       |> Zoi.max(128)
                       |> Zoi.regex(~r/^[a-z][a-z0-9_]*$/)
 
+  @hook_name_schema Zoi.string()
+                    |> Zoi.trim()
+                    |> Zoi.min(1)
+                    |> Zoi.max(128)
+                    |> Zoi.regex(~r/^[a-z][a-z0-9_]*$/)
+
+  @default_hooks %{before_turn: [], after_turn: [], on_interrupt: []}
+
   @model_map_schema Zoi.object(
                       %{
                         provider:
@@ -50,6 +58,16 @@ defmodule Moto.DynamicAgent.Spec do
                       unrecognized_keys: :error
                     )
 
+  @hooks_schema Zoi.object(
+                  %{
+                    before_turn: Zoi.list(@hook_name_schema) |> Zoi.default([]),
+                    after_turn: Zoi.list(@hook_name_schema) |> Zoi.default([]),
+                    on_interrupt: Zoi.list(@hook_name_schema) |> Zoi.default([])
+                  },
+                  coerce: true,
+                  unrecognized_keys: :error
+                )
+
   @schema Zoi.struct(
             __MODULE__,
             %{
@@ -61,7 +79,8 @@ defmodule Moto.DynamicAgent.Spec do
                   @model_map_schema
                 ]),
               tools: Zoi.list(@tool_name_schema) |> Zoi.default([]),
-              plugins: Zoi.list(@plugin_name_schema) |> Zoi.default([])
+              plugins: Zoi.list(@plugin_name_schema) |> Zoi.default([]),
+              hooks: @hooks_schema |> Zoi.default(@default_hooks)
             },
             coerce: true,
             unrecognized_keys: :error
@@ -80,19 +99,25 @@ defmodule Moto.DynamicAgent.Spec do
           system_prompt: String.t(),
           model: model_input(),
           tools: [String.t()],
-          plugins: [String.t()]
+          plugins: [String.t()],
+          hooks: %{
+            before_turn: [String.t()],
+            after_turn: [String.t()],
+            on_interrupt: [String.t()]
+          }
         }
 
   @enforce_keys [:name, :system_prompt, :model]
-  defstruct [:name, :system_prompt, :model, tools: [], plugins: []]
+  defstruct [:name, :system_prompt, :model, tools: [], plugins: [], hooks: @default_hooks]
 
   @spec schema() :: Zoi.schema()
   def schema, do: @schema
 
   @spec new(map() | t(), keyword()) :: {:ok, t()} | {:error, term()}
   def new(%__MODULE__{} = spec, opts) do
-    with {:ok, spec} <- validate_tools(spec, Keyword.get(opts, :available_tools, %{})) do
-      validate_plugins(spec, Keyword.get(opts, :available_plugins, %{}))
+    with {:ok, spec} <- validate_tools(spec, Keyword.get(opts, :available_tools, %{})),
+         {:ok, spec} <- validate_plugins(spec, Keyword.get(opts, :available_plugins, %{})) do
+      validate_hooks(spec, Keyword.get(opts, :available_hooks, %{}))
     end
   end
 
@@ -109,6 +134,11 @@ defmodule Moto.DynamicAgent.Spec do
            validate_plugins(
              normalized_spec,
              Keyword.get(opts, :available_plugins, %{})
+           ),
+         {:ok, normalized_spec} <-
+           validate_hooks(
+             normalized_spec,
+             Keyword.get(opts, :available_hooks, %{})
            ) do
       {:ok, normalized_spec}
     else
@@ -130,7 +160,8 @@ defmodule Moto.DynamicAgent.Spec do
       "model" => externalize_model(spec.model),
       "system_prompt" => spec.system_prompt,
       "tools" => spec.tools,
-      "plugins" => spec.plugins
+      "plugins" => spec.plugins,
+      "hooks" => spec.hooks
     }
   end
 
@@ -237,12 +268,42 @@ defmodule Moto.DynamicAgent.Spec do
     end
   end
 
+  defp validate_hooks(%__MODULE__{} = spec, available_hooks) when is_map(available_hooks) do
+    cond do
+      not hooks_unique?(spec.hooks) ->
+        {:error, "hook names must be unique within each stage"}
+
+      hooks_empty?(spec.hooks) ->
+        {:ok, spec}
+
+      map_size(available_hooks) == 0 ->
+        {:error, "hooks require an available_hooks registry when importing Moto agents"}
+
+      true ->
+        spec.hooks
+        |> Enum.reduce_while({:ok, spec}, fn {_stage, hook_names}, {:ok, spec_acc} ->
+          case Moto.Hook.resolve_hook_names(hook_names, available_hooks) do
+            {:ok, _hook_modules} -> {:cont, {:ok, spec_acc}}
+            {:error, reason} -> {:halt, {:error, reason}}
+          end
+        end)
+    end
+  end
+
   defp format_model_error(reason) when is_binary(reason), do: reason
 
   defp format_model_error(%{message: message}) when is_binary(message),
     do: message
 
   defp format_model_error(reason), do: inspect(reason)
+
+  defp hooks_unique?(hooks) do
+    Enum.all?(hooks, fn {_stage, hook_names} -> Enum.uniq(hook_names) == hook_names end)
+  end
+
+  defp hooks_empty?(hooks) do
+    Enum.all?(hooks, fn {_stage, hook_names} -> hook_names == [] end)
+  end
 
   defp format_zoi_errors(errors) do
     errors

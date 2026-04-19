@@ -16,4 +16,11 @@ defmodule Moto.Scripts.Demo.Agents.ChatAgent do
   plugins do
     plugin Moto.Scripts.Demo.Plugins.MathPlugin
   end
+
+  hooks do
+    before_turn Moto.Scripts.Demo.Hooks.ReplyWithFinalAnswer
+    after_turn Moto.Scripts.Demo.Hooks.TagAfterTurn
+    after_turn Moto.Scripts.Demo.Hooks.RequireApprovalForRefunds
+    on_interrupt Moto.Scripts.Demo.Hooks.NotifyInterrupt
+  end
 end

@@ -131,6 +131,149 @@ defmodule MotoTest do
     end
   end
 
+  defmodule InjectTenantHook do
+    use Moto.Hook, name: "inject_tenant"
+
+    @impl true
+    def call(%Moto.Hooks.BeforeTurn{} = input) do
+      sequence = Map.get(input.metadata, :sequence, [])
+
+      {:ok,
+       %{
+         message: "#{input.message} for acme",
+         tool_context: %{tenant: "acme"},
+         allowed_tools: ["add_numbers"],
+         llm_opts: [temperature: 0.1],
+         metadata: %{sequence: sequence ++ ["inject_tenant"], touched?: true}
+       }}
+    end
+  end
+
+  defmodule RestrictRefundsHook do
+    use Moto.Hook, name: "restrict_refunds"
+
+    @impl true
+    def call(%Moto.Hooks.BeforeTurn{} = input) do
+      sequence = Map.get(input.metadata, :sequence, [])
+      {:ok, %{metadata: %{sequence: sequence ++ ["restrict_refunds"], mode: :refunds}}}
+    end
+  end
+
+  defmodule NormalizeReplyHook do
+    use Moto.Hook, name: "normalize_reply"
+
+    @impl true
+    def call(%Moto.Hooks.AfterTurn{outcome: {:ok, result}}) do
+      {:ok, {:ok, "normalized:#{result}"}}
+    end
+
+    def call(%Moto.Hooks.AfterTurn{outcome: {:error, reason}}) do
+      {:ok, {:error, {:normalized_error, reason}}}
+    end
+  end
+
+  defmodule InterruptBeforeHook do
+    use Moto.Hook, name: "approval_gate"
+
+    @impl true
+    def call(%Moto.Hooks.BeforeTurn{} = input) do
+      notify_pid =
+        Map.get(input.tool_context, :notify_pid, Map.get(input.tool_context, "notify_pid"))
+
+      {:interrupt,
+       %{
+         kind: :approval,
+         message: "Approval required",
+         data: %{notify_pid: notify_pid, from: :before_turn}
+       }}
+    end
+  end
+
+  defmodule InterruptAfterHook do
+    use Moto.Hook, name: "interrupt_after_turn"
+
+    @impl true
+    def call(%Moto.Hooks.AfterTurn{} = input) do
+      notify_pid =
+        Map.get(input.tool_context, :notify_pid, Map.get(input.tool_context, "notify_pid"))
+
+      {:interrupt,
+       %{
+         kind: :review,
+         message: "Review required",
+         data: %{notify_pid: notify_pid, from: :after_turn}
+       }}
+    end
+  end
+
+  defmodule NotifyOpsHook do
+    use Moto.Hook, name: "notify_ops"
+
+    @impl true
+    def call(%Moto.Hooks.InterruptInput{interrupt: interrupt}) do
+      if pid = get_in(interrupt.data, [:notify_pid]) do
+        send(pid, {:hook_interrupt, interrupt.kind, interrupt.data[:from]})
+      end
+
+      :ok
+    end
+  end
+
+  defmodule HookCallbacks do
+    def before_turn(%Moto.Hooks.BeforeTurn{} = input, label) do
+      sequence = Map.get(input.metadata, :sequence, [])
+      {:ok, %{metadata: %{sequence: sequence ++ [label]}}}
+    end
+
+    def after_turn(%Moto.Hooks.AfterTurn{outcome: {:ok, result}}, suffix) do
+      {:ok, {:ok, "#{result}#{suffix}"}}
+    end
+
+    def after_turn(%Moto.Hooks.AfterTurn{outcome: {:error, reason}}, suffix) do
+      {:ok, {:error, {suffix, reason}}}
+    end
+
+    def notify_interrupt(%Moto.Hooks.InterruptInput{interrupt: interrupt}, label) do
+      if pid = get_in(interrupt.data, [:notify_pid]) do
+        send(pid, {:hook_interrupt_callback, label, interrupt.kind})
+      end
+
+      :ok
+    end
+  end
+
+  defmodule HookedAgent do
+    use Moto.Agent
+
+    agent do
+      model(:fast)
+      system_prompt("You have hooks.")
+    end
+
+    hooks do
+      before_turn(InjectTenantHook)
+      before_turn({HookCallbacks, :before_turn, ["dsl_mfa"]})
+      after_turn(NormalizeReplyHook)
+      after_turn({HookCallbacks, :after_turn, ["!"]})
+      on_interrupt(NotifyOpsHook)
+      on_interrupt({HookCallbacks, :notify_interrupt, ["dsl_mfa"]})
+    end
+  end
+
+  defmodule InterruptingAgent do
+    use Moto.Agent
+
+    agent do
+      model(:fast)
+      system_prompt("You may interrupt.")
+    end
+
+    hooks do
+      before_turn(InterruptBeforeHook)
+      on_interrupt(NotifyOpsHook)
+    end
+  end
+
   test "starts a moto agent under the shared runtime" do
     assert {:ok, pid} = ChatAgent.start_link(id: "chat-agent-test")
     assert is_pid(pid)
@@ -242,6 +385,14 @@ defmodule MotoTest do
     assert MathPlugin.actions() == [MultiplyNumbers]
   end
 
+  test "wraps Moto.Hook with published names" do
+    assert Moto.Hook.validate_hook_module(InjectTenantHook) == :ok
+    assert {:ok, "inject_tenant"} = Moto.Hook.hook_name(InjectTenantHook)
+
+    assert {:ok, ["inject_tenant", "normalize_reply"]} =
+             Moto.Hook.hook_names([InjectTenantHook, NormalizeReplyHook])
+  end
+
   test "exposes configured plugin modules and names" do
     assert PluginAgent.plugins() == [MathPlugin]
     assert PluginAgent.plugin_names() == ["math_plugin"]
@@ -250,6 +401,191 @@ defmodule MotoTest do
   test "merges plugin actions into the agent tool registry" do
     assert PluginAgent.tools() == [MultiplyNumbers]
     assert PluginAgent.tool_names() == ["multiply_numbers"]
+  end
+
+  test "exposes configured hooks by stage" do
+    assert HookedAgent.hooks() == %{
+             before_turn: [InjectTenantHook, {HookCallbacks, :before_turn, ["dsl_mfa"]}],
+             after_turn: [NormalizeReplyHook, {HookCallbacks, :after_turn, ["!"]}],
+             on_interrupt: [NotifyOpsHook, {HookCallbacks, :notify_interrupt, ["dsl_mfa"]}]
+           }
+
+    assert HookedAgent.before_turn_hooks() ==
+             [InjectTenantHook, {HookCallbacks, :before_turn, ["dsl_mfa"]}]
+
+    assert HookedAgent.after_turn_hooks() ==
+             [NormalizeReplyHook, {HookCallbacks, :after_turn, ["!"]}]
+
+    assert HookedAgent.interrupt_hooks() ==
+             [NotifyOpsHook, {HookCallbacks, :notify_interrupt, ["dsl_mfa"]}]
+  end
+
+  test "accepts request-scoped module, MFA, and function hooks" do
+    runtime_fun = fn %Moto.Hooks.BeforeTurn{} = input ->
+      sequence = Map.get(input.metadata, :sequence, [])
+      {:ok, %{metadata: %{sequence: sequence ++ ["runtime_fn"]}}}
+    end
+
+    assert {:ok, opts} =
+             Moto.Agent.prepare_chat_opts(
+               [
+                 hooks: [
+                   before_turn: [
+                     InjectTenantHook,
+                     {HookCallbacks, :before_turn, ["runtime_mfa"]},
+                     runtime_fun
+                   ]
+                 ]
+               ],
+               nil
+             )
+
+    tool_context = Keyword.fetch!(opts, :tool_context)
+
+    assert %{
+             before_turn: [
+               InjectTenantHook,
+               {HookCallbacks, :before_turn, ["runtime_mfa"]},
+               ^runtime_fun
+             ]
+           } =
+             tool_context[:__moto_hooks__]
+  end
+
+  test "runs before_turn hooks in declaration order and rewrites request params" do
+    runtime = HookedAgent.runtime_module()
+    agent = new_runtime_agent(runtime)
+
+    assert {:ok, updated_agent, {:ai_react_start, params}} =
+             runtime.on_before_cmd(
+               agent,
+               {:ai_react_start,
+                %{query: "hello", request_id: "req-hook-1", tool_context: %{notify_pid: self()}}}
+             )
+
+    assert params.query == "hello for acme"
+    assert params.tool_context == %{notify_pid: self(), tenant: "acme"}
+    assert params.allowed_tools == ["add_numbers"]
+    assert params.llm_opts == [temperature: 0.1]
+
+    assert get_in(updated_agent.state, [
+             :requests,
+             "req-hook-1",
+             :meta,
+             :moto_hooks,
+             :metadata,
+             :sequence
+           ]) ==
+             ["inject_tenant", "dsl_mfa"]
+  end
+
+  test "runs after_turn hooks in reverse order for successful outcomes" do
+    runtime = HookedAgent.runtime_module()
+    agent = new_runtime_agent(runtime)
+
+    {:ok, agent, _action} =
+      runtime.on_before_cmd(
+        agent,
+        {:ai_react_start,
+         %{query: "hello", request_id: "req-hook-2", tool_context: %{notify_pid: self()}}}
+      )
+
+    agent = Jido.AI.Request.complete_request(agent, "req-hook-2", "done")
+
+    assert {:ok, updated_agent, []} =
+             runtime.on_after_cmd(agent, {:ai_react_start, %{request_id: "req-hook-2"}}, [])
+
+    assert Jido.AI.Request.get_result(updated_agent, "req-hook-2") == {:ok, "normalized:done!"}
+  end
+
+  test "runs after_turn hooks in reverse order for failed outcomes" do
+    runtime = HookedAgent.runtime_module()
+    agent = new_runtime_agent(runtime)
+
+    {:ok, agent, _action} =
+      runtime.on_before_cmd(
+        agent,
+        {:ai_react_start,
+         %{query: "hello", request_id: "req-hook-3", tool_context: %{notify_pid: self()}}}
+      )
+
+    agent = Jido.AI.Request.fail_request(agent, "req-hook-3", :boom)
+
+    assert {:ok, updated_agent, []} =
+             runtime.on_after_cmd(agent, {:ai_react_start, %{request_id: "req-hook-3"}}, [])
+
+    assert Jido.AI.Request.get_result(updated_agent, "req-hook-3") ==
+             {:error, {:normalized_error, {"!", :boom}}}
+  end
+
+  test "stores hook metadata per request" do
+    runtime = HookedAgent.runtime_module()
+    agent = new_runtime_agent(runtime)
+
+    {:ok, agent, _action} =
+      runtime.on_before_cmd(
+        agent,
+        {:ai_react_start,
+         %{query: "first", request_id: "req-hook-4", tool_context: %{notify_pid: self()}}}
+      )
+
+    {:ok, agent, _action} =
+      runtime.on_before_cmd(
+        agent,
+        {:ai_react_start,
+         %{query: "second", request_id: "req-hook-5", tool_context: %{notify_pid: self()}}}
+      )
+
+    assert get_in(agent.state, [:requests, "req-hook-4", :meta, :moto_hooks, :message]) ==
+             "first for acme"
+
+    assert get_in(agent.state, [:requests, "req-hook-5", :meta, :moto_hooks, :message]) ==
+             "second for acme"
+  end
+
+  test "translates default hook interrupts from MyAgent.chat and runs interrupt hooks" do
+    assert {:ok, pid} = InterruptingAgent.start_link(id: "interrupting-agent-test")
+
+    try do
+      assert {:interrupt, %Moto.Interrupt{kind: :approval, message: "Approval required"}} =
+               InterruptingAgent.chat(pid, "Refund this order",
+                 tool_context: %{notify_pid: self()}
+               )
+
+      assert_receive {:hook_interrupt, :approval, :before_turn}
+    after
+      :ok = Moto.stop_agent(pid)
+    end
+  end
+
+  test "translates request-scoped interrupt hooks from Moto.chat and supports runtime functions" do
+    assert {:ok, pid} = ChatAgent.start_link(id: "runtime-hook-agent-test")
+    test_pid = self()
+
+    before_turn = fn _input ->
+      {:interrupt,
+       %{
+         kind: :manual_review,
+         message: "Manual review required",
+         data: %{notify_pid: test_pid, from: :runtime}
+       }}
+    end
+
+    on_interrupt = fn %Moto.Hooks.InterruptInput{interrupt: interrupt} ->
+      send(test_pid, {:runtime_interrupt, interrupt.kind})
+      :ok
+    end
+
+    try do
+      assert {:interrupt, %Moto.Interrupt{kind: :manual_review}} =
+               Moto.chat(pid, "Check this request",
+                 hooks: [before_turn: before_turn, on_interrupt: on_interrupt]
+               )
+
+      assert_receive {:runtime_interrupt, :manual_review}
+    after
+      :ok = Moto.stop_agent(pid)
+    end
   end
 
   test "handles ai.tool.started without routing errors in generated runtimes" do
@@ -320,6 +656,42 @@ defmodule MotoTest do
 
         agent do
           system_prompt fn _input -> "This should fail." end
+        end
+      end
+      """)
+    end
+  end
+
+  test "rejects anonymous functions in DSL hooks at compile time" do
+    assert_raise Spark.Error.DslError, ~r/DSL hooks do not support anonymous functions/, fn ->
+      Code.compile_string("""
+      defmodule MotoTest.InvalidHookFnAgent do
+        use Moto.Agent
+
+        agent do
+          system_prompt "This should fail."
+        end
+
+        hooks do
+          before_turn fn _input -> {:ok, %{}} end
+        end
+      end
+      """)
+    end
+  end
+
+  test "rejects invalid hook modules at compile time" do
+    assert_raise Spark.Error.DslError, ~r/not a valid Moto hook/, fn ->
+      Code.compile_string("""
+      defmodule MotoTest.InvalidHookAgent do
+        use Moto.Agent
+
+        agent do
+          system_prompt "This should fail."
+        end
+
+        hooks do
+          before_turn String
         end
       end
       """)
@@ -444,7 +816,12 @@ defmodule MotoTest do
       "model": "fast",
       "system_prompt": "You are a concise assistant.",
       "tools": ["add_numbers"],
-      "plugins": ["math_plugin"]
+      "plugins": ["math_plugin"],
+      "hooks": {
+        "before_turn": ["inject_tenant", "restrict_refunds"],
+        "after_turn": ["normalize_reply"],
+        "on_interrupt": ["notify_ops"]
+      }
     }
     """
 
@@ -452,7 +829,13 @@ defmodule MotoTest do
              Moto.import_agent(
                json,
                available_tools: [AddNumbers],
-               available_plugins: [MathPlugin]
+               available_plugins: [MathPlugin],
+               available_hooks: [
+                 InjectTenantHook,
+                 RestrictRefundsHook,
+                 NormalizeReplyHook,
+                 NotifyOpsHook
+               ]
              )
 
     assert {:ok, encoded} = Moto.encode_agent(agent, format: :json)
@@ -460,8 +843,12 @@ defmodule MotoTest do
     assert encoded =~ "\"model\": \"fast\""
     assert encoded =~ "\"tools\": ["
     assert encoded =~ "\"plugins\": ["
+    assert encoded =~ "\"hooks\""
     assert agent.tool_modules == [AddNumbers, MultiplyNumbers]
     assert agent.plugin_modules == [MathPlugin]
+    assert agent.hook_modules.before_turn == [InjectTenantHook, RestrictRefundsHook]
+    assert agent.hook_modules.after_turn == [NormalizeReplyHook]
+    assert agent.hook_modules.on_interrupt == [NotifyOpsHook]
   end
 
   test "imports a constrained dynamic agent from YAML" do
@@ -476,6 +863,14 @@ defmodule MotoTest do
       - "add_numbers"
     plugins:
       - "math_plugin"
+    hooks:
+      before_turn:
+        - "inject_tenant"
+        - "restrict_refunds"
+      after_turn:
+        - "normalize_reply"
+      on_interrupt:
+        - "notify_ops"
     """
 
     assert {:ok, %DynamicAgent{} = agent} =
@@ -483,7 +878,13 @@ defmodule MotoTest do
                yaml,
                format: :yaml,
                available_tools: [AddNumbers],
-               available_plugins: [MathPlugin]
+               available_plugins: [MathPlugin],
+               available_hooks: [
+                 InjectTenantHook,
+                 RestrictRefundsHook,
+                 NormalizeReplyHook,
+                 NotifyOpsHook
+               ]
              )
 
     assert {:ok, encoded} = Moto.encode_agent(agent, format: :yaml)
@@ -491,7 +892,10 @@ defmodule MotoTest do
     assert encoded =~ "provider: \"openai\""
     assert encoded =~ "- \"add_numbers\""
     assert encoded =~ "- \"math_plugin\""
+    assert encoded =~ "hooks:"
+    assert encoded =~ "- \"notify_ops\""
     assert agent.tool_modules == [AddNumbers, MultiplyNumbers]
+    assert agent.hook_modules.before_turn == [InjectTenantHook, RestrictRefundsHook]
   end
 
   test "imports a constrained dynamic agent from file" do
@@ -501,18 +905,20 @@ defmodule MotoTest do
 
     File.write!(
       path,
-      ~s({"name":"file_agent","model":"fast","system_prompt":"You are concise.","tools":["add_numbers"],"plugins":["math_plugin"]})
+      ~s({"name":"file_agent","model":"fast","system_prompt":"You are concise.","tools":["add_numbers"],"plugins":["math_plugin"],"hooks":{"before_turn":["inject_tenant"],"after_turn":["normalize_reply"],"on_interrupt":["notify_ops"]}})
     )
 
     assert {:ok, %DynamicAgent{} = agent} =
              Moto.import_agent_file(
                path,
                available_tools: [AddNumbers],
-               available_plugins: [MathPlugin]
+               available_plugins: [MathPlugin],
+               available_hooks: [InjectTenantHook, NormalizeReplyHook, NotifyOpsHook]
              )
 
     assert agent.tool_modules == [AddNumbers, MultiplyNumbers]
     assert agent.plugin_modules == [MathPlugin]
+    assert agent.hook_modules.before_turn == [InjectTenantHook]
   end
 
   test "starts an imported dynamic agent under the shared runtime" do
@@ -522,7 +928,11 @@ defmodule MotoTest do
       "model": "fast",
       "system_prompt": "You are a concise assistant.",
       "tools": ["add_numbers"],
-      "plugins": ["math_plugin"]
+      "plugins": ["math_plugin"],
+      "hooks": {
+        "before_turn": ["approval_gate"],
+        "on_interrupt": ["notify_ops"]
+      }
     }
     """
 
@@ -530,7 +940,8 @@ defmodule MotoTest do
              Moto.import_agent(
                json,
                available_tools: [AddNumbers],
-               available_plugins: [MathPlugin]
+               available_plugins: [MathPlugin],
+               available_hooks: [InterruptBeforeHook, NotifyOpsHook]
              )
 
     assert {:ok, pid} = Moto.start_agent(agent, id: "dynamic-agent-test")
@@ -622,6 +1033,60 @@ defmodule MotoTest do
     assert reason =~ "plugins must be unique"
   end
 
+  test "rejects duplicate hook names within a stage in imported dynamic agent specs" do
+    assert {:error, reason} =
+             Moto.import_agent(
+               %{
+                 "name" => "duplicate_hook_agent",
+                 "model" => "fast",
+                 "system_prompt" => "You are concise.",
+                 "hooks" => %{"before_turn" => ["inject_tenant", "inject_tenant"]}
+               },
+               available_hooks: [InjectTenantHook]
+             )
+
+    assert reason =~ "hook names must be unique"
+  end
+
+  test "rejects unknown hook names in imported dynamic agent specs" do
+    assert {:error, reason} =
+             Moto.import_agent(
+               %{
+                 "name" => "bad_hook_agent",
+                 "model" => "fast",
+                 "system_prompt" => "You are concise.",
+                 "hooks" => %{"before_turn" => ["does_not_exist"]}
+               },
+               available_hooks: [InjectTenantHook]
+             )
+
+    assert reason =~ "unknown hook"
+  end
+
+  test "rejects importing hooks without an available registry" do
+    assert {:error, reason} =
+             Moto.import_agent(%{
+               "name" => "missing_hook_registry_agent",
+               "model" => "fast",
+               "system_prompt" => "You are concise.",
+               "hooks" => %{"before_turn" => ["inject_tenant"]}
+             })
+
+    assert reason =~ "available_hooks registry"
+  end
+
+  test "rejects invalid request hook stages" do
+    assert {:error, {:invalid_hook_stage, :bogus}} =
+             Moto.Agent.prepare_chat_opts([hooks: [bogus: InjectTenantHook]], nil)
+  end
+
+  test "rejects invalid request hook refs" do
+    assert {:error, {:invalid_hook, :before_turn, message}} =
+             Moto.Agent.prepare_chat_opts([hooks: [before_turn: String]], nil)
+
+    assert message =~ "not a valid Moto hook"
+  end
+
   test "rejects importing plugins without an available registry" do
     assert {:error, reason} =
              Moto.import_agent(%{
@@ -665,5 +1130,9 @@ defmodule MotoTest do
       request_transformer: request_transformer,
       streaming: false
     )
+  end
+
+  defp new_runtime_agent(module) do
+    module.new(id: "agent-#{System.unique_integer([:positive])}")
   end
 end

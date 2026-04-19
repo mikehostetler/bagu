@@ -26,6 +26,7 @@ defmodule Moto.Agent do
   - `system_prompt` as a string, module callback, or MFA tuple
   - `tools`
   - `plugins`
+  - `hooks`
 
   A nested runtime module is generated automatically and uses `Jido.AI.Agent`
   with the configured tool modules. The `tools` block currently supports
@@ -60,13 +61,51 @@ defmodule Moto.Agent do
   end
 
   @doc false
-  def prepare_chat_opts(opts, nil) when is_list(opts), do: {:ok, opts}
+  def resolve_hooks!(owner_module, hooks) do
+    case Moto.Hooks.normalize_dsl_hooks(hooks) do
+      {:ok, normalized} ->
+        normalized
+
+      {:error, message} ->
+        raise Spark.Error.DslError,
+          message: message,
+          path: [:hooks],
+          module: owner_module
+    end
+  end
+
+  @doc false
+  def prepare_chat_opts(opts, nil) when is_list(opts) do
+    Moto.Hooks.prepare_request_opts(opts)
+  end
 
   def prepare_chat_opts(opts, %{domain: domain, require_actor?: true}) when is_list(opts) do
-    with {:ok, tool_context} <- normalize_tool_context(Keyword.get(opts, :tool_context, %{})),
+    with {:ok, opts} <- Moto.Hooks.prepare_request_opts(opts),
+         {:ok, tool_context} <- normalize_tool_context(Keyword.get(opts, :tool_context, %{})),
          :ok <- ensure_actor(tool_context),
          {:ok, tool_context} <- ensure_domain(tool_context, domain) do
       {:ok, Keyword.put(opts, :tool_context, tool_context)}
+    end
+  end
+
+  @doc false
+  def hook_runtime_ast(default_hooks) do
+    quote location: :keep do
+      @moto_hook_defaults unquote(Macro.escape(default_hooks))
+
+      @impl true
+      def on_before_cmd(agent, action) do
+        with {:ok, agent, action} <- super(agent, action) do
+          Moto.Hooks.on_before_cmd(__MODULE__, agent, action, @moto_hook_defaults)
+        end
+      end
+
+      @impl true
+      def on_after_cmd(agent, action, directives) do
+        with {:ok, agent, directives} <- super(agent, action, directives) do
+          Moto.Hooks.on_after_cmd(__MODULE__, agent, action, directives, @moto_hook_defaults)
+        end
+      end
     end
   end
 
@@ -134,6 +173,15 @@ defmodule Moto.Agent do
       env.module
       |> Spark.Dsl.Extension.get_entities([:plugins])
 
+    hook_entities =
+      env.module
+      |> Spark.Dsl.Extension.get_entities([:hooks])
+      |> Enum.filter(
+        &(match?(%Moto.Agent.Dsl.BeforeTurnHook{}, &1) or
+            match?(%Moto.Agent.Dsl.AfterTurnHook{}, &1) or
+            match?(%Moto.Agent.Dsl.InterruptHook{}, &1))
+      )
+
     direct_tool_modules =
       tool_entities
       |> Enum.filter(&match?(%Moto.Agent.Dsl.Tool{}, &1))
@@ -148,6 +196,21 @@ defmodule Moto.Agent do
       plugin_entities
       |> Enum.filter(&match?(%Moto.Agent.Dsl.Plugin{}, &1))
       |> Enum.map(& &1.module)
+
+    configured_hooks =
+      hook_entities
+      |> Enum.reduce(Moto.Hooks.default_stage_map(), fn
+        %Moto.Agent.Dsl.BeforeTurnHook{hook: hook}, acc ->
+          Map.update!(acc, :before_turn, &(&1 ++ [hook]))
+
+        %Moto.Agent.Dsl.AfterTurnHook{hook: hook}, acc ->
+          Map.update!(acc, :after_turn, &(&1 ++ [hook]))
+
+        %Moto.Agent.Dsl.InterruptHook{hook: hook}, acc ->
+          Map.update!(acc, :on_interrupt, &(&1 ++ [hook]))
+      end)
+
+    configured_hooks = __MODULE__.resolve_hooks!(env.module, configured_hooks)
 
     direct_tool_names =
       case Moto.Tool.tool_names(direct_tool_modules) do
@@ -300,6 +363,8 @@ defmodule Moto.Agent do
           tools: unquote(Macro.escape(tool_modules)),
           plugins: unquote(Macro.escape(runtime_plugins)),
           request_transformer: unquote(runtime_request_transformer)
+
+        unquote(__MODULE__.hook_runtime_ast(configured_hooks))
       end
 
       @doc """
@@ -317,7 +382,8 @@ defmodule Moto.Agent do
       def chat(pid, message, opts \\ []) when is_pid(pid) and is_binary(message) do
         with {:ok, prepared_opts} <-
                Moto.Agent.prepare_chat_opts(opts, unquote(Macro.escape(ash_tool_config))) do
-          unquote(runtime_module).ask_sync(pid, message, prepared_opts)
+          Moto.chat_request(pid, message, prepared_opts)
+          |> Moto.Hooks.translate_chat_result()
         end
       end
 
@@ -380,6 +446,30 @@ defmodule Moto.Agent do
       """
       @spec plugin_names() :: [String.t()]
       def plugin_names, do: unquote(Macro.escape(plugin_names))
+
+      @doc """
+      Returns the configured hooks by stage.
+      """
+      @spec hooks() :: Moto.Hooks.stage_map()
+      def hooks, do: unquote(Macro.escape(configured_hooks))
+
+      @doc """
+      Returns the configured `before_turn` hooks.
+      """
+      @spec before_turn_hooks() :: [term()]
+      def before_turn_hooks, do: unquote(Macro.escape(configured_hooks.before_turn))
+
+      @doc """
+      Returns the configured `after_turn` hooks.
+      """
+      @spec after_turn_hooks() :: [term()]
+      def after_turn_hooks, do: unquote(Macro.escape(configured_hooks.after_turn))
+
+      @doc """
+      Returns the configured `on_interrupt` hooks.
+      """
+      @spec interrupt_hooks() :: [term()]
+      def interrupt_hooks, do: unquote(Macro.escape(configured_hooks.on_interrupt))
 
       @doc """
       Returns any Ash resources registered through `ash_resource`.

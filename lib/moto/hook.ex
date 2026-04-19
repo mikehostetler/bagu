@@ -1,0 +1,198 @@
+defmodule Moto.Hook do
+  @moduledoc """
+  Thin wrapper for reusable Moto turn hooks.
+
+  Moto hooks are published by name and expose a single `call/1` callback.
+  They can be referenced from the Moto DSL, imported JSON/YAML specs, or
+  request-scoped `chat/3` overrides.
+  """
+
+  @required_functions [
+    {:name, 0},
+    {:call, 1}
+  ]
+
+  @type name :: String.t()
+  @type registry :: %{required(name()) => module()}
+
+  @callback name() :: name()
+  @callback call(term()) :: term()
+
+  defmacro __using__(opts \\ []) do
+    module_name =
+      __CALLER__.module
+      |> Module.split()
+      |> List.last()
+      |> Macro.underscore()
+
+    defaults = [
+      name: module_name
+    ]
+
+    quote location: :keep do
+      @behaviour Moto.Hook
+
+      @hook_name unquote(Keyword.get(Keyword.merge(defaults, opts), :name))
+
+      @spec name() :: String.t()
+      def name, do: @hook_name
+
+      @after_compile Moto.Hook
+    end
+  end
+
+  @doc false
+  def __after_compile__(env, _bytecode) do
+    case validate_hook_module(env.module) do
+      :ok ->
+        :ok
+
+      {:error, message} ->
+        raise CompileError,
+          file: env.file,
+          line: env.line,
+          description: message
+    end
+  end
+
+  @spec validate_hook_module(module()) :: :ok | {:error, String.t()}
+  def validate_hook_module(module) when is_atom(module) do
+    cond do
+      match?({:error, _}, Code.ensure_compiled(module)) ->
+        {:error, "hook #{inspect(module)} could not be loaded"}
+
+      missing = missing_functions(module) ->
+        {:error,
+         "hook #{inspect(module)} is not a valid Moto hook; missing #{Enum.join(missing, ", ")}"}
+
+      true ->
+        hook_name(module)
+        |> case do
+          {:ok, _name} -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+    end
+  end
+
+  def validate_hook_module(other),
+    do: {:error, "hook entries must be modules, got: #{inspect(other)}"}
+
+  @spec hook_name(module()) :: {:ok, name()} | {:error, String.t()}
+  def hook_name(module) when is_atom(module) do
+    with :ok <- ensure_compiled_hook(module),
+         name when is_binary(name) <- module.name(),
+         trimmed <- String.trim(name),
+         true <- trimmed != "" do
+      {:ok, trimmed}
+    else
+      {:error, reason} ->
+        {:error, reason}
+
+      _ ->
+        {:error, "hook #{inspect(module)} must publish a non-empty string name"}
+    end
+  end
+
+  def hook_name(other),
+    do: {:error, "hook entries must be modules, got: #{inspect(other)}"}
+
+  @spec hook_names([module()]) :: {:ok, [name()]} | {:error, String.t()}
+  def hook_names(modules) when is_list(modules) do
+    modules
+    |> Enum.reduce_while({:ok, []}, fn module, {:ok, acc} ->
+      case hook_name(module) do
+        {:ok, name} -> {:cont, {:ok, acc ++ [name]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+    |> case do
+      {:ok, names} -> {:ok, names}
+      other -> other
+    end
+  end
+
+  @spec normalize_available_hooks([module()] | %{required(name()) => module()}) ::
+          {:ok, registry()} | {:error, String.t()}
+  def normalize_available_hooks(modules) when is_list(modules) do
+    modules
+    |> Enum.reduce_while({:ok, %{}}, fn module, {:ok, acc} ->
+      with {:ok, name} <- hook_name(module),
+           :ok <- ensure_unique_registry_name(name, acc) do
+        {:cont, {:ok, Map.put(acc, name, module)}}
+      else
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  def normalize_available_hooks(registry) when is_map(registry) do
+    registry
+    |> Enum.reduce_while({:ok, %{}}, fn {name, module}, {:ok, acc} ->
+      with true <- is_binary(name) or {:error, "hook registry keys must be strings"},
+           trimmed <- String.trim(name),
+           true <- trimmed != "" or {:error, "hook registry keys must not be empty"},
+           {:ok, published_name} <- hook_name(module),
+           true <-
+             trimmed == published_name or
+               {:error,
+                "hook registry key #{inspect(trimmed)} must match published hook name #{inspect(published_name)}"},
+           :ok <- ensure_unique_registry_name(trimmed, acc) do
+        {:cont, {:ok, Map.put(acc, trimmed, module)}}
+      else
+        {:error, reason} -> {:halt, {:error, reason}}
+        false -> {:halt, {:error, "hook registry keys must be non-empty strings"}}
+      end
+    end)
+  end
+
+  def normalize_available_hooks(other),
+    do:
+      {:error,
+       "available_hooks must be a list of Moto hook modules or a map of name => module, got: #{inspect(other)}"}
+
+  @spec resolve_hook_names([name()], registry()) :: {:ok, [module()]} | {:error, String.t()}
+  def resolve_hook_names(names, registry) when is_list(names) and is_map(registry) do
+    names
+    |> Enum.reduce_while({:ok, []}, fn name, {:ok, acc} ->
+      case Map.fetch(registry, name) do
+        {:ok, module} -> {:cont, {:ok, acc ++ [module]}}
+        :error -> {:halt, {:error, "unknown hook #{inspect(name)}"}}
+      end
+    end)
+  end
+
+  def resolve_hook_names(_names, _registry),
+    do: {:error, "hook names must be a list and registry must be a map"}
+
+  defp ensure_compiled_hook(module) do
+    cond do
+      match?({:error, _}, Code.ensure_compiled(module)) ->
+        {:error, "hook #{inspect(module)} could not be loaded"}
+
+      missing = missing_functions(module) ->
+        {:error,
+         "hook #{inspect(module)} is not a valid Moto hook; missing #{Enum.join(missing, ", ")}"}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp missing_functions(module) do
+    @required_functions
+    |> Enum.reject(fn {name, arity} -> function_exported?(module, name, arity) end)
+    |> Enum.map(fn {name, arity} -> "#{name}/#{arity}" end)
+    |> case do
+      [] -> nil
+      missing -> missing
+    end
+  end
+
+  defp ensure_unique_registry_name(name, acc) do
+    if Map.has_key?(acc, name) do
+      {:error, "hook names must be unique within a Moto hook registry"}
+    else
+      :ok
+    end
+  end
+end
