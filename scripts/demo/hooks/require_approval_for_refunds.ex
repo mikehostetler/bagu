@@ -4,12 +4,16 @@ defmodule Moto.Scripts.Demo.Hooks.RequireApprovalForRefunds do
   @impl true
   def call(%Moto.Hooks.AfterTurn{} = input) do
     if refund_request?(input.message) do
+      tenant = Map.get(input.context, :tenant, Map.get(input.context, "tenant"))
+      notify_pid = Map.get(input.context, :notify_pid, Map.get(input.context, "notify_pid"))
+
       {:interrupt,
        %{
          kind: :approval,
          message: "Refund requests require approval in the demo.",
          data: %{
-           notify_pid: Map.get(input.tool_context, :notify_pid),
+           notify_pid: notify_pid,
+           tenant: tenant,
            reason: :refund_request
          }
        }}

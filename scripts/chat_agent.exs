@@ -23,6 +23,7 @@ defmodule Moto.Scripts.ChatAgentCLI do
     IO.puts("Moto demo agent")
     IO.puts("Configured model: #{inspect(ChatAgent.configured_model())}")
     IO.puts("Resolved model: #{inspect(resolved_model)}")
+    IO.puts("Default context: #{inspect(ChatAgent.context())}")
     IO.puts("Plugins: #{Enum.join(ChatAgent.plugin_names(), ", ")}")
     IO.puts("Tools: #{Enum.join(ChatAgent.tool_names(), ", ")}")
     IO.puts("Before-turn hooks: #{Enum.map_join(ChatAgent.before_turn_hooks(), ", ", &inspect/1)}")
@@ -74,7 +75,7 @@ defmodule Moto.Scripts.ChatAgentCLI do
   end
 
   defp one_shot(pid, prompt) do
-    opts = [tool_context: %{notify_pid: self()}]
+    opts = [context: %{notify_pid: self(), session: "cli"}]
 
     case ChatAgent.chat(pid, prompt, opts) do
       {:ok, reply} ->
@@ -115,7 +116,7 @@ defmodule Moto.Scripts.ChatAgentCLI do
             :ok
 
           true ->
-            case ChatAgent.chat(pid, prompt, tool_context: %{notify_pid: self()}) do
+            case ChatAgent.chat(pid, prompt, context: %{notify_pid: self(), session: "interactive"}) do
               {:ok, reply} ->
                 flush_interrupt_messages()
                 IO.puts("")
@@ -143,7 +144,9 @@ defmodule Moto.Scripts.ChatAgentCLI do
   defp flush_interrupt_messages do
     receive do
       {:demo_interrupt, interrupt} ->
-        IO.puts("hook> on_interrupt received #{interrupt.kind}: #{interrupt.message}")
+        tenant = get_in(interrupt.data, [:tenant])
+        tenant_suffix = if tenant, do: " tenant=#{tenant}", else: ""
+        IO.puts("hook> on_interrupt received #{interrupt.kind}#{tenant_suffix}: #{interrupt.message}")
         flush_interrupt_messages()
     after
       0 -> :ok

@@ -73,6 +73,7 @@ defmodule Moto.Scripts.ImportedChatAgentCLI do
     IO.puts("Imported agent: #{spec.name}")
     IO.puts("Configured model: #{inspect(spec.model)}")
     IO.puts("Resolved model: #{inspect(Moto.model(spec.model))}")
+    IO.puts("Default context: #{inspect(spec.context)}")
     IO.puts("Imported tools: #{Enum.join(spec.tools, ", ")}")
     IO.puts("Imported hooks: #{format_imported_hooks(spec.hooks)}")
     IO.puts("Tool modules: #{Enum.map_join(tool_modules, ", ", &inspect/1)}")
@@ -114,7 +115,7 @@ defmodule Moto.Scripts.ImportedChatAgentCLI do
   end
 
   defp one_shot(pid, prompt) do
-    case Moto.chat(pid, prompt) do
+    case Moto.chat(pid, prompt, context: %{"session" => "imported-cli"}) do
       {:ok, reply} ->
         IO.puts(reply)
 
@@ -147,7 +148,7 @@ defmodule Moto.Scripts.ImportedChatAgentCLI do
             :ok
 
           true ->
-            case Moto.chat(pid, prompt) do
+            case Moto.chat(pid, prompt, context: %{"session" => "imported-interactive"}) do
               {:ok, reply} ->
                 IO.puts("")
                 IO.puts("claude> #{reply}")

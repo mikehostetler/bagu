@@ -15,6 +15,20 @@ defmodule MotoTest do
     end
   end
 
+  defmodule ContextAgent do
+    use Moto.Agent
+
+    agent do
+      model(:fast)
+      system_prompt("You are a context-aware assistant.")
+    end
+
+    context do
+      put(:tenant, "demo")
+      put(:channel, "test")
+    end
+  end
+
   defmodule StringModelAgent do
     use Moto.Agent
 
@@ -141,7 +155,7 @@ defmodule MotoTest do
       {:ok,
        %{
          message: "#{input.message} for acme",
-         tool_context: %{tenant: "acme"},
+         context: %{tenant: "acme"},
          allowed_tools: ["add_numbers"],
          llm_opts: [temperature: 0.1],
          metadata: %{sequence: sequence ++ ["inject_tenant"], touched?: true}
@@ -177,8 +191,7 @@ defmodule MotoTest do
 
     @impl true
     def call(%Moto.Hooks.BeforeTurn{} = input) do
-      notify_pid =
-        Map.get(input.tool_context, :notify_pid, Map.get(input.tool_context, "notify_pid"))
+      notify_pid = Map.get(input.context, :notify_pid, Map.get(input.context, "notify_pid"))
 
       {:interrupt,
        %{
@@ -194,8 +207,7 @@ defmodule MotoTest do
 
     @impl true
     def call(%Moto.Hooks.AfterTurn{} = input) do
-      notify_pid =
-        Map.get(input.tool_context, :notify_pid, Map.get(input.tool_context, "notify_pid"))
+      notify_pid = Map.get(input.context, :notify_pid, Map.get(input.context, "notify_pid"))
 
       {:interrupt,
        %{
@@ -291,6 +303,10 @@ defmodule MotoTest do
   test "exposes the configured system prompt" do
     assert ChatAgent.system_prompt() == "You are a concise assistant."
     assert ChatAgent.request_transformer() == nil
+  end
+
+  test "exposes the configured default context" do
+    assert ContextAgent.context() == %{tenant: "demo", channel: "test"}
   end
 
   test "supports module-based dynamic system prompts" do
@@ -429,6 +445,7 @@ defmodule MotoTest do
     assert {:ok, opts} =
              Moto.Agent.prepare_chat_opts(
                [
+                 context: %{tenant: "runtime"},
                  hooks: [
                    before_turn: [
                      InjectTenantHook,
@@ -450,6 +467,41 @@ defmodule MotoTest do
              ]
            } =
              tool_context[:__moto_hooks__]
+  end
+
+  test "accepts context keyword lists and normalizes them to internal tool_context" do
+    assert {:ok, opts} =
+             Moto.Agent.prepare_chat_opts([context: [tenant: "acme", locale: "en-US"]], nil)
+
+    assert Keyword.get(opts, :tool_context) == %{tenant: "acme", locale: "en-US"}
+  end
+
+  test "merges default agent context with per-turn context" do
+    assert {:ok, opts} =
+             Moto.Agent.prepare_chat_opts(
+               [context: %{session: "runtime"}],
+               %{context: ContextAgent.context()}
+             )
+
+    assert Keyword.get(opts, :tool_context) == %{
+             tenant: "demo",
+             channel: "test",
+             session: "runtime"
+           }
+  end
+
+  test "merges default agent context into runtime requests" do
+    runtime = ContextAgent.runtime_module()
+    agent = new_runtime_agent(runtime)
+
+    assert {:ok, _agent, {:ai_react_start, params}} =
+             runtime.on_before_cmd(
+               agent,
+               {:ai_react_start, %{query: "hello", request_id: "req-context-1"}}
+             )
+
+    assert params.tool_context == %{tenant: "demo", channel: "test"}
+    assert params.runtime_context == %{tenant: "demo", channel: "test"}
   end
 
   test "runs before_turn hooks in declaration order and rewrites request params" do
@@ -548,9 +600,7 @@ defmodule MotoTest do
 
     try do
       assert {:interrupt, %Moto.Interrupt{kind: :approval, message: "Approval required"}} =
-               InterruptingAgent.chat(pid, "Refund this order",
-                 tool_context: %{notify_pid: self()}
-               )
+               InterruptingAgent.chat(pid, "Refund this order", context: [notify_pid: self()])
 
       assert_receive {:hook_interrupt, :approval, :before_turn}
     after
@@ -579,6 +629,7 @@ defmodule MotoTest do
     try do
       assert {:interrupt, %Moto.Interrupt{kind: :manual_review}} =
                Moto.chat(pid, "Check this request",
+                 context: [notify_pid: self()],
                  hooks: [before_turn: before_turn, on_interrupt: on_interrupt]
                )
 
@@ -780,33 +831,52 @@ defmodule MotoTest do
     end
   end
 
-  test "requires actor in tool_context for ash_resource agents" do
+  test "requires actor in context for ash_resource agents" do
     assert {:ok, pid} = AshResourceAgent.start_link(id: "ash-resource-agent-test")
 
     try do
-      assert {:error, {:missing_tool_context, :actor}} =
+      assert {:error, {:missing_context, :actor}} =
                AshResourceAgent.chat(pid, "List users.")
     after
       :ok = Moto.stop_agent(pid)
     end
   end
 
-  test "injects ash domain into tool_context for ash_resource agents" do
+  test "injects ash domain into internal tool_context for ash_resource agents" do
     assert {:ok, opts} =
              Moto.Agent.prepare_chat_opts(
-               [tool_context: %{actor: %{id: "user-1"}}],
+               [context: %{actor: %{id: "user-1"}}],
                %{domain: Accounts, require_actor?: true}
              )
 
     assert Keyword.get(opts, :tool_context) == %{actor: %{id: "user-1"}, domain: Accounts}
   end
 
-  test "rejects mismatched tool_context domain for ash_resource agents" do
-    assert {:error, {:invalid_tool_context, {:domain_mismatch, Accounts, :other_domain}}} =
+  test "rejects mismatched context domain for ash_resource agents" do
+    assert {:error, {:invalid_context, {:domain_mismatch, Accounts, :other_domain}}} =
              Moto.Agent.prepare_chat_opts(
-               [tool_context: %{actor: %{id: "user-1"}, domain: :other_domain}],
+               [context: %{actor: %{id: "user-1"}, domain: :other_domain}],
                %{domain: Accounts, require_actor?: true}
              )
+  end
+
+  test "rejects public tool_context in favor of context" do
+    assert {:error, {:invalid_option, :tool_context, :use_context}} =
+             Moto.Agent.prepare_chat_opts([tool_context: %{actor: %{id: "user-1"}}], nil)
+  end
+
+  test "rejects public tool_context in chat helpers" do
+    assert {:ok, pid} = ChatAgent.start_link(id: "invalid-tool-context-chat-test")
+
+    try do
+      assert {:error, {:invalid_option, :tool_context, :use_context}} =
+               ChatAgent.chat(pid, "Hello", tool_context: %{tenant: "acme"})
+
+      assert {:error, {:invalid_option, :tool_context, :use_context}} =
+               Moto.chat(pid, "Hello", tool_context: %{tenant: "acme"})
+    after
+      :ok = Moto.stop_agent(pid)
+    end
   end
 
   test "imports a constrained dynamic agent from JSON" do
@@ -815,6 +885,7 @@ defmodule MotoTest do
       "name": "json_agent",
       "model": "fast",
       "system_prompt": "You are a concise assistant.",
+      "context": {"tenant": "json", "channel": "imported"},
       "tools": ["add_numbers"],
       "plugins": ["math_plugin"],
       "hooks": {
@@ -841,9 +912,11 @@ defmodule MotoTest do
     assert {:ok, encoded} = Moto.encode_agent(agent, format: :json)
     assert encoded =~ "\"name\": \"json_agent\""
     assert encoded =~ "\"model\": \"fast\""
+    assert encoded =~ "\"context\": {"
     assert encoded =~ "\"tools\": ["
     assert encoded =~ "\"plugins\": ["
     assert encoded =~ "\"hooks\""
+    assert agent.spec.context == %{"tenant" => "json", "channel" => "imported"}
     assert agent.tool_modules == [AddNumbers, MultiplyNumbers]
     assert agent.plugin_modules == [MathPlugin]
     assert agent.hook_modules.before_turn == [InjectTenantHook, RestrictRefundsHook]
@@ -859,6 +932,9 @@ defmodule MotoTest do
       id: "gpt-4.1"
     system_prompt: |-
       You are a concise assistant.
+    context:
+      tenant: "yaml"
+      channel: "imported"
     tools:
       - "add_numbers"
     plugins:
@@ -890,11 +966,14 @@ defmodule MotoTest do
     assert {:ok, encoded} = Moto.encode_agent(agent, format: :yaml)
     assert encoded =~ "name: \"yaml_agent\""
     assert encoded =~ "provider: \"openai\""
+    assert encoded =~ "context:"
+    assert encoded =~ "tenant: \"yaml\""
     assert encoded =~ "- \"add_numbers\""
     assert encoded =~ "- \"math_plugin\""
     assert encoded =~ "hooks:"
     assert encoded =~ "- \"notify_ops\""
     assert agent.tool_modules == [AddNumbers, MultiplyNumbers]
+    assert agent.spec.context == %{"tenant" => "yaml", "channel" => "imported"}
     assert agent.hook_modules.before_turn == [InjectTenantHook, RestrictRefundsHook]
   end
 
@@ -905,7 +984,7 @@ defmodule MotoTest do
 
     File.write!(
       path,
-      ~s({"name":"file_agent","model":"fast","system_prompt":"You are concise.","tools":["add_numbers"],"plugins":["math_plugin"],"hooks":{"before_turn":["inject_tenant"],"after_turn":["normalize_reply"],"on_interrupt":["notify_ops"]}})
+      ~s({"name":"file_agent","model":"fast","system_prompt":"You are concise.","context":{"tenant":"file","channel":"imported"},"tools":["add_numbers"],"plugins":["math_plugin"],"hooks":{"before_turn":["inject_tenant"],"after_turn":["normalize_reply"],"on_interrupt":["notify_ops"]}})
     )
 
     assert {:ok, %DynamicAgent{} = agent} =
@@ -918,6 +997,7 @@ defmodule MotoTest do
 
     assert agent.tool_modules == [AddNumbers, MultiplyNumbers]
     assert agent.plugin_modules == [MathPlugin]
+    assert agent.spec.context == %{"tenant" => "file", "channel" => "imported"}
     assert agent.hook_modules.before_turn == [InjectTenantHook]
   end
 
@@ -948,6 +1028,42 @@ defmodule MotoTest do
     assert is_pid(pid)
     assert Moto.whereis("dynamic-agent-test") == pid
     assert :ok = Moto.stop_agent(pid)
+  end
+
+  test "merges imported default context into runtime requests" do
+    assert {:ok, %DynamicAgent{} = agent} =
+             Moto.import_agent(%{
+               "name" => "runtime_context_agent",
+               "model" => "fast",
+               "system_prompt" => "You are concise.",
+               "context" => %{"tenant" => "imported", "channel" => "json"}
+             })
+
+    runtime = agent.runtime_module
+    runtime_agent = new_runtime_agent(runtime)
+
+    assert {:ok, _agent, {:ai_react_start, params}} =
+             runtime.on_before_cmd(
+               runtime_agent,
+               {:ai_react_start,
+                %{
+                  query: "hello",
+                  request_id: "req-imported-context",
+                  tool_context: %{session: "runtime"}
+                }}
+             )
+
+    assert params.tool_context == %{
+             "tenant" => "imported",
+             "channel" => "json",
+             session: "runtime"
+           }
+
+    assert params.runtime_context == %{
+             "tenant" => "imported",
+             "channel" => "json",
+             session: "runtime"
+           }
   end
 
   test "rejects unexpected keys in imported dynamic agent specs" do

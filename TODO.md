@@ -31,16 +31,16 @@ The bias here is:
   Keep this first pass narrow: plugins can contribute action-backed tools to
   the agent runtime without exposing broader plugin lifecycle/config hooks yet.
 
+- [x] `context`
+  Add explicit runtime-only context, separate from model-visible conversation
+  history.
+  This should become the Moto name for request-scoped runtime data.
+
 - [ ] `output`
   Add a first-class output concept.
   Start with:
   - `:text`
   - schema/module-backed structured output
-
-- [ ] `context`
-  Add explicit runtime-only context, separate from model-visible conversation
-  history.
-  This should become the Moto name for request-scoped runtime data.
 
 ## Soon After
 

@@ -24,6 +24,7 @@ defmodule Moto.Agent do
   - `name`
   - `model`
   - `system_prompt` as a string, module callback, or MFA tuple
+  - `context`
   - `tools`
   - `plugins`
   - `hooks`
@@ -75,28 +76,61 @@ defmodule Moto.Agent do
   end
 
   @doc false
-  def prepare_chat_opts(opts, nil) when is_list(opts) do
-    Moto.Hooks.prepare_request_opts(opts)
-  end
+  def resolve_context!(owner_module, entries) when is_list(entries) do
+    context =
+      Enum.reduce(entries, %{}, fn %Moto.Agent.Dsl.ContextEntry{key: key, value: value}, acc ->
+        Map.put(acc, key, value)
+      end)
 
-  def prepare_chat_opts(opts, %{domain: domain, require_actor?: true}) when is_list(opts) do
-    with {:ok, opts} <- Moto.Hooks.prepare_request_opts(opts),
-         {:ok, tool_context} <- normalize_tool_context(Keyword.get(opts, :tool_context, %{})),
-         :ok <- ensure_actor(tool_context),
-         {:ok, tool_context} <- ensure_domain(tool_context, domain) do
-      {:ok, Keyword.put(opts, :tool_context, tool_context)}
+    case Moto.Context.validate_default(context) do
+      :ok ->
+        context
+
+      {:error, message} ->
+        raise Spark.Error.DslError,
+          message: message,
+          path: [:context],
+          module: owner_module
     end
   end
 
   @doc false
-  def hook_runtime_ast(default_hooks) do
+  def prepare_chat_opts(opts, nil) when is_list(opts) do
+    with :ok <- reject_tool_context(opts),
+         {:ok, opts} <- Moto.Hooks.prepare_request_opts(opts),
+         {:ok, context} <- merge_default_context(opts, %{}) do
+      {:ok, Keyword.put(opts, :tool_context, context)}
+    end
+  end
+
+  def prepare_chat_opts(opts, config) when is_list(opts) do
+    default_context = default_context(config)
+    ash_tool_config = ash_tool_config(config)
+
+    with :ok <- reject_tool_context(opts),
+         {:ok, opts} <- Moto.Hooks.prepare_request_opts(opts),
+         {:ok, context} <- merge_default_context(opts, default_context),
+         {:ok, context} <- maybe_prepare_ash_context(context, ash_tool_config) do
+      {:ok, Keyword.put(opts, :tool_context, context)}
+    end
+  end
+
+  @doc false
+  def hook_runtime_ast(default_hooks, default_context \\ %{}) do
     quote location: :keep do
       @moto_hook_defaults unquote(Macro.escape(default_hooks))
+      @moto_context_defaults unquote(Macro.escape(default_context))
 
       @impl true
       def on_before_cmd(agent, action) do
         with {:ok, agent, action} <- super(agent, action) do
-          Moto.Hooks.on_before_cmd(__MODULE__, agent, action, @moto_hook_defaults)
+          Moto.Hooks.on_before_cmd(
+            __MODULE__,
+            agent,
+            action,
+            @moto_hook_defaults,
+            @moto_context_defaults
+          )
         end
       end
 
@@ -109,31 +143,55 @@ defmodule Moto.Agent do
     end
   end
 
-  defp normalize_tool_context(tool_context) when is_map(tool_context), do: {:ok, tool_context}
+  defp reject_tool_context(opts) do
+    if Keyword.has_key?(opts, :tool_context) do
+      {:error, {:invalid_option, :tool_context, :use_context}}
+    else
+      :ok
+    end
+  end
 
-  defp normalize_tool_context(tool_context) when is_list(tool_context),
-    do: {:ok, Map.new(tool_context)}
+  defp normalize_context(context), do: Moto.Context.normalize(context)
 
-  defp normalize_tool_context(_tool_context),
-    do: {:error, {:invalid_tool_context, :expected_map}}
+  defp merge_default_context(opts, default_context) do
+    with {:ok, runtime_context} <- normalize_context(Keyword.get(opts, :tool_context, %{})) do
+      {:ok, Moto.Context.merge(default_context, runtime_context)}
+    end
+  end
 
-  defp ensure_actor(tool_context) do
-    case Map.get(tool_context, :actor, Map.get(tool_context, "actor")) do
-      nil -> {:error, {:missing_tool_context, :actor}}
+  defp maybe_prepare_ash_context(context, nil), do: {:ok, context}
+
+  defp maybe_prepare_ash_context(context, %{domain: domain, require_actor?: true}) do
+    with :ok <- ensure_actor(context),
+         {:ok, context} <- ensure_domain(context, domain) do
+      {:ok, context}
+    end
+  end
+
+  defp default_context(%{context: context}) when is_map(context), do: context
+  defp default_context(_config), do: %{}
+
+  defp ash_tool_config(%{ash: ash}) when is_map(ash), do: ash
+  defp ash_tool_config(%{domain: _domain, require_actor?: _require_actor?} = ash), do: ash
+  defp ash_tool_config(_config), do: nil
+
+  defp ensure_actor(context) do
+    case Map.get(context, :actor, Map.get(context, "actor")) do
+      nil -> {:error, {:missing_context, :actor}}
       _actor -> :ok
     end
   end
 
-  defp ensure_domain(tool_context, domain) do
-    case Map.get(tool_context, :domain, Map.get(tool_context, "domain")) do
+  defp ensure_domain(context, domain) do
+    case Map.get(context, :domain, Map.get(context, "domain")) do
       nil ->
-        {:ok, Map.put(tool_context, :domain, domain)}
+        {:ok, Map.put(context, :domain, domain)}
 
       ^domain ->
-        {:ok, Map.put(tool_context, :domain, domain)}
+        {:ok, Map.put(context, :domain, domain)}
 
       other ->
-        {:error, {:invalid_tool_context, {:domain_mismatch, domain, other}}}
+        {:error, {:invalid_context, {:domain_mismatch, domain, other}}}
     end
   end
 
@@ -173,6 +231,11 @@ defmodule Moto.Agent do
       env.module
       |> Spark.Dsl.Extension.get_entities([:plugins])
 
+    context_entities =
+      env.module
+      |> Spark.Dsl.Extension.get_entities([:context])
+      |> Enum.filter(&match?(%Moto.Agent.Dsl.ContextEntry{}, &1))
+
     hook_entities =
       env.module
       |> Spark.Dsl.Extension.get_entities([:hooks])
@@ -211,6 +274,7 @@ defmodule Moto.Agent do
       end)
 
     configured_hooks = __MODULE__.resolve_hooks!(env.module, configured_hooks)
+    configured_context = __MODULE__.resolve_context!(env.module, context_entities)
 
     direct_tool_names =
       case Moto.Tool.tool_names(direct_tool_modules) do
@@ -364,7 +428,7 @@ defmodule Moto.Agent do
           plugins: unquote(Macro.escape(runtime_plugins)),
           request_transformer: unquote(runtime_request_transformer)
 
-        unquote(__MODULE__.hook_runtime_ast(configured_hooks))
+        unquote(__MODULE__.hook_runtime_ast(configured_hooks, configured_context))
       end
 
       @doc """
@@ -381,7 +445,13 @@ defmodule Moto.Agent do
       @spec chat(pid(), String.t(), keyword()) :: {:ok, term()} | {:error, term()}
       def chat(pid, message, opts \\ []) when is_pid(pid) and is_binary(message) do
         with {:ok, prepared_opts} <-
-               Moto.Agent.prepare_chat_opts(opts, unquote(Macro.escape(ash_tool_config))) do
+               Moto.Agent.prepare_chat_opts(
+                 opts,
+                 %{
+                   context: unquote(Macro.escape(configured_context)),
+                   ash: unquote(Macro.escape(ash_tool_config))
+                 }
+               ) do
           Moto.chat_request(pid, message, prepared_opts)
           |> Moto.Hooks.translate_chat_result()
         end
@@ -422,6 +492,12 @@ defmodule Moto.Agent do
       """
       @spec model() :: term()
       def model, do: unquote(Macro.escape(resolved_model))
+
+      @doc """
+      Returns the configured default runtime context for this agent.
+      """
+      @spec context() :: map()
+      def context, do: unquote(Macro.escape(configured_context))
 
       @doc """
       Returns the configured tool modules.
@@ -484,7 +560,7 @@ defmodule Moto.Agent do
       def ash_domain, do: unquote(Macro.escape(ash_resource_info.domain))
 
       @doc """
-      Returns whether this agent requires an explicit `tool_context.actor`.
+      Returns whether this agent requires an explicit `context.actor`.
       """
       @spec requires_actor?() :: boolean()
       def requires_actor?, do: unquote(ash_resource_info.require_actor?)

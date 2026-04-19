@@ -17,7 +17,7 @@ defmodule Moto.Hooks do
       :server,
       :request_id,
       :message,
-      :tool_context,
+      :context,
       :allowed_tools,
       :llm_opts,
       :metadata,
@@ -28,7 +28,7 @@ defmodule Moto.Hooks do
       :server,
       :request_id,
       :message,
-      :tool_context,
+      :context,
       :allowed_tools,
       :llm_opts,
       :metadata,
@@ -43,7 +43,7 @@ defmodule Moto.Hooks do
       :server,
       :request_id,
       :message,
-      :tool_context,
+      :context,
       :allowed_tools,
       :llm_opts,
       :metadata,
@@ -55,7 +55,7 @@ defmodule Moto.Hooks do
       :server,
       :request_id,
       :message,
-      :tool_context,
+      :context,
       :allowed_tools,
       :llm_opts,
       :metadata,
@@ -71,7 +71,7 @@ defmodule Moto.Hooks do
       :server,
       :request_id,
       :message,
-      :tool_context,
+      :context,
       :allowed_tools,
       :llm_opts,
       :metadata,
@@ -83,7 +83,7 @@ defmodule Moto.Hooks do
       :server,
       :request_id,
       :message,
-      :tool_context,
+      :context,
       :allowed_tools,
       :llm_opts,
       :metadata,
@@ -117,17 +117,18 @@ defmodule Moto.Hooks do
 
   @spec prepare_request_opts(keyword()) :: {:ok, keyword()} | {:error, term()}
   def prepare_request_opts(opts) when is_list(opts) do
-    tool_context =
+    context =
       opts
-      |> Keyword.get(:tool_context, %{})
-      |> normalize_tool_context()
+      |> Keyword.get(:context, %{})
+      |> Moto.Context.normalize()
 
-    with {:ok, tool_context} <- tool_context,
+    with {:ok, context} <- context,
          {:ok, hooks} <- normalize_request_hooks(Keyword.get(opts, :hooks, nil)) do
       opts =
         opts
         |> Keyword.delete(:hooks)
-        |> Keyword.put(:tool_context, maybe_attach_request_hooks(tool_context, hooks))
+        |> Keyword.delete(:context)
+        |> Keyword.put(:tool_context, maybe_attach_request_hooks(context, hooks))
 
       {:ok, opts}
     end
@@ -165,10 +166,17 @@ defmodule Moto.Hooks do
     end
   end
 
-  @spec on_before_cmd(module(), Jido.Agent.t(), term(), stage_map()) ::
+  @spec on_before_cmd(module(), Jido.Agent.t(), term(), stage_map(), map()) ::
           {:ok, Jido.Agent.t(), term()}
-  def on_before_cmd(_agent_module, agent, {:ai_react_start, %{query: query} = params}, defaults) do
+  def on_before_cmd(
+        _agent_module,
+        agent,
+        {:ai_react_start, %{query: query} = params},
+        defaults,
+        default_context
+      ) do
     request_id = params[:request_id] || agent.state[:last_request_id]
+    params = merge_default_context(params, default_context)
 
     {request_hooks, params} = pop_request_hooks(params)
     hooks = combine(defaults, request_hooks)
@@ -178,7 +186,7 @@ defmodule Moto.Hooks do
       server: self(),
       request_id: request_id,
       message: query,
-      tool_context: Map.get(params, :tool_context, %{}) || %{},
+      context: Map.get(params, :tool_context, %{}) || %{},
       allowed_tools: Map.get(params, :allowed_tools),
       llm_opts: Map.get(params, :llm_opts, []),
       metadata: %{},
@@ -192,7 +200,7 @@ defmodule Moto.Hooks do
           metadata: input.metadata,
           request_opts: input.request_opts,
           message: input.message,
-          tool_context: input.tool_context,
+          context: input.context,
           allowed_tools: input.allowed_tools,
           llm_opts: input.llm_opts
         })
@@ -205,7 +213,7 @@ defmodule Moto.Hooks do
           metadata: input.metadata,
           request_opts: input.request_opts,
           message: input.message,
-          tool_context: input.tool_context,
+          context: input.context,
           allowed_tools: input.allowed_tools,
           llm_opts: input.llm_opts,
           interrupt: interrupt
@@ -232,7 +240,7 @@ defmodule Moto.Hooks do
             metadata: input.metadata,
             request_opts: input.request_opts,
             message: input.message,
-            tool_context: input.tool_context,
+            context: input.context,
             allowed_tools: input.allowed_tools,
             llm_opts: input.llm_opts
           })
@@ -241,7 +249,8 @@ defmodule Moto.Hooks do
     end
   end
 
-  def on_before_cmd(_agent_module, agent, action, _defaults), do: {:ok, agent, action}
+  def on_before_cmd(_agent_module, agent, action, _defaults, _default_context),
+    do: {:ok, agent, action}
 
   @spec on_after_cmd(module(), Jido.Agent.t(), term(), [term()], stage_map()) ::
           {:ok, Jido.Agent.t(), [term()]}
@@ -354,25 +363,26 @@ defmodule Moto.Hooks do
   defp wrap_invalid_ref(stage, reason) when is_binary(reason), do: {:invalid_hook, stage, reason}
   defp wrap_invalid_ref(stage, reason), do: {:invalid_hook, stage, inspect(reason)}
 
-  defp maybe_attach_request_hooks(tool_context, hooks) do
+  defp maybe_attach_request_hooks(context, hooks) do
     if hooks == default_stage_map() do
-      tool_context
+      context
     else
-      Map.put(tool_context, @request_hooks_key, hooks)
+      Map.put(context, @request_hooks_key, hooks)
     end
   end
 
-  defp normalize_tool_context(tool_context) when is_map(tool_context), do: {:ok, tool_context}
+  defp merge_default_context(params, default_context) when is_map(default_context) do
+    merged_context =
+      default_context
+      |> Moto.Context.merge(Map.get(params, :tool_context, %{}) || %{})
 
-  defp normalize_tool_context(tool_context) when is_list(tool_context),
-    do: {:ok, Map.new(tool_context)}
-
-  defp normalize_tool_context(_tool_context), do: {:error, {:invalid_tool_context, :expected_map}}
+    Map.put(params, :tool_context, merged_context)
+  end
 
   defp pop_request_hooks(params) when is_map(params) do
-    tool_context = Map.get(params, :tool_context, %{}) || %{}
-    {request_hooks, tool_context} = Map.pop(tool_context, @request_hooks_key, default_stage_map())
-    {request_hooks, Map.put(params, :tool_context, tool_context)}
+    context = Map.get(params, :tool_context, %{}) || %{}
+    {request_hooks, context} = Map.pop(context, @request_hooks_key, default_stage_map())
+    {request_hooks, Map.put(params, :tool_context, context)}
   end
 
   defp run_before_turn(hooks, %BeforeTurn{} = input) do
@@ -440,7 +450,8 @@ defmodule Moto.Hooks do
     params
     |> Map.put(:query, input.message)
     |> maybe_put_prompt(input.message)
-    |> Map.put(:tool_context, input.tool_context)
+    |> Map.put(:tool_context, input.context)
+    |> Map.put(:runtime_context, input.context)
     |> maybe_put_optional(:allowed_tools, input.allowed_tools)
     |> maybe_put_optional(:llm_opts, input.llm_opts)
   end
@@ -459,12 +470,12 @@ defmodule Moto.Hooks do
   defp apply_before_turn_overrides(%BeforeTurn{} = input, overrides)
        when is_map(overrides) or is_list(overrides) do
     overrides = Map.new(overrides)
-    allowed_keys = [:message, :tool_context, :allowed_tools, :llm_opts, :metadata]
+    allowed_keys = [:message, :context, :allowed_tools, :llm_opts, :metadata]
 
     case Map.keys(overrides) -- allowed_keys do
       [] ->
-        with {:ok, tool_context} <-
-               normalize_override_tool_context(Map.get(overrides, :tool_context)),
+        with {:ok, context} <-
+               normalize_override_context(Map.get(overrides, :context)),
              {:ok, allowed_tools} <-
                normalize_override_allowed_tools(Map.get(overrides, :allowed_tools)),
              {:ok, llm_opts} <- normalize_override_llm_opts(Map.get(overrides, :llm_opts)),
@@ -475,7 +486,7 @@ defmodule Moto.Hooks do
            %BeforeTurn{
              input
              | message: message,
-               tool_context: merge_optional(input.tool_context, tool_context),
+               context: merge_optional(input.context, context),
                allowed_tools: coalesce_optional(allowed_tools, input.allowed_tools),
                llm_opts: coalesce_optional(llm_opts, input.llm_opts),
                metadata: Map.merge(input.metadata, metadata)
@@ -499,14 +510,14 @@ defmodule Moto.Hooks do
   defp normalize_override_message(other),
     do: {:error, "before_turn message override must be a string, got: #{inspect(other)}"}
 
-  defp normalize_override_tool_context(nil), do: {:ok, %{}}
-  defp normalize_override_tool_context(value) when is_map(value), do: {:ok, value}
-  defp normalize_override_tool_context(value) when is_list(value), do: {:ok, Map.new(value)}
+  defp normalize_override_context(nil), do: {:ok, %{}}
+  defp normalize_override_context(value) when is_map(value), do: {:ok, value}
+  defp normalize_override_context(value) when is_list(value), do: {:ok, Map.new(value)}
 
-  defp normalize_override_tool_context(other),
+  defp normalize_override_context(other),
     do:
       {:error,
-       "before_turn tool_context override must be a map or keyword list, got: #{inspect(other)}"}
+       "before_turn context override must be a map or keyword list, got: #{inspect(other)}"}
 
   defp normalize_override_allowed_tools(nil), do: {:ok, nil}
   defp normalize_override_allowed_tools(value) when is_list(value), do: {:ok, value}
@@ -566,7 +577,7 @@ defmodule Moto.Hooks do
       server: self(),
       request_id: request_id,
       message: hook_meta[:message] || "",
-      tool_context: hook_meta[:tool_context] || %{},
+      context: hook_meta[:context] || %{},
       allowed_tools: hook_meta[:allowed_tools],
       llm_opts: hook_meta[:llm_opts] || [],
       metadata: hook_meta[:metadata] || %{},
@@ -639,7 +650,7 @@ defmodule Moto.Hooks do
             server: self(),
             request_id: request_id,
             message: hook_meta[:message] || "",
-            tool_context: hook_meta[:tool_context] || %{},
+            context: hook_meta[:context] || %{},
             allowed_tools: hook_meta[:allowed_tools],
             llm_opts: hook_meta[:llm_opts] || [],
             metadata: hook_meta[:metadata] || %{},
@@ -678,7 +689,10 @@ defmodule Moto.Hooks do
               agent =
                 agent
                 |> Request.fail_request(request_id, {:hook, :after_turn, reason})
-                |> put_request_hook_meta(request_id, Map.put(hook_meta, :after_turn_applied?, true))
+                |> put_request_hook_meta(
+                  request_id,
+                  Map.put(hook_meta, :after_turn_applied?, true)
+                )
 
               {:ok, agent, directives}
           end

@@ -13,6 +13,11 @@ defmodule Moto.Scripts.Demo.Agents.ChatAgent do
     """
   end
 
+  context do
+    put :tenant, "demo"
+    put :channel, "cli"
+  end
+
   plugins do
     plugin Moto.Scripts.Demo.Plugins.MathPlugin
   end

@@ -19,6 +19,12 @@ defmodule Moto.Agent.Dsl do
     defstruct [:module, :__spark_metadata__]
   end
 
+  defmodule ContextEntry do
+    @moduledoc false
+
+    defstruct [:key, :value, :__spark_metadata__]
+  end
+
   defmodule BeforeTurnHook do
     @moduledoc false
 
@@ -138,6 +144,35 @@ defmodule Moto.Agent.Dsl do
     entities: [@plugin_entity]
   }
 
+  @context_entry %Spark.Dsl.Entity{
+    name: :put,
+    describe: """
+    Add a default runtime context entry for this agent.
+    """,
+    target: ContextEntry,
+    args: [:key, :value],
+    schema: [
+      key: [
+        type: :any,
+        required: true,
+        doc: "An atom or string key available in runtime agent context."
+      ],
+      value: [
+        type: :any,
+        required: true,
+        doc: "The default value for the runtime context key."
+      ]
+    ]
+  }
+
+  @context_section %Spark.Dsl.Section{
+    name: :context,
+    describe: """
+    Configure default runtime context values for this agent.
+    """,
+    entities: [@context_entry]
+  }
+
   @before_turn_hook_entity %Spark.Dsl.Entity{
     name: :before_turn,
     describe: """
@@ -195,9 +230,10 @@ defmodule Moto.Agent.Dsl do
   }
 
   use Spark.Dsl.Extension,
-    sections: [@agent_section, @tools_section, @plugins_section, @hooks_section],
+    sections: [@agent_section, @context_section, @tools_section, @plugins_section, @hooks_section],
     verifiers: [
       Moto.Agent.Verifiers.VerifyModel,
+      Moto.Agent.Verifiers.VerifyContext,
       Moto.Agent.Verifiers.VerifyTools,
       Moto.Agent.Verifiers.VerifyAshResources,
       Moto.Agent.Verifiers.VerifyPlugins,

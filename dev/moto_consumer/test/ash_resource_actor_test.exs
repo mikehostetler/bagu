@@ -34,14 +34,14 @@ defmodule MotoConsumer.AshResourceActorTest do
     assert {:ok, pid} = SupportNoteAgent.start_link(id: "support-note-agent")
 
     try do
-      assert {:error, {:missing_tool_context, :actor}} =
+      assert {:error, {:missing_context, :actor}} =
                SupportNoteAgent.chat(pid, "List secure notes.")
 
-      assert {:error, {:missing_tool_context, :actor}} =
+      assert {:error, {:missing_context, :actor}} =
                SupportNoteAgent.chat(
                  pid,
                  "List secure notes.",
-                 tool_context: %{scope: %{actor: %{id: "scope_only"}}}
+                 context: %{scope: %{actor: %{id: "scope_only"}}}
                )
     after
       :ok = Moto.stop_agent(pid)

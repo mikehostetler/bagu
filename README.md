@@ -12,7 +12,8 @@ LLM agents on top of Jido and Jido.AI.
 Today, Moto can:
 
 - define agents with a small Spark DSL via `use Moto.Agent`
-- configure agent `name`, `model`, `system_prompt`, `tools`, `plugins`, and `hooks`
+- configure agent `name`, `model`, `system_prompt`, default `context`, `tools`,
+  `plugins`, and `hooks`
 - resolve models through Moto-owned aliases like `:fast`, direct model strings,
   inline maps, and `%LLMDB.Model{}`
 - support static or dynamic system prompts through strings, module callbacks,
@@ -27,7 +28,7 @@ Today, Moto can:
 - start many runtime instances from the same agent module under the shared
   `Moto.Runtime`
 - import constrained agents from JSON or YAML at runtime with explicit
-  allowlists for tools, plugins, and hooks
+  allowlists for tools, plugins, and hooks, including default imported context
 - run local demo scripts that exercise full LLM + tool-call loops
 
 Moto is intentionally opinionated. It keeps the public surface focused on
@@ -53,6 +54,7 @@ By default, `:fast` maps to `anthropic:claude-haiku-4-5`.
 The generated runtime currently uses:
 
 - the DSL-configured `model` value, defaulting to `:fast`
+- the DSL-configured default `context`
 - the DSL-configured `tools`
 - the DSL-configured `plugins`
 - the DSL-configured `hooks`
@@ -72,6 +74,11 @@ defmodule MyApp.ChatAgent do
     model :fast
     system_prompt "You are a concise assistant."
   end
+
+  context do
+    put :tenant, "demo"
+    put :channel, "web"
+  end
 end
 ```
 
@@ -80,6 +87,7 @@ The DSL currently supports:
 - `name`
 - `model`
 - `system_prompt`
+- `context`
 - `tools`
 - `plugins`
 - `hooks`
@@ -157,6 +165,29 @@ end
 Dynamic system prompts resolve once per turn through Jido.AI's request
 transformer hook, using the current runtime context.
 
+## Default Context
+
+Agents can also define default runtime context:
+
+```elixir
+defmodule MyApp.ChatAgent do
+  use Moto.Agent
+
+  agent do
+    model :fast
+    system_prompt "You are a concise assistant."
+  end
+
+  context do
+    put :tenant, "demo"
+    put :channel, "web"
+  end
+end
+```
+
+Those defaults are available through `MyApp.ChatAgent.context/0` and are merged
+with per-turn `context:` passed to `chat/3`.
+
 ## Define A Tool
 
 ```elixir
@@ -216,8 +247,8 @@ end
 For `ash_resource` tools, Moto will:
 
 - expand the resource into its generated `AshJido` action modules
-- inject the resource's Ash domain into `tool_context`
-- require an explicit `tool_context.actor` on `MyApp.UserAgent.chat/3`
+- inject the resource's Ash domain into the agent runtime context
+- require an explicit `context.actor` on `MyApp.UserAgent.chat/3`
 
 Example:
 
@@ -225,7 +256,7 @@ Example:
 {:ok, pid} = MyApp.UserAgent.start_link(id: "user-agent")
 
 {:ok, reply} =
-  MyApp.UserAgent.chat(pid, "List users.", tool_context: %{actor: current_user})
+  MyApp.UserAgent.chat(pid, "List users.", context: %{actor: current_user})
 ```
 
 ## Define A Plugin
@@ -330,7 +361,7 @@ You can also pass hooks directly to `chat/3`:
 
 ```elixir
 runtime_before_turn = fn %Moto.Hooks.BeforeTurn{} = input ->
-  {:ok, %{tool_context: Map.put(input.tool_context, :tenant, "acme")}}
+  {:ok, %{context: Map.put(input.context, :tenant, "acme")}}
 end
 
 {:ok, pid} = MyApp.ChatAgent.start_link(id: "chat-1")
@@ -353,6 +384,33 @@ If a hook interrupts the turn, Moto returns:
 ```elixir
 {:interrupt, %Moto.Interrupt{}}
 ```
+
+## Runtime Context
+
+Moto uses `context:` as the public name for request-scoped runtime data.
+
+```elixir
+{:ok, pid} = MyApp.ChatAgent.start_link(id: "chat-1")
+
+{:ok, reply} =
+  MyApp.ChatAgent.chat(pid, "Help with order 123",
+    context: %{actor: current_user, tenant: "acme", order_id: "123"}
+  )
+```
+
+Per-turn `context:` is merged over any default context defined in the agent or
+imported spec.
+
+`context` is:
+
+- runtime-only application data for this turn
+- available to hooks, dynamic `system_prompt`, tools, and `ash_resource`
+- distinct from internal agent state
+- distinct from model-visible conversation context
+
+Moto does not automatically inject `context` into prompts or messages. If you
+want the model to see part of it, project it explicitly through a hook, tool,
+or dynamic system prompt.
 
 ## Start And Chat
 
@@ -384,8 +442,10 @@ mix run scripts/chat_agent.exs
 ```
 
 By default, the script runs one built-in tool-call demo first, then drops into
-interactive mode. You should see a line like `[tool:add_numbers] 17 + 25 = 42`
-when the tool executes.
+interactive mode. You should see the configured default context printed at
+startup and a tool log line like
+`[tool:add_numbers tenant=demo channel=cli session=cli] 17 + 25 = 42` when the
+tool executes.
 
 One-shot:
 
@@ -415,6 +475,10 @@ json = ~S"""
   "name": "json_agent",
   "model": "fast",
   "system_prompt": "You are a concise assistant.",
+  "context": {
+    "tenant": "json-demo",
+    "channel": "imported"
+  },
   "plugins": ["math_plugin"],
   "hooks": {
     "before_turn": ["reply_with_final_answer"]
@@ -443,6 +507,9 @@ model:
   id: "gpt-4.1"
 system_prompt: |-
   You are a concise assistant.
+context:
+  tenant: "yaml-demo"
+  channel: "imported"
 plugins:
   - "math_plugin"
 hooks:
@@ -462,6 +529,7 @@ The dynamic import path is intentionally narrower than the Elixir DSL:
 - only `name`
 - only `model`
 - only `system_prompt`
+- only default `context` as a plain map
 - only published tool names through `tools`
 - only published plugin names through `plugins`
 - only published hook names through `hooks`

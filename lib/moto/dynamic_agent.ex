@@ -233,7 +233,7 @@ defmodule Moto.DynamicAgent do
           tools: unquote(Macro.escape(tool_modules)),
           plugins: unquote(Macro.escape(runtime_plugins))
 
-        unquote(Moto.Agent.hook_runtime_ast(hook_modules))
+        unquote(Moto.Agent.hook_runtime_ast(hook_modules, spec.context))
       end
 
     case Module.create(runtime_module, quoted, Macro.Env.location(__ENV__)) do
@@ -307,6 +307,8 @@ defmodule Moto.DynamicAgent do
       model_yaml,
       "system_prompt: |-",
       prompt_block,
+      "context:",
+      encode_yaml_context(spec.context),
       "tools:",
       encode_yaml_tools(spec.tools),
       "plugins:",
@@ -320,6 +322,14 @@ defmodule Moto.DynamicAgent do
 
   defp encode_yaml_tools([]), do: "  []"
   defp encode_yaml_tools(tools), do: Enum.map_join(tools, "\n", &"  - #{Jason.encode!(&1)}")
+
+  defp encode_yaml_context(context) when context == %{}, do: "  {}"
+
+  defp encode_yaml_context(context) when is_map(context) do
+    Enum.map_join(context, "\n", fn {key, value} ->
+      "  #{yaml_key(key)}: #{Jason.encode!(value)}"
+    end)
+  end
 
   defp encode_yaml_plugins([]), do: "  []"
   defp encode_yaml_plugins(plugins), do: Enum.map_join(plugins, "\n", &"  - #{Jason.encode!(&1)}")
@@ -338,4 +348,7 @@ defmodule Moto.DynamicAgent do
       |> Enum.join("\n")
     end)
   end
+
+  defp yaml_key(key) when is_atom(key), do: Atom.to_string(key)
+  defp yaml_key(key) when is_binary(key), do: key
 end

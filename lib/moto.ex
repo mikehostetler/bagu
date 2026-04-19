@@ -65,6 +65,7 @@ defmodule Moto do
   Imports a constrained dynamic Moto agent from a map, JSON string, or YAML string.
 
   The imported format currently supports `name`, `model`, `system_prompt`,
+  default `context`,
   published tool names via `tools`, published plugin names via `plugins`,
   and published hook names via `hooks`.
 

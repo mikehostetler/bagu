@@ -78,6 +78,7 @@ defmodule Moto.DynamicAgent.Spec do
                   Zoi.string() |> Zoi.trim() |> Zoi.min(1) |> Zoi.max(256),
                   @model_map_schema
                 ]),
+              context: Zoi.map() |> Zoi.default(%{}),
               tools: Zoi.list(@tool_name_schema) |> Zoi.default([]),
               plugins: Zoi.list(@plugin_name_schema) |> Zoi.default([]),
               hooks: @hooks_schema |> Zoi.default(@default_hooks)
@@ -98,6 +99,7 @@ defmodule Moto.DynamicAgent.Spec do
           name: String.t(),
           system_prompt: String.t(),
           model: model_input(),
+          context: map(),
           tools: [String.t()],
           plugins: [String.t()],
           hooks: %{
@@ -108,14 +110,23 @@ defmodule Moto.DynamicAgent.Spec do
         }
 
   @enforce_keys [:name, :system_prompt, :model]
-  defstruct [:name, :system_prompt, :model, tools: [], plugins: [], hooks: @default_hooks]
+  defstruct [
+    :name,
+    :system_prompt,
+    :model,
+    context: %{},
+    tools: [],
+    plugins: [],
+    hooks: @default_hooks
+  ]
 
   @spec schema() :: Zoi.schema()
   def schema, do: @schema
 
   @spec new(map() | t(), keyword()) :: {:ok, t()} | {:error, term()}
   def new(%__MODULE__{} = spec, opts) do
-    with {:ok, spec} <- validate_tools(spec, Keyword.get(opts, :available_tools, %{})),
+    with :ok <- validate_context(spec.context),
+         {:ok, spec} <- validate_tools(spec, Keyword.get(opts, :available_tools, %{})),
          {:ok, spec} <- validate_plugins(spec, Keyword.get(opts, :available_plugins, %{})) do
       validate_hooks(spec, Keyword.get(opts, :available_hooks, %{}))
     end
@@ -125,6 +136,7 @@ defmodule Moto.DynamicAgent.Spec do
     with {:ok, spec} <- Zoi.parse(@schema, attrs),
          {:ok, normalized_model} <- normalize_model(spec.model),
          :ok <- validate_model(normalized_model),
+         :ok <- validate_context(spec.context),
          {:ok, normalized_spec} <-
            validate_tools(
              %{spec | model: normalized_model},
@@ -159,6 +171,7 @@ defmodule Moto.DynamicAgent.Spec do
       "name" => spec.name,
       "model" => externalize_model(spec.model),
       "system_prompt" => spec.system_prompt,
+      "context" => spec.context,
       "tools" => spec.tools,
       "plugins" => spec.plugins,
       "hooks" => spec.hooks
@@ -216,6 +229,13 @@ defmodule Moto.DynamicAgent.Spec do
     |> case do
       {:ok, _model} -> :ok
       {:error, reason} -> {:error, format_model_error(reason)}
+    end
+  end
+
+  defp validate_context(context) do
+    case Moto.Context.validate_default(context) do
+      :ok -> :ok
+      {:error, reason} -> {:error, reason}
     end
   end
 
