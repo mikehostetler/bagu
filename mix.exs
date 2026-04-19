@@ -24,10 +24,14 @@ defmodule Moto.MixProject do
 
   defp deps do
     [
+      {:ash_jido, path: "../ash_jido"},
       {:dotenvy, "~> 1.1"},
+      {:jason, "~> 1.4"},
       {:jido, path: "../jido", override: true},
       {:jido_ai, path: "../jido_ai"},
-      {:spark, "~> 2.6"}
+      {:spark, "~> 2.6"},
+      {:yaml_elixir, "~> 2.12"},
+      {:zoi, "~> 0.17"}
     ]
   end
 end

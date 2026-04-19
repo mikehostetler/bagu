@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.38.1">
+    <meta name="project" content="luerl v1.5.1">
+
+
+    <title>luerl_io — luerl v1.5.1</title>
+
+    <link rel="stylesheet" href="dist/html-erlang-ZK43ZOAC.css" />
+
+    <script defer src="dist/sidebar_items-712621B1.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="readme.html" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="luerl" />
+        </a>
+
+      <div>
+        <a href="readme.html" class="sidebar-projectName" translate="no">
+luerl
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v1.5.1
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of luerl</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">luerl_io</span> 
+      <small class="app-vsn" translate="no">(luerl v1.5.1)</small>
+
+    </h1>
+
+      <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_io.erl#L19" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>This module provides a standard of set io functions for Luerl. In the
+following description, many functions have an optional parameter
+<code class="inline">IoDevice</code>. If included, it must be the pid of a process which handles
+the IO protocols such as the IoDevice returned by <a href="https://www.erlang.org/doc/apps/kernel/file.html#open/2"><code class="inline">file:open/2</code></a>. Also
+in the functions handling files it can also be the name of the file
+which will then be opened.</p><p>Note that Luerl, following Lua, does do any implicit UTF-8 encoding of
+input strings.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#collect_line/2" data-no-tooltip="" translate="no">collect_line(Stack, Data)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_line/0" data-no-tooltip="" translate="no">get_line()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <a><code class="inline">get_line(standard_io, '')</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_line/1" data-no-tooltip="" translate="no">get_line(Prompt)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <a><code class="inline">get_line(standard_io, Prompt)</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_line/2" data-no-tooltip="" translate="no">get_line(IoDevice, Prompt)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Read a line of text from <code class="inline">IoDevice</code> withe the prompt <code class="inline">Prompt</code>. We make
+sure that anu UTF-8 encoding is done before we return the data.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#parse_file/1" data-no-tooltip="" translate="no">parse_file(FileName)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <a><code class="inline">parse_file(FileName, 1)</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#parse_file/2" data-no-tooltip="" translate="no">parse_file(FileName, Line)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Parse the file <code class="inline">FileName</code> and return the chunk in it. <code class="inline">FileName</code> can
+also be an <code class="inline">IoDevice</code> of an already opened file.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#scan_file/1" data-no-tooltip="" translate="no">scan_file(FileName)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <a><code class="inline">scan_file(FileName, 1)</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#scan_file/2" data-no-tooltip="" translate="no">scan_file(FileName, Line)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Scan the file <code class="inline">FileName</code> and return the tokens in it. <code class="inline">FileName</code> can
+also be an <code class="inline">IoDevice</code> of an already opened file.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="collect_line/2">
+
+  <div class="detail-header">
+    <a href="#collect_line/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">collect_line(Stack, Data)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_io.erl#L71" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="get_line/0">
+
+  <div class="detail-header">
+    <a href="#get_line/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_line()</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_io.erl#L46" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <a href="#get_line/2"><code class="inline">get_line(standard_io, '')</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="get_line/1">
+
+  <div class="detail-header">
+    <a href="#get_line/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_line(Prompt)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_io.erl#L51" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <a href="#get_line/2"><code class="inline">get_line(standard_io, Prompt)</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="get_line/2">
+
+  <div class="detail-header">
+    <a href="#get_line/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_line(IoDevice, Prompt)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_io.erl#L59" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Read a line of text from <code class="inline">IoDevice</code> withe the prompt <code class="inline">Prompt</code>. We make
+sure that anu UTF-8 encoding is done before we return the data.</p>
+  </section>
+</section>
+<section class="detail" id="parse_file/1">
+
+  <div class="detail-header">
+    <a href="#parse_file/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">parse_file(FileName)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_io.erl#L105" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <a href="#parse_file/2"><code class="inline">parse_file(FileName, 1)</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="parse_file/2">
+
+  <div class="detail-header">
+    <a href="#parse_file/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">parse_file(FileName, Line)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_io.erl#L112" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Parse the file <code class="inline">FileName</code> and return the chunk in it. <code class="inline">FileName</code> can
+also be an <code class="inline">IoDevice</code> of an already opened file.</p>
+  </section>
+</section>
+<section class="detail" id="scan_file/1">
+
+  <div class="detail-header">
+    <a href="#scan_file/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">scan_file(FileName)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_io.erl#L86" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <a href="#scan_file/2"><code class="inline">scan_file(FileName, 1)</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="scan_file/2">
+
+  <div class="detail-header">
+    <a href="#scan_file/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">scan_file(FileName, Line)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_io.erl#L93" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Scan the file <code class="inline">FileName</code> and return the tokens in it. <code class="inline">FileName</code> can
+also be an <code class="inline">IoDevice</code> of an already opened file.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+          <span class="line">
+            <a href="https://hex.pm/packages/luerl/1.5.1" class="footer-hex-package">Hex Package</a>
+
+            <a href="https://preview.hex.pm/preview/luerl/1.5.1">Hex Preview</a>
+
+          </span>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="luerl.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
+
+          <a href="https://erlang.org" title="Erlang" target="_blank" translate="no">Erlang programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

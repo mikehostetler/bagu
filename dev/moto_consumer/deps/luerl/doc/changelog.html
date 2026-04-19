@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.38.1">
+    <meta name="project" content="luerl v1.5.1">
+
+
+    <title>Changelog — luerl v1.5.1</title>
+
+    <link rel="stylesheet" href="dist/html-erlang-ZK43ZOAC.css" />
+
+    <script defer src="dist/sidebar_items-712621B1.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="readme.html" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="luerl" />
+        </a>
+
+      <div>
+        <a href="readme.html" class="sidebar-projectName" translate="no">
+luerl
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v1.5.1
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-extra" id="main" data-type="extras">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of luerl</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>Changelog</h1>
+
+
+      <a href="https://github.com/rvirding/luerl/blob/v1.5.1/CHANGELOG.md#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+<p>All notable changes to this project will be documented in this file.</p><p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
+and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p><h2 id="unreleased" class="section-heading"><a href="#unreleased" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Unreleased</span></h2><h2 id="1-5-1" class="section-heading"><a href="#1-5-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[1.5.1]</span></h2><h3 id="fixed" class="section-heading"><a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>badges and logo in documentation</li><li>illegal_token displaying integer value instead of characters</li></ul><h2 id="1-5-0" class="section-heading"><a href="#1-5-0" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[1.5.0]</span></h2><h3 id="changed" class="section-heading"><a href="#changed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>luerl_io with some basic io functions added</li><li>main Luerl discussions moved from slack to discord</li><li>tostring can now handle <strong>tostring and </strong>name metakeys</li><li>add ex_doc and move current docs to doc_legacy to avoid collisions</li></ul><h3 id="fixed-1" class="section-heading"><a href="#fixed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>luerl_scan is now Lua compliant and doesn't do utf-8 encoding</li><li>cleanup parser and fix handling of local functions</li><li>scanner now does Lua compliant numbers and strings</li><li>improve handling of string.format</li><li>add attributes for local variables</li><li>add typespecs to make dialyzer happy</li><li>improve documentation info in files</li><li>README now links to discord instead</li><li>fix pcall error messages</li></ul><h2 id="1-4-1" class="section-heading"><a href="#1-4-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[1.4.1]</span></h2><h3 id="fixed-2" class="section-heading"><a href="#fixed-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Move <code class="inline">doc/</code> folder to <code class="inline">doc_legacy/</code> so it doesn't collide with <code class="inline">ex_doc</code> artificats</li></ul><h2 id="1-4-0" class="section-heading"><a href="#1-4-0" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[1.4.0]</span></h2><p>This version was not released to Hex.pm due to a build issue</p><h3 id="changed-1" class="section-heading"><a href="#changed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li><p>(breaking) <code class="inline">luerl:get_private</code> returns <code class="inline">{ok, Val} | error</code> tuple</p></li></ul><h3 id="fixed-3" class="section-heading"><a href="#fixed-3" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>files with only comments can now be loaded</li><li>atoms are now decoded as strings</li><li>Erlang functions that return errors are now properly propagated upward and state is updated</li><li>binary error messages captured in pcall are not formatted</li></ul>
+
+</div>
+
+<div class="bottom-actions" id="bottom-actions">
+  <div class="bottom-actions-item">
+
+      <a href="readme.html" class="bottom-actions-button" rel="prev">
+        <span class="subheader">
+          ← Previous Page
+        </span>
+        <span class="title">
+Luerl
+        </span>
+      </a>
+
+  </div>
+  <div class="bottom-actions-item">
+
+      <a href="license.html" class="bottom-actions-button" rel="next">
+        <span class="subheader">
+          Next Page →
+        </span>
+        <span class="title">
+LICENSE
+        </span>
+      </a>
+
+  </div>
+</div>
+    <footer class="footer">
+      <p>
+
+          <span class="line">
+            <a href="https://hex.pm/packages/luerl/1.5.1" class="footer-hex-package">Hex Package</a>
+
+            <a href="https://preview.hex.pm/preview/luerl/1.5.1">Hex Preview</a>
+
+              (<a href="https://preview.hex.pm/preview/luerl/1.5.1/show/CHANGELOG.md">current file</a>)
+
+          </span>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="luerl.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
+
+          <a href="https://erlang.org" title="Erlang" target="_blank" translate="no">Erlang programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

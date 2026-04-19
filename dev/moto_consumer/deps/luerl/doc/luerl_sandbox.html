@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.38.1">
+    <meta name="project" content="luerl v1.5.1">
+
+
+    <title>luerl_sandbox — luerl v1.5.1</title>
+
+    <link rel="stylesheet" href="dist/html-erlang-ZK43ZOAC.css" />
+
+    <script defer src="dist/sidebar_items-712621B1.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="readme.html" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="luerl" />
+        </a>
+
+      <div>
+        <a href="readme.html" class="sidebar-projectName" translate="no">
+luerl
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v1.5.1
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of luerl</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">luerl_sandbox</span> 
+      <small class="app-vsn" translate="no">(luerl v1.5.1)</small>
+
+    </h1>
+
+      <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_sandbox.erl#L19" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Sandboxed execution environment for Luerl with reduction counting.
+This module provides a way to run Lua code with controlled execution,
+limiting the number of reductions (computational steps) to prevent
+excessive resource consumption.</p><p>The <code class="inline">ControlFlags</code> is a map or keyword list which can contain the
+following fields</p><pre><code class="makeup erlang" translate="no"><span class="w">    </span><span class="p" data-group-id="7621829047-1">#{</span><span class="ss">max_time</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">MaxTime</span><span class="p">,</span><span class="w">              </span><span class="c1">% 100 msecs</span><span class="w">
+      </span><span class="ss">max_reductions</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">MaxReds</span><span class="p">,</span><span class="w">        </span><span class="c1">% none</span><span class="w">
+      </span><span class="ss">spawn_opts</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">SpawnOpts</span><span class="p" data-group-id="7621829047-1">}</span><span class="w">          </span><span class="c1">% []</span></code></pre><p><code class="inline">MaxReds</code> limits the number of reductions (default no max) and
+<code class="inline">MaxTime</code> (default 100 msecs) limits the maximum time to run the
+string. <code class="inline">SpawnOpts</code> are spawn options to the process running the
+evaluation. The default values are shown as comments. Any other fields
+are ignored.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:controlflags/0" data-no-tooltip="" translate="no">controlflags()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:luerldata/0" data-no-tooltip="" translate="no">luerldata()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:luerlstate/0" data-no-tooltip="" translate="no">luerlstate()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:sandboxtable/0" data-no-tooltip="" translate="no">sandboxtable()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#init/0" data-no-tooltip="" translate="no">init()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Create a new Luerl state with the standard sandboxing.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#init/1" data-no-tooltip="" translate="no">init/1</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Take an existing Luerl state and run the default sandboxing on it. Or
+create a new Luerl state and run a sandboxing table on it.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#init/2" data-no-tooltip="" translate="no">init(LuaState, TablePaths)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Take an existing Luerl state and run the <code class="inline">TablePaths</code> on it to control the sandboxing.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#run/1" data-no-tooltip="" translate="no">run(Expression)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Run the Lua expression controlled by the default <code class="inline">ControlFlags</code> in a
+new <code class="inline">LuaState</code> with the default sandboxing.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#run/2" data-no-tooltip="" translate="no">run(Expression, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Run the Lua expression controlled by the default <code class="inline">ControlFlags</code> in the
+<code class="inline">LuaState</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#run/3" data-no-tooltip="" translate="no">run(Expression, ControlFlags, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Run the Lua expression controlled by the <code class="inline">ControlFlags</code> in the <code class="inline">LuaState</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#run/4" data-no-tooltip="" translate="no">run(String, LuaState, MaxReds, SpawnOpts)</a>
+
+          <span class="deprecated" title="Use `run/3`">deprecated</span>
+
+      </div>
+
+        <div class="summary-synopsis"></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#run/5" data-no-tooltip="" translate="no">run(String, LuaState, MaxReds, SpawnOpts, Timeout)</a>
+
+          <span class="deprecated" title="Use `run/3`">deprecated</span>
+
+      </div>
+
+        <div class="summary-synopsis"></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+    <div class="types-list">
+<section class="detail" id="t:controlflags/0">
+
+  <div class="detail-header">
+    <a href="#t:controlflags/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">controlflags()</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_sandbox.erl#L69" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-type</span> controlflags() :: #{<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:atom/0">atom</a>() := <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()} | [{<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:atom/0">atom</a>(), <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()}].</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:luerldata/0">
+
+  <div class="detail-header">
+    <a href="#t:luerldata/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">luerldata()</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.hrl#L137" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-type</span> luerldata() ::
+          nil |
+          <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:boolean/0">boolean</a>() |
+          <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:binary/0">binary</a>() |
+          <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:number/0">number</a>() |
+          #tref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()} |
+          #usdref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()} |
+          #eref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()} |
+          #funref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), env :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()} |
+          #erl_func{code :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()} |
+          #erl_mfa{m :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), f :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), a :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()}.</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:luerlstate/0">
+
+  <div class="detail-header">
+    <a href="#t:luerlstate/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">luerlstate()</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.hrl#L134" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-type</span> luerlstate() ::
+          #luerl{tabs :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 envs :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 usds :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 fncs :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 g :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 stk :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 cs :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 meta :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 rand :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 tag :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 trace_func :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 trace_data :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 private :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()}.</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:sandboxtable/0">
+
+  <div class="detail-header">
+    <a href="#t:sandboxtable/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">sandboxtable()</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_sandbox.erl#L71" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-type</span> sandboxtable() :: [[<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:atom/0">atom</a>()]].</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="init/0">
+
+  <div class="detail-header">
+    <a href="#init/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">init()</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_sandbox.erl#L89" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> init() -> LuaState when LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Create a new Luerl state with the standard sandboxing.</p>
+  </section>
+</section>
+<section class="detail" id="init/1">
+
+  <div class="detail-header">
+    <a href="#init/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">init/1</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_sandbox.erl#L104" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> init(LuaState) -> LuaState when LuaState :: <a href="#t:luerlstate/0">luerlstate</a>();
+          (TablePaths) -> LuaState when LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(), TablePaths :: <a href="#t:sandboxtable/0">sandboxtable</a>().</pre>
+
+      </div>
+
+<p>Take an existing Luerl state and run the default sandboxing on it. Or
+create a new Luerl state and run a sandboxing table on it.</p>
+  </section>
+</section>
+<section class="detail" id="init/2">
+
+  <div class="detail-header">
+    <a href="#init/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">init(LuaState, TablePaths)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_sandbox.erl#L117" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> init(LuaState, TablePaths) -> LuaState when LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(), TablePaths :: [[<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:atom/0">atom</a>()]].</pre>
+
+      </div>
+
+<p>Take an existing Luerl state and run the <code class="inline">TablePaths</code> on it to control the sandboxing.</p>
+  </section>
+</section>
+<section class="detail" id="run/1">
+
+  <div class="detail-header">
+    <a href="#run/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">run(Expression)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_sandbox.erl#L145" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> run(Expression) -> {Reply, LuaState}
+             when
+                 Expression :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                 LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                 Reply :: {ok, Result, LuaState} | Error,
+                 Result :: <a href="#t:luerldata/0">luerldata</a>(),
+                 Error :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>().</pre>
+
+      </div>
+
+<p>Run the Lua expression controlled by the default <code class="inline">ControlFlags</code> in a
+new <code class="inline">LuaState</code> with the default sandboxing.</p>
+  </section>
+</section>
+<section class="detail" id="run/2">
+
+  <div class="detail-header">
+    <a href="#run/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">run(Expression, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_sandbox.erl#L160" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> run(Expression, LuaState) -> {Reply, LuaState}
+             when
+                 Expression :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                 LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                 Reply :: {ok, Result, LuaState} | Error,
+                 Result :: <a href="#t:luerldata/0">luerldata</a>(),
+                 Error :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>().</pre>
+
+      </div>
+
+<p>Run the Lua expression controlled by the default <code class="inline">ControlFlags</code> in the
+<code class="inline">LuaState</code>.</p>
+  </section>
+</section>
+<section class="detail" id="run/3">
+
+  <div class="detail-header">
+    <a href="#run/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">run(Expression, ControlFlags, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_sandbox.erl#L176" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> run(Expression, ControlFlags, LuaState) -> {Reply, LuaState}
+             when
+                 Expression :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                 ControlFlags :: <a href="#t:controlflags/0">controlflags</a>(),
+                 LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                 Reply :: {ok, Result, LuaState} | Error,
+                 Result :: <a href="#t:luerldata/0">luerldata</a>(),
+                 Error :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>().</pre>
+
+      </div>
+
+<p>Run the Lua expression controlled by the <code class="inline">ControlFlags</code> in the <code class="inline">LuaState</code>.</p>
+  </section>
+</section>
+<section class="detail" id="run/4">
+
+  <div class="detail-header">
+    <a href="#run/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">run(String, LuaState, MaxReds, SpawnOpts)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_sandbox.erl#L195" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+    <div class="deprecated">
+      This function is deprecated. Use `run/3`.
+    </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="run/5">
+
+  <div class="detail-header">
+    <a href="#run/5" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">run(String, LuaState, MaxReds, SpawnOpts, Timeout)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl_sandbox.erl#L203" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+    <div class="deprecated">
+      This function is deprecated. Use `run/3`.
+    </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+          <span class="line">
+            <a href="https://hex.pm/packages/luerl/1.5.1" class="footer-hex-package">Hex Package</a>
+
+            <a href="https://preview.hex.pm/preview/luerl/1.5.1">Hex Preview</a>
+
+          </span>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="luerl.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
+
+          <a href="https://erlang.org" title="Erlang" target="_blank" translate="no">Erlang programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

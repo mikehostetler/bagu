@@ -1,0 +1,1 @@
+{application,fsmx,[{modules,['Elixir.Fsmx','Elixir.Fsmx.Fsm','Elixir.Fsmx.Struct']},{optional_applications,[ecto,ecto_sql]},{applications,[kernel,stdlib,elixir,logger,ecto,ecto_sql]},{description,"A Finite-state machine implementation in Elixir, with opt-in Ecto friendliness."},{registered,[]},{vsn,"0.5.0"}]}.

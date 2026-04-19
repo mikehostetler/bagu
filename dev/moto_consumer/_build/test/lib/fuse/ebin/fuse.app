@@ -1,0 +1,13 @@
+{application,fuse,
+             [{description,"A Circuit breaker implementation for Erlang"},
+              {vsn,"2.5.0"},
+              {modules,[fuse,fuse_app,fuse_event,fuse_monitor,fuse_rand,
+                        fuse_server,fuse_stats_ets,fuse_stats_exometer,
+                        fuse_stats_folsom,fuse_stats_plugin,
+                        fuse_stats_prometheus,fuse_sup,fuse_time]},
+              {registered,[fuse_server,fuse_monitor,fuse_event,fuse_sup]},
+              {applications,[kernel,stdlib,sasl]},
+              {mod,{fuse_app,[]}},
+              {env,[{monitor,true}]},
+              {licenses,["MIT"]},
+              {links,[{"Github","https://github.com/jlouis/fuse"}]}]}.

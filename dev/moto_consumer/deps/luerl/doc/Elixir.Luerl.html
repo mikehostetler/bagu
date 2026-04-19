@@ -1,0 +1,1761 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.38.1">
+    <meta name="project" content="luerl v1.5.1">
+
+
+    <title>Elixir.Luerl — luerl v1.5.1</title>
+
+    <link rel="stylesheet" href="dist/html-erlang-ZK43ZOAC.css" />
+
+    <script defer src="dist/sidebar_items-712621B1.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="readme.html" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="luerl" />
+        </a>
+
+      <div>
+        <a href="readme.html" class="sidebar-projectName" translate="no">
+luerl
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v1.5.1
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of luerl</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Elixir.Luerl</span> 
+      <small class="app-vsn" translate="no">(luerl v1.5.1)</small>
+
+    </h1>
+
+      <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L24" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Elixir API for Luerl, an implementation of Lua 5.3 written in Erlang.</p><p>This module provides an idiomatic Elixir interface to the Luerl Lua
+interpreter with state as the first argument for better pipe operator usage.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:luerlstate/0" data-no-tooltip="" translate="no">luerlstate()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call/3" data-no-tooltip="" translate="no">call(St, C, Args)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call_chunk/2" data-no-tooltip="" translate="no">call_chunk(St, C)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call_chunk/3" data-no-tooltip="" translate="no">call_chunk(St, C, Args)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call_function/3" data-no-tooltip="" translate="no">call_function(St, Fp, Args)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call_function_dec/3" data-no-tooltip="" translate="no">call_function_dec(St, Dfunc, Dargs)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call_function_enc/3" data-no-tooltip="" translate="no">call_function_enc(St, Dfunc, Dargs)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call_method/4" data-no-tooltip="" translate="no">call_method(St, Obj, Meth, Args)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call_method_dec/4" data-no-tooltip="" translate="no">call_method_dec(St, Dobj, Dmeth, Dargs)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#do/2" data-no-tooltip="" translate="no">do(St, S)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#do/3" data-no-tooltip="" translate="no">do(St, S, Opts)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#do_dec/2" data-no-tooltip="" translate="no">do_dec(St, S)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#do_dec/3" data-no-tooltip="" translate="no">do_dec(St, S, Opts)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#dofile/2" data-no-tooltip="" translate="no">dofile(St, Path)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#dofile/3" data-no-tooltip="" translate="no">dofile(St, Path, Opts)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#dofile_dec/2" data-no-tooltip="" translate="no">dofile_dec(St, Path)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#dofile_dec/3" data-no-tooltip="" translate="no">dofile_dec(St, Path, Opts)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#externalize/1" data-no-tooltip="" translate="no">externalize(St)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#gc/1" data-no-tooltip="" translate="no">gc(LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:gc(LuaState)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_stacktrace/1" data-no-tooltip="" translate="no">get_stacktrace(St)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_table_key/3" data-no-tooltip="" translate="no">get_table_key(St, Tab, Key)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_table_keys/2" data-no-tooltip="" translate="no">get_table_keys(St, Keys)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_table_keys_dec/2" data-no-tooltip="" translate="no">get_table_keys_dec(St, Dkeys)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#init/0" data-no-tooltip="" translate="no">init()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:init()</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#internalize/1" data-no-tooltip="" translate="no">internalize(St)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#load/2" data-no-tooltip="" translate="no">load(LuaState, Chunk)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:load(Chunk, LuaState)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#load/3" data-no-tooltip="" translate="no">load(LuaState, Chunk, CompileOptions)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:load(Chunk, CompileOptions, LuaState)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#load_module/3" data-no-tooltip="" translate="no">load_module(LuaState, KeyPath, ErlangModule)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:load_module(KeyPath, ErlangModule, LuaState)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#load_module_dec/3" data-no-tooltip="" translate="no">load_module_dec(LuaState, KeyPath, ErlangModule)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:load_module_dec(KeyPath, ErlangModule, LuaState)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#loadfile/2" data-no-tooltip="" translate="no">loadfile(LuaState, FileName)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:loadfile(FileName, LuaState)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#loadfile/3" data-no-tooltip="" translate="no">loadfile(LuaState, FileName, CompileOptions)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:loadfile(FileName, CompileOptions, LuaState)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#path_loadfile/2" data-no-tooltip="" translate="no">path_loadfile(LuaState, FileName)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:path_loadfile(FileName, LuaState)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#path_loadfile/3" data-no-tooltip="" translate="no">path_loadfile(LuaState, Path, FileName)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:path_loadfile(Path, FileName, LuaState)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#path_loadfile/4" data-no-tooltip="" translate="no">path_loadfile(LuaState, Path, FileName, CompileOptions)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:path_loadfile(Path, FileName, CompileOptions, LuaState)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_table_key/4" data-no-tooltip="" translate="no">set_table_key(St, Tab, Key, Val)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_table_keys/3" data-no-tooltip="" translate="no">set_table_keys(St, Keys, Val)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_table_keys_dec/3" data-no-tooltip="" translate="no">set_table_keys_dec(St, Dkeys, Dval)</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-encode-decode-date-functions summary">
+  <h2>
+    <a href="#encode-decode-date-functions">Encode/Decode Date functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#decode/2" data-no-tooltip="" translate="no">decode(LuaState, LuerlTerm)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:decode(LuerlTerm, LuaState)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#decode_list/2" data-no-tooltip="" translate="no">decode_list(LuaState, LuerlTerms)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:decode_list(LuerlTerms, LuaState)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#encode/2" data-no-tooltip="" translate="no">encode(luastate, term)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">:luerl.encode(term, luastate)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#encode_list/2" data-no-tooltip="" translate="no">encode_list(LuaState, Terms)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:encode_list(Terms, LuaState)</code>.</p></div>
+
+    </div>
+
+</div>
+<div class="summary-private-data-functions summary">
+  <h2>
+    <a href="#private-data-functions">Private Data functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#delete_private/2" data-no-tooltip="" translate="no">delete_private(LuaState, Key)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Delete the private value for <code class="inline">Key</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_private/2" data-no-tooltip="" translate="no">get_private(LuaState, Key)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Get the private value for <code class="inline">Key</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#put_private/3" data-no-tooltip="" translate="no">put_private(LuaState, Key, Value)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Puts a private <code class="inline">Value</code> under <code class="inline">Key</code> that is not exposed to the runtime.</p></div>
+
+    </div>
+
+</div>
+<div class="summary-trace-control-functions summary">
+  <h2>
+    <a href="#trace-control-functions">Trace Control functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#clear_trace_func/1" data-no-tooltip="" translate="no">clear_trace_func(LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:clear_trace_func(LuaState)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_trace_data/1" data-no-tooltip="" translate="no">get_trace_data(LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:get_trace_func(LuaState)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_trace_data/2" data-no-tooltip="" translate="no">set_trace_data(LuaState, TraceData)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:set_trace_func(TraceData, LuaState)</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_trace_func/2" data-no-tooltip="" translate="no">set_trace_func(LuaState, Function)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <code class="inline">luerl:set_trace_func(Function, LuaState)</code>.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+    <div class="types-list">
+<section class="detail" id="t:luerlstate/0">
+
+  <div class="detail-header">
+    <a href="#t:luerlstate/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">luerlstate()</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.hrl#L134" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-type</span> luerlstate() ::
+          #luerl{tabs :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 envs :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 usds :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 fncs :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 g :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 stk :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 cs :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 meta :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 rand :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 tag :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 trace_func :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 trace_data :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 private :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()}.</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="call/3">
+
+  <div class="detail-header">
+    <a href="#call/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call(St, C, Args)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L167" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="call_chunk/2">
+
+  <div class="detail-header">
+    <a href="#call_chunk/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call_chunk(St, C)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L170" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="call_chunk/3">
+
+  <div class="detail-header">
+    <a href="#call_chunk/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call_chunk(St, C, Args)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L173" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="call_function/3">
+
+  <div class="detail-header">
+    <a href="#call_function/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call_function(St, Fp, Args)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L176" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="call_function_dec/3">
+
+  <div class="detail-header">
+    <a href="#call_function_dec/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call_function_dec(St, Dfunc, Dargs)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L182" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="call_function_enc/3">
+
+  <div class="detail-header">
+    <a href="#call_function_enc/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call_function_enc(St, Dfunc, Dargs)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L179" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="call_method/4">
+
+  <div class="detail-header">
+    <a href="#call_method/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call_method(St, Obj, Meth, Args)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L185" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="call_method_dec/4">
+
+  <div class="detail-header">
+    <a href="#call_method_dec/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call_method_dec(St, Dobj, Dmeth, Dargs)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L188" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="do/2">
+
+  <div class="detail-header">
+    <a href="#do/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">do(St, S)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L143" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="do/3">
+
+  <div class="detail-header">
+    <a href="#do/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">do(St, S, Opts)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L146" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="do_dec/2">
+
+  <div class="detail-header">
+    <a href="#do_dec/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">do_dec(St, S)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L149" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="do_dec/3">
+
+  <div class="detail-header">
+    <a href="#do_dec/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">do_dec(St, S, Opts)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L152" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="dofile/2">
+
+  <div class="detail-header">
+    <a href="#dofile/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">dofile(St, Path)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L155" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="dofile/3">
+
+  <div class="detail-header">
+    <a href="#dofile/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">dofile(St, Path, Opts)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L158" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="dofile_dec/2">
+
+  <div class="detail-header">
+    <a href="#dofile_dec/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">dofile_dec(St, Path)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L161" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="dofile_dec/3">
+
+  <div class="detail-header">
+    <a href="#dofile_dec/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">dofile_dec(St, Path, Opts)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L164" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="externalize/1">
+
+  <div class="detail-header">
+    <a href="#externalize/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">externalize(St)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L239" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="gc/1">
+
+  <div class="detail-header">
+    <a href="#gc/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">gc(LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L71" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:gc(LuaState)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="get_stacktrace/1">
+
+  <div class="detail-header">
+    <a href="#get_stacktrace/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_stacktrace(St)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L209" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="get_table_key/3">
+
+  <div class="detail-header">
+    <a href="#get_table_key/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_table_key(St, Tab, Key)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L203" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="get_table_keys/2">
+
+  <div class="detail-header">
+    <a href="#get_table_keys/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_table_keys(St, Keys)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L191" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="get_table_keys_dec/2">
+
+  <div class="detail-header">
+    <a href="#get_table_keys_dec/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_table_keys_dec(St, Dkeys)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L194" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="init/0">
+
+  <div class="detail-header">
+    <a href="#init/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">init()</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L66" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:init()</code>.</p>
+  </section>
+</section>
+<section class="detail" id="internalize/1">
+
+  <div class="detail-header">
+    <a href="#internalize/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">internalize(St)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L242" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="load/2">
+
+  <div class="detail-header">
+    <a href="#load/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">load(LuaState, Chunk)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L100" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:load(Chunk, LuaState)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="load/3">
+
+  <div class="detail-header">
+    <a href="#load/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">load(LuaState, Chunk, CompileOptions)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L105" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:load(Chunk, CompileOptions, LuaState)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="load_module/3">
+
+  <div class="detail-header">
+    <a href="#load_module/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">load_module(LuaState, KeyPath, ErlangModule)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L135" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:load_module(KeyPath, ErlangModule, LuaState)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="load_module_dec/3">
+
+  <div class="detail-header">
+    <a href="#load_module_dec/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">load_module_dec(LuaState, KeyPath, ErlangModule)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L140" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:load_module_dec(KeyPath, ErlangModule, LuaState)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="loadfile/2">
+
+  <div class="detail-header">
+    <a href="#loadfile/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">loadfile(LuaState, FileName)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L110" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:loadfile(FileName, LuaState)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="loadfile/3">
+
+  <div class="detail-header">
+    <a href="#loadfile/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">loadfile(LuaState, FileName, CompileOptions)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L115" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:loadfile(FileName, CompileOptions, LuaState)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="path_loadfile/2">
+
+  <div class="detail-header">
+    <a href="#path_loadfile/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">path_loadfile(LuaState, FileName)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L120" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:path_loadfile(FileName, LuaState)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="path_loadfile/3">
+
+  <div class="detail-header">
+    <a href="#path_loadfile/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">path_loadfile(LuaState, Path, FileName)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L125" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:path_loadfile(Path, FileName, LuaState)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="path_loadfile/4">
+
+  <div class="detail-header">
+    <a href="#path_loadfile/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">path_loadfile(LuaState, Path, FileName, CompileOptions)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L130" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:path_loadfile(Path, FileName, CompileOptions, LuaState)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="set_table_key/4">
+
+  <div class="detail-header">
+    <a href="#set_table_key/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_table_key(St, Tab, Key, Val)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L206" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="set_table_keys/3">
+
+  <div class="detail-header">
+    <a href="#set_table_keys/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_table_keys(St, Keys, Val)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L197" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="set_table_keys_dec/3">
+
+  <div class="detail-header">
+    <a href="#set_table_keys_dec/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_table_keys_dec(St, Dkeys, Dval)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L200" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="encode-decode-date-functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#encode-decode-date-functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Encode/Decode Date functions</span>
+    </h1>
+    <div class="encode-decode-date-functions-list">
+<section class="detail" id="decode/2">
+
+  <div class="detail-header">
+    <a href="#decode/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">decode(LuaState, LuerlTerm)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L230" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:decode(LuerlTerm, LuaState)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="decode_list/2">
+
+  <div class="detail-header">
+    <a href="#decode_list/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">decode_list(LuaState, LuerlTerms)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L236" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:decode_list(LuerlTerms, LuaState)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="encode/2">
+
+  <div class="detail-header">
+    <a href="#encode/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">encode(luastate, term)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L218" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">:luerl.encode(term, luastate)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="encode_list/2">
+
+  <div class="detail-header">
+    <a href="#encode_list/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">encode_list(LuaState, Terms)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L224" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:encode_list(Terms, LuaState)</code>.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="private-data-functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#private-data-functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Private Data functions</span>
+    </h1>
+    <div class="private-data-functions-list">
+<section class="detail" id="delete_private/2">
+
+  <div class="detail-header">
+    <a href="#delete_private/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete_private(LuaState, Key)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L285" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> delete_private(LuaState, Key) -> LuaState when Key :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Delete the private value for <code class="inline">Key</code>.</p>
+  </section>
+</section>
+<section class="detail" id="get_private/2">
+
+  <div class="detail-header">
+    <a href="#get_private/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_private(LuaState, Key)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L268" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> get_private(LuaState, Key) -> Value when Key :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), Value :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Get the private value for <code class="inline">Key</code>.</p>
+  </section>
+</section>
+<section class="detail" id="put_private/3">
+
+  <div class="detail-header">
+    <a href="#put_private/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">put_private(LuaState, Key, Value)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L255" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> put_private(LuaState, Key, Value) -> LuaState
+                     when Key :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), Value :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Puts a private <code class="inline">Value</code> under <code class="inline">Key</code> that is not exposed to the runtime.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="trace-control-functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#trace-control-functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Trace Control functions</span>
+    </h1>
+    <div class="trace-control-functions-list">
+<section class="detail" id="clear_trace_func/1">
+
+  <div class="detail-header">
+    <a href="#clear_trace_func/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">clear_trace_func(LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L83" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:clear_trace_func(LuaState)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="get_trace_data/1">
+
+  <div class="detail-header">
+    <a href="#get_trace_data/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_trace_data(LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L89" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:get_trace_func(LuaState)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="set_trace_data/2">
+
+  <div class="detail-header">
+    <a href="#set_trace_data/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_trace_data(LuaState, TraceData)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L95" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:set_trace_func(TraceData, LuaState)</code>.</p>
+  </section>
+</section>
+<section class="detail" id="set_trace_func/2">
+
+  <div class="detail-header">
+    <a href="#set_trace_func/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_trace_func(LuaState, Function)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/Elixir.Luerl.erl#L77" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <code class="inline">luerl:set_trace_func(Function, LuaState)</code>.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+          <span class="line">
+            <a href="https://hex.pm/packages/luerl/1.5.1" class="footer-hex-package">Hex Package</a>
+
+            <a href="https://preview.hex.pm/preview/luerl/1.5.1">Hex Preview</a>
+
+          </span>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="luerl.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
+
+          <a href="https://erlang.org" title="Erlang" target="_blank" translate="no">Erlang programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

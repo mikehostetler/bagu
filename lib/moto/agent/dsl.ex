@@ -1,6 +1,18 @@
 defmodule Moto.Agent.Dsl do
   @moduledoc false
 
+  defmodule Tool do
+    @moduledoc false
+
+    defstruct [:module, :__spark_metadata__]
+  end
+
+  defmodule AshResource do
+    @moduledoc false
+
+    defstruct [:resource, :__spark_metadata__]
+  end
+
   @agent_section %Spark.Dsl.Section{
     name: :agent,
     describe: """
@@ -12,6 +24,16 @@ defmodule Moto.Agent.Dsl do
         required: false,
         doc: "The public agent name. Defaults to the underscored module name."
       ],
+      model: [
+        type: :any,
+        required: false,
+        doc: """
+        The model to use for this agent.
+
+        Supports the same shapes Jido.AI accepts, including alias atoms, direct
+        model strings, inline model maps, and `%LLMDB.Model{}` structs.
+        """
+      ],
       system_prompt: [
         type: :string,
         required: true,
@@ -20,5 +42,51 @@ defmodule Moto.Agent.Dsl do
     ]
   }
 
-  use Spark.Dsl.Extension, sections: [@agent_section]
+  @tool_entity %Spark.Dsl.Entity{
+    name: :tool,
+    describe: """
+    Register a Moto tool module for this agent.
+    """,
+    target: Tool,
+    args: [:module],
+    schema: [
+      module: [
+        type: :atom,
+        required: true,
+        doc: "A module defined with `use Moto.Tool`."
+      ]
+    ]
+  }
+
+  @ash_resource_entity %Spark.Dsl.Entity{
+    name: :ash_resource,
+    describe: """
+    Register all generated AshJido actions for an Ash resource as agent tools.
+    """,
+    target: AshResource,
+    args: [:resource],
+    schema: [
+      resource: [
+        type: :atom,
+        required: true,
+        doc: "An Ash resource module extended with `AshJido`."
+      ]
+    ]
+  }
+
+  @tools_section %Spark.Dsl.Section{
+    name: :tools,
+    describe: """
+    Register Moto tools for this agent.
+    """,
+    entities: [@tool_entity, @ash_resource_entity]
+  }
+
+  use Spark.Dsl.Extension,
+    sections: [@agent_section, @tools_section],
+    verifiers: [
+      Moto.Agent.Verifiers.VerifyModel,
+      Moto.Agent.Verifiers.VerifyTools,
+      Moto.Agent.Verifiers.VerifyAshResources
+    ]
 end

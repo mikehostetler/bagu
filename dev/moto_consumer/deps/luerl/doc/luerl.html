@@ -1,0 +1,2401 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.38.1">
+    <meta name="project" content="luerl v1.5.1">
+
+
+    <title>luerl — luerl v1.5.1</title>
+
+    <link rel="stylesheet" href="dist/html-erlang-ZK43ZOAC.css" />
+
+    <script defer src="dist/sidebar_items-712621B1.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="readme.html" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="luerl" />
+        </a>
+
+      <div>
+        <a href="readme.html" class="sidebar-projectName" translate="no">
+luerl
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v1.5.1
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of luerl</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">luerl</span> 
+      <small class="app-vsn" translate="no">(luerl v1.5.1)</small>
+
+    </h1>
+
+      <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L19" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Luerl is an implementation of Lua 5.3 written in Erlang.
+This is the main public API module for interfacing with Luerl.</p><p>The <code class="inline">LuaState</code> parameter is the state of a Lua VM instance. It must be
+created with the <a href="#init/0"><code class="inline">init/0</code></a> call and be threaded from one call to the
+next.</p><p>Note that Luerl, following Lua, does do any implicit UTF-8 encoding of
+input strings. This means that all strings given as arguments to the
+calls or the strings to evaluate with <a href="#do/3"><code class="inline">do/3</code></a> or <a href="#do_dec/3"><code class="inline">do_dec/3</code></a> need to
+have already been UTF-8 encoded. This can be quite easily do with the
+<code class="inline">~</code> or <code class="inline">~b</code> sigils. For example</p><p><code class="inline">luerl:do(~b&quot;return 'árvíztűrő tükörfúrógép'&quot;, St0)</code></p><p>or</p><p><code class="inline">luerl:do(~&quot;return 'árvíztűrő tükörfúrógép'&quot;, St0)</code></p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:luerldata/0" data-no-tooltip="" translate="no">luerldata()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:luerlstate/0" data-no-tooltip="" translate="no">luerlstate()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#externalize/1" data-no-tooltip="" translate="no">externalize(LuaState)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#gc/1" data-no-tooltip="" translate="no">gc(LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Runs the garbage collector on a state and returns the new state.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_stacktrace/1" data-no-tooltip="" translate="no">get_stacktrace(LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Return a stack trace of the current call stack in the state.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#init/0" data-no-tooltip="" translate="no">init()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Create a new Lua state which is a fresh Lua VM instance.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#internalize/1" data-no-tooltip="" translate="no">internalize(LuaState)</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-encode-decode-data-functions summary">
+  <h2>
+    <a href="#encode-decode-data-functions">Encode/Decode Data functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#decode/2" data-no-tooltip="" translate="no">decode(LuerlTerm, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Decode a Luerl term into its standard Erlang representation. Note that
+we have to detect recursive references and generate an error when this
+occurs.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#decode_list/2" data-no-tooltip="" translate="no">decode_list(LuerlTerms, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Decode a list of Luerl terms into their standard Erlang
+representation. Note that we have to detect recursive references and
+generate an error when this occurs.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#encode/2" data-no-tooltip="" translate="no">encode(Term, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Encode an Erlang term into its Luerl representation if possible.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#encode_list/2" data-no-tooltip="" translate="no">encode_list(Terms, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Encode a list of Erlang terms into their Luerl representations if possible.</p></div>
+
+    </div>
+
+</div>
+<div class="summary-evaluate-code-functions summary">
+  <h2>
+    <a href="#evaluate-code-functions">Evaluate Code functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#do/2" data-no-tooltip="" translate="no">do(Expression, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <a><code class="inline">do(Expression, [return], LuaState)</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#do/3" data-no-tooltip="" translate="no">do(Expression, CompileOptions, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Compile a Lua expression string, evaluate it and return its result, which is
+<strong>NOT</strong> decoded, and the new Lua State.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#do_dec/2" data-no-tooltip="" translate="no">do_dec(Expression, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <a><code class="inline">do_dec(Expression, [return], LuaState)</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#do_dec/3" data-no-tooltip="" translate="no">do_dec(Expression, CompileOptions, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Compile a Lua expression string, evaluate it and return its result, which is
+is decoded, and the new Lua State.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#dofile/2" data-no-tooltip="" translate="no">dofile(FileName, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <a><code class="inline">dofile(FileName, [return], LuaState)</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#dofile/3" data-no-tooltip="" translate="no">dofile(FileName, CompileOptions, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Load and execute the Lua code in the file and return its result which
+is <strong>NOT</strong> decoded, and the new Lua State. Equivalent to doing
+luerl:do(&quot;return dofile('FileName')&quot;).</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#dofile_dec/2" data-no-tooltip="" translate="no">dofile_dec(FileName, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <a><code class="inline">dofile_dec(FileName, [return], LuaState)</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#dofile_dec/3" data-no-tooltip="" translate="no">dofile_dec(FileName, CompileOptions, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Load and execute the Lua code in the file and return its result which
+is Lua  decoded, and the new Lua State. Equivalent to doing
+luerl:do_dec(&quot;return dofile('FileName')&quot;).</p></div>
+
+    </div>
+
+</div>
+<div class="summary-function-method-call-functions summary">
+  <h2>
+    <a href="#function-method-call-functions">Function/Method Call functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call/3" data-no-tooltip="" translate="no">call(LuaFuncRef, Args, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <a><code class="inline">call_function(LuaFuncRef, Args, LuaState)</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call_chunk/2" data-no-tooltip="" translate="no">call_chunk(LuaFuncRef, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <a><code class="inline">call_function(LuaFuncRef, [], LuaState)</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call_chunk/3" data-no-tooltip="" translate="no">call_chunk(LuaFuncRef, Args, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <a><code class="inline">call_function(LuaFuncRef, Args, LuaState)</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call_function/3" data-no-tooltip="" translate="no">call_function(LuaFuncRef, Args, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Call a function already defined in the state. <code class="inline">LuaFuncReaf</code> and <code class="inline">Args</code>
+are <strong>NOT</strong> automatically encoded and <code class="inline">Result</code> is <strong>NOT</strong>
+automatically decoded.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call_function_dec/3" data-no-tooltip="" translate="no">call_function_dec(KeyPath, Args, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Call a function already defined in the state. <code class="inline">KeyPath</code> is a list of keys to the function. <code class="inline">KeyPath</code> and <code class="inline">Args</code> are automatically encoded, while <code class="inline">Result</code> is automatically decoded.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call_function_enc/3" data-no-tooltip="" translate="no">call_function_enc(KeyPath, Args, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Call a function already defined in the state. <code class="inline">KeyPath</code> is a list of
+keys to the function. <code class="inline">KeyPath</code> and <code class="inline">Args</code> are automatically encoded,
+while <code class="inline">Result</code> is <strong>NOT</strong> automatically decoded.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call_method/4" data-no-tooltip="" translate="no">call_method(LuaTable, Method, Args, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Call the <code class="inline">Method</code> in the <code class="inline">LuaTable</code> with the <code class="inline">Args</code>. The <code class="inline">LuaTable</code>,
+<code class="inline">Method</code> and <code class="inline">Args</code> are <strong>NOT</strong> automatically encoded and the <code class="inline">Result</code>
+is <strong>NOT</strong> automatically decoded</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call_method_dec/4" data-no-tooltip="" translate="no">call_method_dec(KeyPath, Method, Args, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Call the <code class="inline">Method</code> in the <code class="inline">Table</code> with the <code class="inline">Args</code>. The <code class="inline">Table</code>,
+<code class="inline">Method</code> and <code class="inline">Args</code> are automatically encoded and the <code class="inline">Result</code>
+is  automatically decoded.</p></div>
+
+    </div>
+
+</div>
+<div class="summary-load-code-functions summary">
+  <h2>
+    <a href="#load-code-functions">Load Code functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#load/2" data-no-tooltip="" translate="no">load(LuaCode, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <a><code class="inline">load(LuaChunk, [return], LuaState)</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#load/3" data-no-tooltip="" translate="no">load(LuaCode, CompileOptions, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Parse Lua chunk code as string or binary, and return a compiled chunk function.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#load_module/3" data-no-tooltip="" translate="no">load_module(KeyPath, ErlangModule, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Load <code class="inline">ErlangModule</code> and install its table at <code class="inline">KeyPath</code> in the LuaTable
+which is <strong>NOT</strong> automatically Lua encoded.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#load_module_dec/3" data-no-tooltip="" translate="no">load_module_dec(KeyPath, ErlangModule, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Load <code class="inline">ErlangModule</code> and install its table at <code class="inline">KeyPath</code> in the LuaTable
+which is automatically Lua encoded.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#loadfile/2" data-no-tooltip="" translate="no">loadfile(FileName, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <a><code class="inline">loadfile(FileName, [return], LuaState)</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#loadfile/3" data-no-tooltip="" translate="no">loadfile(FileName, CompileOptions, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Parse a Lua file, and return a compiled chunk function.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#path_loadfile/2" data-no-tooltip="" translate="no">path_loadfile(FileName, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Calls <a><code class="inline">path_loadfile/4</code></a> with Path set the value of <code class="inline">LUA_LOAD_PATH</code> and
+<code class="inline">CompileOptions</code> set to <code class="inline">[return]</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#path_loadfile/3" data-no-tooltip="" translate="no">path_loadfile(Path, FileName, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Equivalent to <a><code class="inline">path_loadfile(Path, FileName, [return], LuaState)</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#path_loadfile/4" data-no-tooltip="" translate="no">path_loadfile(Path, FileName, CompileOptions, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Search down a <code class="inline">Path</code> to find the Lua file and return a compiled ('form').</p></div>
+
+    </div>
+
+</div>
+<div class="summary-lua-table-access-functions summary">
+  <h2>
+    <a href="#lua-table-access-functions">Lua Table Access functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_table_key/3" data-no-tooltip="" translate="no">get_table_key(Table, Key, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Get the value of a key in a table. <code class="inline">Table</code>, <code class="inline">Key</code> are
+<strong>NOT</strong> encoded and the <code class="inline">Result</code> is <strong>NOT</strong> decoded.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_table_keys/2" data-no-tooltip="" translate="no">get_table_keys(KeyPath, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Gets a value inside the Lua state. <code class="inline">KeyPath</code> is <strong>NOT</strong> encoded and
+<code class="inline">Result</code> is <strong>NOT</strong> decoded.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_table_keys_dec/2" data-no-tooltip="" translate="no">get_table_keys_dec(KeyPath, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Gets a value inside the Lua state. <code class="inline">KeyPath</code> is automatically encoded
+and <code class="inline">Result</code> is automatically decoded.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_table_key/4" data-no-tooltip="" translate="no">set_table_key(Table, Key, Value, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Set the value of a key in a table. <code class="inline">Table</code>, <code class="inline">Key</code> and <code class="inline">Value</code> are
+<strong>NOT</strong> encoded.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_table_keys/3" data-no-tooltip="" translate="no">set_table_keys(KeyPath, Value, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Sets a value inside the Lua state. <code class="inline">KeyPath</code> and <code class="inline">Value</code> are <strong>NOT</strong> encoded.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_table_keys_dec/3" data-no-tooltip="" translate="no">set_table_keys_dec(KeyPath, Value, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Sets a value inside the Lua state. <code class="inline">KeyPath</code> and <code class="inline">Value</code> are
+automatically encoded.</p></div>
+
+    </div>
+
+</div>
+<div class="summary-private-data-functions summary">
+  <h2>
+    <a href="#private-data-functions">Private Data functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#delete_private/2" data-no-tooltip="" translate="no">delete_private(Key, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Delete the private value for <code class="inline">Key</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_private/2" data-no-tooltip="" translate="no">get_private(Key, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Get the private value for <code class="inline">Key</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#put_private/3" data-no-tooltip="" translate="no">put_private(Key, Value, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Puts a private <code class="inline">Value</code> under <code class="inline">Key</code> that is not exposed to the runtime.</p></div>
+
+    </div>
+
+</div>
+<div class="summary-trace-control-functions summary">
+  <h2>
+    <a href="#trace-control-functions">Trace Control functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#clear_trace_func/1" data-no-tooltip="" translate="no">clear_trace_func(LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Clear the trace function.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_trace_data/1" data-no-tooltip="" translate="no">get_trace_data(LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Get the current trace data.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_trace_data/2" data-no-tooltip="" translate="no">set_trace_data(TraceData, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Set the trace data.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_trace_func/2" data-no-tooltip="" translate="no">set_trace_func(Function, LuaState)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Set the trace function.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+    <div class="types-list">
+<section class="detail" id="t:luerldata/0">
+
+  <div class="detail-header">
+    <a href="#t:luerldata/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">luerldata()</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.hrl#L137" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-type</span> luerldata() ::
+          nil |
+          <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:boolean/0">boolean</a>() |
+          <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:binary/0">binary</a>() |
+          <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:number/0">number</a>() |
+          #tref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()} |
+          #usdref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()} |
+          #eref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()} |
+          #funref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), env :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()} |
+          #erl_func{code :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()} |
+          #erl_mfa{m :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), f :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), a :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()}.</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:luerlstate/0">
+
+  <div class="detail-header">
+    <a href="#t:luerlstate/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">luerlstate()</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.hrl#L134" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-type</span> luerlstate() ::
+          #luerl{tabs :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 envs :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 usds :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 fncs :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 g :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 stk :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 cs :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 meta :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 rand :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 tag :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 trace_func :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 trace_data :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                 private :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()}.</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="externalize/1">
+
+  <div class="detail-header">
+    <a href="#externalize/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">externalize(LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L982" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> externalize(LuaState) -> LuaState when LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="gc/1">
+
+  <div class="detail-header">
+    <a href="#gc/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">gc(LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L92" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> gc(LuaState) -> LuaState when LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Runs the garbage collector on a state and returns the new state.</p>
+  </section>
+</section>
+<section class="detail" id="get_stacktrace/1">
+
+  <div class="detail-header">
+    <a href="#get_stacktrace/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_stacktrace(LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L771" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> get_stacktrace(LuaState) -> [FuncCall]
+                        when
+                            LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                            FuncCall :: {FuncName, CallArgs, ExtraInfo},
+                            FuncName :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:atom/0">atom</a>(),
+                            ExtraInfo :: [{<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:atom/0">atom</a>(), <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()}],
+                            CallArgs :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()].</pre>
+
+      </div>
+
+<p>Return a stack trace of the current call stack in the state.</p>
+  </section>
+</section>
+<section class="detail" id="init/0">
+
+  <div class="detail-header">
+    <a href="#init/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">init()</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L82" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> init() -> LuaState when LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Create a new Lua state which is a fresh Lua VM instance.</p>
+  </section>
+</section>
+<section class="detail" id="internalize/1">
+
+  <div class="detail-header">
+    <a href="#internalize/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">internalize(LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L988" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> internalize(LuaState) -> LuaState when LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="encode-decode-data-functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#encode-decode-data-functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Encode/Decode Data functions</span>
+    </h1>
+    <div class="encode-decode-data-functions-list">
+<section class="detail" id="decode/2">
+
+  <div class="detail-header">
+    <a href="#decode/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">decode(LuerlTerm, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L921" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> decode(LuerlTerm, LuaState) -> Term
+                when LuerlTerm :: <a href="#t:luerldata/0">luerldata</a>(), Term :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Decode a Luerl term into its standard Erlang representation. Note that
+we have to detect recursive references and generate an error when this
+occurs.</p>
+  </section>
+</section>
+<section class="detail" id="decode_list/2">
+
+  <div class="detail-header">
+    <a href="#decode_list/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">decode_list(LuerlTerms, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L906" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> decode_list([LuerlTerm], LuaState) -> [Term]
+                     when LuerlTerm :: <a href="#t:luerldata/0">luerldata</a>(), Term :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Decode a list of Luerl terms into their standard Erlang
+representation. Note that we have to detect recursive references and
+generate an error when this occurs.</p>
+  </section>
+</section>
+<section class="detail" id="encode/2">
+
+  <div class="detail-header">
+    <a href="#encode/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">encode(Term, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L850" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> encode(Term, LuaState) -> {LuerlTerm, LuaState}
+                when LuerlTerm :: <a href="#t:luerldata/0">luerldata</a>(), Term :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Encode an Erlang term into its Luerl representation if possible.</p>
+  </section>
+</section>
+<section class="detail" id="encode_list/2">
+
+  <div class="detail-header">
+    <a href="#encode_list/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">encode_list(Terms, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L835" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> encode_list([Term], LuaState) -> {[LuerlTerm], LuaState}
+                     when LuerlTerm :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), Term :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Encode a list of Erlang terms into their Luerl representations if possible.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="evaluate-code-functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#evaluate-code-functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Evaluate Code functions</span>
+    </h1>
+    <div class="evaluate-code-functions-list">
+<section class="detail" id="do/2">
+
+  <div class="detail-header">
+    <a href="#do/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">do(Expression, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L342" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> do(Expression, LuaState) -> {ok, Result, LuaState} | LuaError | CompileError
+            when
+                Expression :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                Result :: [<a href="#t:luerldata/0">luerldata</a>()],
+                LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState},
+                CompileError :: {error, [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()]}.</pre>
+
+      </div>
+
+<p>Equivalent to <a href="#do/3"><code class="inline">do(Expression, [return], LuaState)</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="do/3">
+
+  <div class="detail-header">
+    <a href="#do/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">do(Expression, CompileOptions, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L358" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> do(Expression, CompileOptions, LuaState) -> {ok, Result, LuaState} | LuaError | CompileError
+            when
+                Expression :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                CompileOptions :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                Result :: [<a href="#t:luerldata/0">luerldata</a>()],
+                LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState},
+                CompileError :: {error, [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()]}.</pre>
+
+      </div>
+
+<p>Compile a Lua expression string, evaluate it and return its result, which is
+<strong>NOT</strong> decoded, and the new Lua State.</p>
+  </section>
+</section>
+<section class="detail" id="do_dec/2">
+
+  <div class="detail-header">
+    <a href="#do_dec/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">do_dec(Expression, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L375" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> do_dec(Expression, LuaState) -> {ok, Result, LuaState} | LuaError | CompileError
+                when
+                    Expression :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                    Result :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                    LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                    LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState},
+                    CompileError :: {error, [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()]}.</pre>
+
+      </div>
+
+<p>Equivalent to <a href="#do_dec/3"><code class="inline">do_dec(Expression, [return], LuaState)</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="do_dec/3">
+
+  <div class="detail-header">
+    <a href="#do_dec/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">do_dec(Expression, CompileOptions, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L392" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> do_dec(Expression, CompileOptions, LuaState) -> {ok, Result, LuaState} | LuaError | CompileError
+                when
+                    Expression :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                    CompileOptions :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                    LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                    Result :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                    LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState},
+                    CompileError :: {error, [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()]}.</pre>
+
+      </div>
+
+<p>Compile a Lua expression string, evaluate it and return its result, which is
+is decoded, and the new Lua State.</p>
+  </section>
+</section>
+<section class="detail" id="dofile/2">
+
+  <div class="detail-header">
+    <a href="#dofile/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">dofile(FileName, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L413" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> dofile(FileName, LuaState) -> {ok, Result, LuaState} | LuaError | CompileError
+                when
+                    FileName :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                    LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                    Result :: [<a href="#t:luerldata/0">luerldata</a>()],
+                    LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState},
+                    CompileError :: {error, [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()]}.</pre>
+
+      </div>
+
+<p>Equivalent to <a href="#dofile/3"><code class="inline">dofile(FileName, [return], LuaState)</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="dofile/3">
+
+  <div class="detail-header">
+    <a href="#dofile/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">dofile(FileName, CompileOptions, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L430" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> dofile(FileName, CompileOptions, LuaState) -> {ok, Result, LuaState} | LuaError | CompileError
+                when
+                    FileName :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                    CompileOptions :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                    LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                    Result :: [<a href="#t:luerldata/0">luerldata</a>()],
+                    LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState},
+                    CompileError :: {error, [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()]}.</pre>
+
+      </div>
+
+<p>Load and execute the Lua code in the file and return its result which
+is <strong>NOT</strong> decoded, and the new Lua State. Equivalent to doing
+luerl:do(&quot;return dofile('FileName')&quot;).</p>
+  </section>
+</section>
+<section class="detail" id="dofile_dec/2">
+
+  <div class="detail-header">
+    <a href="#dofile_dec/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">dofile_dec(FileName, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L447" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> dofile_dec(FileName, LuaState) -> {ok, Result, LuaState} | LuaError | CompileError
+                    when
+                        FileName :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                        Result :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                        LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                        LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState},
+                        CompileError :: {error, [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()]}.</pre>
+
+      </div>
+
+<p>Equivalent to <a href="#dofile_dec/3"><code class="inline">dofile_dec(FileName, [return], LuaState)</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="dofile_dec/3">
+
+  <div class="detail-header">
+    <a href="#dofile_dec/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">dofile_dec(FileName, CompileOptions, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L465" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> dofile_dec(FileName, CompileOptions, LuaState) -> {ok, Result, LuaState} | LuaError | CompileError
+                    when
+                        FileName :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                        CompileOptions :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                        LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                        Result :: [<a href="#t:luerldata/0">luerldata</a>()],
+                        LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState},
+                        CompileError :: {error, [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()]}.</pre>
+
+      </div>
+
+<p>Load and execute the Lua code in the file and return its result which
+is Lua  decoded, and the new Lua State. Equivalent to doing
+luerl:do_dec(&quot;return dofile('FileName')&quot;).</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="function-method-call-functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#function-method-call-functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Function/Method Call functions</span>
+    </h1>
+    <div class="function-method-call-functions-list">
+<section class="detail" id="call/3">
+
+  <div class="detail-header">
+    <a href="#call/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call(LuaFuncRef, Args, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L480" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <a href="#call_function/3"><code class="inline">call_function(LuaFuncRef, Args, LuaState)</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="call_chunk/2">
+
+  <div class="detail-header">
+    <a href="#call_chunk/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call_chunk(LuaFuncRef, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L486" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <a href="#call_function/3"><code class="inline">call_function(LuaFuncRef, [], LuaState)</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="call_chunk/3">
+
+  <div class="detail-header">
+    <a href="#call_chunk/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call_chunk(LuaFuncRef, Args, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L492" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Equivalent to <a href="#call_function/3"><code class="inline">call_function(LuaFuncRef, Args, LuaState)</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="call_function/3">
+
+  <div class="detail-header">
+    <a href="#call_function/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call_function(LuaFuncRef, Args, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L512" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> call_function(LuaFuncRef, Args, LuaState) -> {ok, Result, LuaState} | LuaError
+                       when
+                           LuaFuncRef :: [<a href="#t:luerldata/0">luerldata</a>()] | <a href="#t:luerldata/0">luerldata</a>(),
+                           Args :: [<a href="#t:luerldata/0">luerldata</a>()],
+                           LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                           Result :: [<a href="#t:luerldata/0">luerldata</a>()],
+                           LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState}.</pre>
+
+      </div>
+
+<p>Call a function already defined in the state. <code class="inline">LuaFuncReaf</code> and <code class="inline">Args</code>
+are <strong>NOT</strong> automatically encoded and <code class="inline">Result</code> is <strong>NOT</strong>
+automatically decoded.</p>
+  </section>
+</section>
+<section class="detail" id="call_function_dec/3">
+
+  <div class="detail-header">
+    <a href="#call_function_dec/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call_function_dec(KeyPath, Args, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L561" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> call_function_dec(KeyPath, Args, LuaState) -> {ok, Result, LuaState} | LuaError
+                           when
+                               KeyPath :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                               Args :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                               LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                               Result :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                               LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState}.</pre>
+
+      </div>
+
+<p>Call a function already defined in the state. <code class="inline">KeyPath</code> is a list of keys to the function. <code class="inline">KeyPath</code> and <code class="inline">Args</code> are automatically encoded, while <code class="inline">Result</code> is automatically decoded.</p>
+  </section>
+</section>
+<section class="detail" id="call_function_enc/3">
+
+  <div class="detail-header">
+    <a href="#call_function_enc/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call_function_enc(KeyPath, Args, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L541" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> call_function_enc(KeyPath, Args, LuaState) -> {ok, Result, LuaState} | LuaError
+                           when
+                               KeyPath :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                               Args :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                               LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                               Result :: [<a href="#t:luerldata/0">luerldata</a>()],
+                               LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState}.</pre>
+
+      </div>
+
+<p>Call a function already defined in the state. <code class="inline">KeyPath</code> is a list of
+keys to the function. <code class="inline">KeyPath</code> and <code class="inline">Args</code> are automatically encoded,
+while <code class="inline">Result</code> is <strong>NOT</strong> automatically decoded.</p>
+  </section>
+</section>
+<section class="detail" id="call_method/4">
+
+  <div class="detail-header">
+    <a href="#call_method/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call_method(LuaTable, Method, Args, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L588" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> call_method(LuaTable, Method, Args, LuaState) -> {ok, Result, LuaState} | LuaError
+                     when
+                         LuaTable :: #tref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()},
+                         Method :: <a href="#t:luerldata/0">luerldata</a>(),
+                         Args :: [<a href="#t:luerldata/0">luerldata</a>()],
+                         LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                         Result :: [<a href="#t:luerldata/0">luerldata</a>()],
+                         LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState}.</pre>
+
+      </div>
+
+<p>Call the <code class="inline">Method</code> in the <code class="inline">LuaTable</code> with the <code class="inline">Args</code>. The <code class="inline">LuaTable</code>,
+<code class="inline">Method</code> and <code class="inline">Args</code> are <strong>NOT</strong> automatically encoded and the <code class="inline">Result</code>
+is <strong>NOT</strong> automatically decoded</p>
+  </section>
+</section>
+<section class="detail" id="call_method_dec/4">
+
+  <div class="detail-header">
+    <a href="#call_method_dec/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">call_method_dec(KeyPath, Method, Args, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L614" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> call_method_dec(KeyPath, Method, Args, LuaState) -> {ok, Result, LuaState} | LuaError
+                         when
+                             KeyPath :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                             Method :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                             Args :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                             LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                             Result :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                             LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState}.</pre>
+
+      </div>
+
+<p>Call the <code class="inline">Method</code> in the <code class="inline">Table</code> with the <code class="inline">Args</code>. The <code class="inline">Table</code>,
+<code class="inline">Method</code> and <code class="inline">Args</code> are automatically encoded and the <code class="inline">Result</code>
+is  automatically decoded.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="load-code-functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#load-code-functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Load Code functions</span>
+    </h1>
+    <div class="load-code-functions-list">
+<section class="detail" id="load/2">
+
+  <div class="detail-header">
+    <a href="#load/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">load(LuaCode, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L160" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> load(LuaCode, LuaState) -> {ok, Function, LuaState} | CompileError
+              when
+                  LuaCode :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:binary/0">binary</a>() | <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                  Function :: #funref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), env :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()},
+                  LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                  CompileError :: {error, [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()]}.</pre>
+
+      </div>
+
+<p>Equivalent to <a href="#load/3"><code class="inline">load(LuaChunk, [return], LuaState)</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="load/3">
+
+  <div class="detail-header">
+    <a href="#load/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">load(LuaCode, CompileOptions, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L174" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> load(LuaCode, CompileOptions, LuaState) -> {ok, Function, LuaState} | CompileError
+              when
+                  LuaCode :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:binary/0">binary</a>() | <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                  CompileOptions :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                  LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                  Function :: #funref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), env :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()},
+                  CompileError :: {error, [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()]}.</pre>
+
+      </div>
+
+<p>Parse Lua chunk code as string or binary, and return a compiled chunk function.</p>
+  </section>
+</section>
+<section class="detail" id="load_module/3">
+
+  <div class="detail-header">
+    <a href="#load_module/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">load_module(KeyPath, ErlangModule, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L305" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> load_module(KeyPath, ErlangModule, LuaState) -> LuaState
+                     when KeyPath :: [<a href="#t:luerldata/0">luerldata</a>()], ErlangModule :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:atom/0">atom</a>(), LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Load <code class="inline">ErlangModule</code> and install its table at <code class="inline">KeyPath</code> in the LuaTable
+which is <strong>NOT</strong> automatically Lua encoded.</p>
+  </section>
+</section>
+<section class="detail" id="load_module_dec/3">
+
+  <div class="detail-header">
+    <a href="#load_module_dec/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">load_module_dec(KeyPath, ErlangModule, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L322" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> load_module_dec(KeyPath, ErlangModule, LuaState) -> LuaState
+                         when KeyPath :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], ErlangModule :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:atom/0">atom</a>(), LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Load <code class="inline">ErlangModule</code> and install its table at <code class="inline">KeyPath</code> in the LuaTable
+which is automatically Lua encoded.</p>
+  </section>
+</section>
+<section class="detail" id="loadfile/2">
+
+  <div class="detail-header">
+    <a href="#loadfile/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">loadfile(FileName, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L197" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> loadfile(FileName, LuaState) -> {ok, Function, LuaState} | CompileError
+                  when
+                      FileName :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                      LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                      Function :: #funref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), env :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()},
+                      CompileError :: {error, [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()]}.</pre>
+
+      </div>
+
+<p>Equivalent to <a href="#loadfile/3"><code class="inline">loadfile(FileName, [return], LuaState)</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="loadfile/3">
+
+  <div class="detail-header">
+    <a href="#loadfile/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">loadfile(FileName, CompileOptions, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L211" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> loadfile(FileName, CompileOptions, LuaState) -> {ok, Function, LuaState} | CompileError
+                  when
+                      FileName :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                      CompileOptions :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                      LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                      Function :: #funref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), env :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()},
+                      CompileError :: {error, [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()]}.</pre>
+
+      </div>
+
+<p>Parse a Lua file, and return a compiled chunk function.</p>
+  </section>
+</section>
+<section class="detail" id="path_loadfile/2">
+
+  <div class="detail-header">
+    <a href="#path_loadfile/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">path_loadfile(FileName, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L238" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> path_loadfile(FileName, LuaState) -> {ok, Function, FullName, LuaState} | CompileError
+                       when
+                           FileName :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                           LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                           Function :: #funref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), env :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()},
+                           FullName :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                           CompileError :: {error, [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()}.</pre>
+
+      </div>
+
+<p>Calls <a href="#path_loadfile/4"><code class="inline">path_loadfile/4</code></a> with Path set the value of <code class="inline">LUA_LOAD_PATH</code> and
+<code class="inline">CompileOptions</code> set to <code class="inline">[return]</code>.</p>
+  </section>
+</section>
+<section class="detail" id="path_loadfile/3">
+
+  <div class="detail-header">
+    <a href="#path_loadfile/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">path_loadfile(Path, FileName, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L262" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> path_loadfile(Path, FileName, LuaState) -> {ok, Function, FullName, LuaState} | CompileError
+                       when
+                           Path :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>()],
+                           FileName :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                           LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                           Function :: #funref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), env :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()},
+                           FullName :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                           CompileError :: {error, [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()]}.</pre>
+
+      </div>
+
+<p>Equivalent to <a href="#path_loadfile/4"><code class="inline">path_loadfile(Path, FileName, [return], LuaState)</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="path_loadfile/4">
+
+  <div class="detail-header">
+    <a href="#path_loadfile/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">path_loadfile(Path, FileName, CompileOptions, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L279" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> path_loadfile(Path, FileName, CompileOptions, LuaState) ->
+                       {ok, Function, FullName, LuaState} | CompileError
+                       when
+                           Path :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>()],
+                           FileName :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                           FullName :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:string/0">string</a>(),
+                           CompileOptions :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                           LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                           Function :: #funref{i :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), env :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()},
+                           CompileError :: {error, [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()], [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()]}.</pre>
+
+      </div>
+
+<p>Search down a <code class="inline">Path</code> to find the Lua file and return a compiled ('form').</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="lua-table-access-functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#lua-table-access-functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Lua Table Access functions</span>
+    </h1>
+    <div class="lua-table-access-functions-list">
+<section class="detail" id="get_table_key/3">
+
+  <div class="detail-header">
+    <a href="#get_table_key/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_table_key(Table, Key, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L727" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> get_table_key(Table, Key, LuaState) -> {ok, Result, LuaState} | LuaError
+                       when
+                           Table :: <a href="#t:luerldata/0">luerldata</a>(),
+                           Key :: <a href="#t:luerldata/0">luerldata</a>(),
+                           LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                           Result :: <a href="#t:luerldata/0">luerldata</a>(),
+                           LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState}.</pre>
+
+      </div>
+
+<p>Get the value of a key in a table. <code class="inline">Table</code>, <code class="inline">Key</code> are
+<strong>NOT</strong> encoded and the <code class="inline">Result</code> is <strong>NOT</strong> decoded.</p>
+  </section>
+</section>
+<section class="detail" id="get_table_keys/2">
+
+  <div class="detail-header">
+    <a href="#get_table_keys/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_table_keys(KeyPath, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L643" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> get_table_keys(KeyPath, LuaState) -> {ok, Result, LuaState} | LuaError
+                        when
+                            KeyPath :: [<a href="#t:luerldata/0">luerldata</a>()],
+                            LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                            Result :: <a href="#t:luerldata/0">luerldata</a>(),
+                            LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState}.</pre>
+
+      </div>
+
+<p>Gets a value inside the Lua state. <code class="inline">KeyPath</code> is <strong>NOT</strong> encoded and
+<code class="inline">Result</code> is <strong>NOT</strong> decoded.</p>
+  </section>
+</section>
+<section class="detail" id="get_table_keys_dec/2">
+
+  <div class="detail-header">
+    <a href="#get_table_keys_dec/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_table_keys_dec(KeyPath, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L664" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> get_table_keys_dec(KeyPath, LuaState) -> {ok, Result, LuaState} | LuaError
+                            when
+                                KeyPath :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                                LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                                Result :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                                LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState}.</pre>
+
+      </div>
+
+<p>Gets a value inside the Lua state. <code class="inline">KeyPath</code> is automatically encoded
+and <code class="inline">Result</code> is automatically decoded.</p>
+  </section>
+</section>
+<section class="detail" id="set_table_key/4">
+
+  <div class="detail-header">
+    <a href="#set_table_key/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_table_key(Table, Key, Value, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L749" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> set_table_key(Table, Key, Value, LuaState) -> {ok, LuaState} | LuaError
+                       when
+                           Table :: <a href="#t:luerldata/0">luerldata</a>(),
+                           Key :: <a href="#t:luerldata/0">luerldata</a>(),
+                           Value :: <a href="#t:luerldata/0">luerldata</a>(),
+                           LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                           LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState}.</pre>
+
+      </div>
+
+<p>Set the value of a key in a table. <code class="inline">Table</code>, <code class="inline">Key</code> and <code class="inline">Value</code> are
+<strong>NOT</strong> encoded.</p>
+  </section>
+</section>
+<section class="detail" id="set_table_keys/3">
+
+  <div class="detail-header">
+    <a href="#set_table_keys/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_table_keys(KeyPath, Value, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L683" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> set_table_keys(KeyPath, Value, LuaState) -> {ok, LuaState} | LuaError
+                        when
+                            KeyPath :: [<a href="#t:luerldata/0">luerldata</a>()],
+                            Value :: <a href="#t:luerldata/0">luerldata</a>(),
+                            LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                            LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState}.</pre>
+
+      </div>
+
+<p>Sets a value inside the Lua state. <code class="inline">KeyPath</code> and <code class="inline">Value</code> are <strong>NOT</strong> encoded.</p>
+  </section>
+</section>
+<section class="detail" id="set_table_keys_dec/3">
+
+  <div class="detail-header">
+    <a href="#set_table_keys_dec/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_table_keys_dec(KeyPath, Value, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L704" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> set_table_keys_dec(KeyPath, Value, LuaState) -> {ok, LuaState} | LuaError
+                            when
+                                KeyPath :: [<a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>()],
+                                Value :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(),
+                                LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(),
+                                LuaError :: {lua_error, <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState}.</pre>
+
+      </div>
+
+<p>Sets a value inside the Lua state. <code class="inline">KeyPath</code> and <code class="inline">Value</code> are
+automatically encoded.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="private-data-functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#private-data-functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Private Data functions</span>
+    </h1>
+    <div class="private-data-functions-list">
+<section class="detail" id="delete_private/2">
+
+  <div class="detail-header">
+    <a href="#delete_private/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete_private(Key, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L1034" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> delete_private(Key, LuaState) -> LuaState when Key :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Delete the private value for <code class="inline">Key</code>.</p>
+  </section>
+</section>
+<section class="detail" id="get_private/2">
+
+  <div class="detail-header">
+    <a href="#get_private/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_private(Key, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L1022" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> get_private(Key, LuaState) -> Value when Key :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), Value :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Get the private value for <code class="inline">Key</code>.</p>
+  </section>
+</section>
+<section class="detail" id="put_private/3">
+
+  <div class="detail-header">
+    <a href="#put_private/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">put_private(Key, Value, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L1008" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> put_private(Key, Value, LuaState) -> LuaState
+                     when Key :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), Value :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>(), LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Puts a private <code class="inline">Value</code> under <code class="inline">Key</code> that is not exposed to the runtime.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="trace-control-functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#trace-control-functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Trace Control functions</span>
+    </h1>
+    <div class="trace-control-functions-list">
+<section class="detail" id="clear_trace_func/1">
+
+  <div class="detail-header">
+    <a href="#clear_trace_func/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">clear_trace_func(LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L121" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> clear_trace_func(LuaState) -> LuaState when LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Clear the trace function.</p>
+  </section>
+</section>
+<section class="detail" id="get_trace_data/1">
+
+  <div class="detail-header">
+    <a href="#get_trace_data/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_trace_data(LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L133" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> get_trace_data(LuaState) -> TraceData when LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(), TraceData :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>().</pre>
+
+      </div>
+
+<p>Get the current trace data.</p>
+  </section>
+</section>
+<section class="detail" id="set_trace_data/2">
+
+  <div class="detail-header">
+    <a href="#set_trace_data/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_trace_data(TraceData, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L145" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> set_trace_data(TraceData, LuaState) -> LuaState when LuaState :: <a href="#t:luerlstate/0">luerlstate</a>(), TraceData :: <a href="https://www.erlang.org/doc/apps/erts/erlang.html#t:term/0">term</a>().</pre>
+
+      </div>
+
+<p>Set the trace data.</p>
+  </section>
+</section>
+<section class="detail" id="set_trace_func/2">
+
+  <div class="detail-header">
+    <a href="#set_trace_func/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_trace_func(Function, LuaState)</h1>
+
+
+        <a href="https://github.com/rvirding/luerl/blob/v1.5.1/src/luerl.erl#L110" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">-spec</span> set_trace_func(Function, LuaState) -> LuaState when Function :: fun(), LuaState :: <a href="#t:luerlstate/0">luerlstate</a>().</pre>
+
+      </div>
+
+<p>Set the trace function.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+          <span class="line">
+            <a href="https://hex.pm/packages/luerl/1.5.1" class="footer-hex-package">Hex Package</a>
+
+            <a href="https://preview.hex.pm/preview/luerl/1.5.1">Hex Preview</a>
+
+          </span>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="luerl.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
+
+          <a href="https://erlang.org" title="Erlang" target="_blank" translate="no">Erlang programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

@@ -1,0 +1,1 @@
+{application,lua,[{modules,['Elixir.Inspect.Lua','Elixir.Lua','Elixir.Lua.API','Elixir.Lua.Chunk','Elixir.Lua.CompilerException','Elixir.Lua.RuntimeException','Elixir.Lua.Table','Elixir.Lua.Util']},{optional_applications,[]},{applications,[kernel,stdlib,elixir,logger,luerl]},{description,"The most ergomonic interface to Luerl in Elixir"},{registered,[]},{vsn,"0.4.0"}]}.

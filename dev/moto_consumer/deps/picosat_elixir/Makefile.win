@@ -1,0 +1,21 @@
+C_SRC_DIR = c_src
+C_OUT_NAME = picosat_nif.dll
+C_OUTPUT = $(MIX_APP_PATH)\priv\$(C_OUT_NAME)
+
+# CFLAGS = -std=c99 -finline-functions -Wall  -fPIC
+# C99 not available in vs...
+CFLAGS = /DNGETRUSAGE=1 /Ob2 /Wall /I"$(C_SRC_DIR)" /I"$(ERTS_INCLUDE_DIR)"
+# LDFLAGS = -flat_namespace -undefined suppress -shared
+LDFLAGS =
+
+all: $(C_OUTPUT)
+
+clean:
+	del /Q /F *.obj
+
+$(C_OUTPUT):
+	if NOT EXIST "$(MIX_APP_PATH)" mkdir "$(MIX_APP_PATH)"
+	if NOT EXIST "$(MIX_APP_PATH)\priv" mkdir "$(MIX_APP_PATH)\priv"
+	$(CC) $(CFLAGS) $(LDFLAGS) /LD /MD /Fe$@ $(C_SRC_DIR)\*.c
+
+.PHONY: all clean

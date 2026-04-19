@@ -1,0 +1,176 @@
+# SPDX-FileCopyrightText: 2019 ash contributors <https://github.com/ash-project/ash/graphs/contributors>
+#
+# SPDX-License-Identifier: MIT
+
+defmodule Ash.Resource.Transformers.SetPrimaryActions do
+  @moduledoc """
+  Validates the primary action configuration
+
+  If multiple primary actions exist this results in an error.
+  """
+  use Spark.Dsl.Transformer
+
+  alias Spark.Dsl.Entity
+  alias Spark.Dsl.Extension
+  alias Spark.Dsl.Transformer
+  alias Spark.Error.DslError
+
+  @default_actions_require_atomic? Application.compile_env(
+                                     :ash,
+                                     :default_actions_require_atomic?,
+                                     false
+                                   )
+
+  def after?(Ash.Resource.Transformers.DefaultAccept), do: true
+  def after?(_), do: false
+
+  def transform(dsl_state) do
+    with {:ok, dsl_state} <- add_defaults(dsl_state) do
+      dsl_state
+      |> Transformer.get_entities([:actions])
+      |> Enum.group_by(& &1.type)
+      |> Map.put_new(:read, [])
+      |> Map.put_new(:update, [])
+      |> Map.put_new(:create, [])
+      |> Map.put_new(:destroy, [])
+      |> Enum.reduce_while({:ok, dsl_state}, fn
+        {_type, []}, {:ok, dsl_state} ->
+          {:cont, {:ok, dsl_state}}
+
+        {type, actions}, {:ok, dsl_state} ->
+          case Enum.count_until(actions, & &1.primary?, 2) do
+            2 ->
+              # Find the second primary action of this type (the one causing the conflict)
+              second_primary_action = actions |> Enum.filter(& &1.primary?) |> Enum.at(1)
+              location = Entity.anno(second_primary_action)
+
+              {:halt,
+               {:error,
+                DslError.exception(
+                  module: Transformer.get_persisted(dsl_state, :module),
+                  message:
+                    "Multiple actions of type #{type} configured as `primary?: true`, but only one action per type can be the primary",
+                  path: [:actions, type],
+                  location: location
+                )}}
+
+            _ ->
+              {:cont, {:ok, dsl_state}}
+          end
+      end)
+    end
+  end
+
+  defp add_defaults(dsl_state) do
+    actions = Transformer.get_entities(dsl_state, [:actions])
+
+    default_defaults =
+      if Transformer.get_persisted(dsl_state, :embedded?) do
+        [{:create, :*}, :read, {:update, :*}, :destroy]
+        |> Enum.reject(fn
+          {action_name, _} ->
+            Enum.any?(actions, &(&1.name == action_name))
+
+          action_name ->
+            Enum.any?(actions, &(&1.name == action_name))
+        end)
+        |> Enum.reverse()
+      else
+        []
+      end
+
+    default_accept =
+      List.wrap(
+        Transformer.get_option(
+          dsl_state,
+          [:actions],
+          :default_accept
+        )
+      )
+
+    dsl_state
+    |> Transformer.get_option([:actions], :defaults)
+    |> Kernel.||(default_defaults)
+    |> Enum.with_index()
+    |> Enum.reduce_while({:ok, dsl_state}, fn {type_and_accept, i}, {:ok, dsl_state} ->
+      {type, accept} =
+        case type_and_accept do
+          {type, _accept} when type in [:destroy, :read] ->
+            # Get location info for the default_accept option
+            default_accept_anno = Extension.get_opt_anno(dsl_state, [:actions], :default_accept)
+
+            raise Spark.Error.DslError,
+              module: Spark.Dsl.Transformer.get_persisted(dsl_state, :module),
+              path: [:actions, :default_accept],
+              location: default_accept_anno,
+              message: """
+              Do not specify an accept for the default actions of type `:read` and `:destroy`.
+
+              Place them at the beginning of the list if you need to avoid specifying a value for them:
+
+                  defaults [:read, :destroy, create: [...], update: [...]]
+              """
+
+          type when type in [:create, :update] ->
+            {type, default_accept}
+
+          {type, accept} ->
+            {type, List.wrap(accept)}
+
+          type ->
+            {type, []}
+        end
+
+      if type not in [:create, :update, :read, :destroy] do
+        # Get location info for the defaults option
+        defaults_anno = Extension.get_opt_anno(dsl_state, [:actions], :defaults)
+
+        raise Spark.Error.DslError,
+          module: Transformer.get_persisted(dsl_state, :module),
+          path: [:actions, :defaults, i],
+          location: defaults_anno,
+          message: "#{type} is not a valid action type"
+      end
+
+      primary? = !Enum.any?(actions, &(&1.type == type && &1.primary?))
+
+      transactions_enabled? = Ash.DataLayer.can?(:transact, dsl_state)
+
+      if type == :read do
+        Ash.Resource.Builder.prepend_action(dsl_state, type, type,
+          primary?: primary?,
+          transaction?: false,
+          pagination:
+            Ash.Resource.Builder.build_pagination(
+              required?: false,
+              offset?: true,
+              keyset?: true,
+              countable: Ash.DataLayer.data_layer_can?(dsl_state, {:query_aggregate, :count})
+            )
+        )
+      else
+        opts =
+          if type in [:update, :destroy] do
+            [
+              require_atomic?: @default_actions_require_atomic?,
+              primary?: primary?,
+              accept: accept,
+              transaction?: transactions_enabled?
+            ]
+          else
+            [
+              primary?: primary?,
+              accept: accept,
+              transaction?: transactions_enabled?
+            ]
+          end
+
+        Ash.Resource.Builder.prepend_action(dsl_state, type, type, opts)
+      end
+      |> case do
+        {:ok, dsl_state} -> {:cont, {:ok, dsl_state}}
+        {:error, error} -> {:halt, {:error, error}}
+      end
+    end)
+  end
+end

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.38.1">
+    <meta name="project" content="luerl v1.5.1">
+
+
+    <title>Luerl — luerl v1.5.1</title>
+
+    <link rel="stylesheet" href="dist/html-erlang-ZK43ZOAC.css" />
+
+    <script defer src="dist/sidebar_items-712621B1.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="readme.html" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="luerl" />
+        </a>
+
+      <div>
+        <a href="readme.html" class="sidebar-projectName" translate="no">
+luerl
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v1.5.1
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-extra" id="main" data-type="extras">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of luerl</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>Luerl</h1>
+
+
+      <a href="https://github.com/rvirding/luerl/blob/v1.5.1/README.md#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+<p><em>An implementation of Lua in Erlang</em></p><p><a href="https://github.com/rvirding/luerl/actions"><img src="https://github.com/rvirding/luerl/workflows/Test/badge.svg" alt="Build Status"/></a>
+<a href="https://github.com/rvirding/luerl"><img src="https://img.shields.io/badge/luerl-1.1-blue.svg" alt="Luerl Versions"/></a>
+<a href="https://github.com/rvirding/luerl/blob/master/.github/workflows/ci.yml"><img src="https://img.shields.io/badge/erlang-24%20to%2026-blue.svg" alt="Erlang Versions"/></a>
+<a href="https://github.com/rvirding/luerl/tags"><img src="https://img.shields.io/github/tag/rvirding/luerl.svg" alt="Tag"/></a></p><p><a href="https://github.com/rvirding/luerl/priv/images/logo-large.png"><img src="   https://github.com/rvirding/luerl/blob/develop/priv/images/logo.png?raw=true" alt="Project Logo"/></a></p><p><strong>Alert</strong>: The migration from Lua 5.2 to 5.3 is very much Work-In-Progress. Please test it but there are as yet no guarantees.</p><h2 id="about" class="section-heading"><a href="#about" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">About</span></h2><p>Luerl is an implementation of standard Lua 5.3 written in Erlang/OTP.</p><p>Lua is a powerful, efficient, lightweight, embeddable scripting language common in games, IoT devices, AI bots, machine learning and scientific computing research.</p><p>It supports procedural, object-oriented, functional, data-driven, reactive, organizational programming and data description.</p><p>Being an extension language, Lua has no notion of a &quot;main&quot; program: it works as a library embedded in a host simple called the embedding program. The host program can invoke functions to execute a piece of Lua code, can write and read Lua variables, and can call Erlang functions by Lua code.</p><p>Through the use of Erlang functions, Luerl can be augmented to cope with a wide range of different domains, creating a customized language sharing a syntactical framework.</p><p>Luerl is implemented as a library, written in clean Erlang/OTP. For more information, read the <a href="https://github.com/rvirding/luerl/wiki">documentation</a> and follow the <a href="https://github.com/rvirding/luerl/wiki/0.2-Getting-started">get started</a> tutorial. You may also browse the <a href="https://github.com/rvirding/luerl/tree/develop/examples">examples</a>.</p><h2 id="join-the-community" class="section-heading"><a href="#join-the-community" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Join the Community</span></h2><p><a href="https://discord.gg/Y9Ww5wBhZh">Luerl on Discord</a></p><p><a href="https://erlangforums.com/luerl">Luerl Forum - Erlang Forums</a></p><p>Luerl embraces both <a href="https://twitter.com/hashtag/erlang?src=hash">#Erlang</a> and <a href="https://twitter.com/hashtag/lualang?src=hash">#LuaLang</a> communities and ecosystems.</p>
+
+</div>
+
+<div class="bottom-actions" id="bottom-actions">
+  <div class="bottom-actions-item">
+
+  </div>
+  <div class="bottom-actions-item">
+
+      <a href="changelog.html" class="bottom-actions-button" rel="next">
+        <span class="subheader">
+          Next Page →
+        </span>
+        <span class="title">
+Changelog
+        </span>
+      </a>
+
+  </div>
+</div>
+    <footer class="footer">
+      <p>
+
+          <span class="line">
+            <a href="https://hex.pm/packages/luerl/1.5.1" class="footer-hex-package">Hex Package</a>
+
+            <a href="https://preview.hex.pm/preview/luerl/1.5.1">Hex Preview</a>
+
+              (<a href="https://preview.hex.pm/preview/luerl/1.5.1/show/README.md">current file</a>)
+
+          </span>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="luerl.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
+
+          <a href="https://erlang.org" title="Erlang" target="_blank" translate="no">Erlang programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

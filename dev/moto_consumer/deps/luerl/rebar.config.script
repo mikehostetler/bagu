@@ -1,0 +1,106 @@
+%% -*- mode: erlang; indent-tabs-mode: nil -*-
+
+Conf0 = CONFIG,                                 %The original config
+
+%% Do a deep set stepping down a list of keys replacing/adding last
+%% with value. Named funs would be nicer but not always available.
+
+SetConf = fun ([K], Val, Ps, _F) ->
+                  %% Replace the whole K field with Val.
+                  [Val|proplists:delete(K, Ps)];
+              ([K|Ks], Val, Ps, F) ->
+                  %% Step down and build coming up.
+                  case lists:keyfind(K, 1, Ps) of
+                      {K,Kps} ->
+                          lists:keyreplace(K, 1, Ps, {K,F(Ks, Val, Kps, F)});
+                      false -> Ps ++ [{K,F(Ks, Val, [], F)}]
+                  end
+          end,
+
+%% Get the release number.
+%% We have stolen the idea and most of the code from rebar3.
+
+OTPRelease =
+    fun () ->
+            case erlang:system_info(otp_release) of
+                [$R,N1|Rest] when is_integer(N1) ->
+                    %% If OTP <= R16, take the digits.
+                    [N1|Rest];
+                Rel ->
+                    %% If OTP >= 17.x, erlang:system_info(otp_release) returns
+                    %% just the major version number.
+                    File = filename:join([code:root_dir(),"releases",Rel,"OTP_VERSION"]),
+                    case file:read_file(File) of
+                        {error, _} -> Rel;
+                        {ok, Vsn} ->
+                            Size = byte_size(Vsn),
+                            %% The shortest vsn string consists of at least
+                            %% two digits followed by "\n". Therefore, it's
+                            %% safe to assume Size >= 3.
+                            case binary:part(Vsn, {Size, -3}) of
+                                <<"**\n">> ->
+                                    binary:bin_to_list(Vsn, {0, Size - 3});
+                                _ ->
+                                    binary:bin_to_list(Vsn, {0, Size - 1})
+                            end
+                    end
+            end
+    end,
+
+Version = OTPRelease(),
+
+%% Collect the macro definitions we will add to the compiler options.
+%% Named funs would be nicer but not always available.
+
+AppendCopts = fun (Version, [{Ver,Opt}|Opts], F) ->
+                      Rest = F(Version, Opts, F),
+                      if Version >= Ver ->
+                              [{d,Opt,true}|Rest];
+                         true ->
+                              Rest
+                      end;
+                  (_Version, [], _F) -> []
+              end,
+
+Copts0 = [{d,'ERLANG_VERSION',Version}],
+Copts = Copts0 ++ AppendCopts(Version,
+                              [{"17",'HAS_MAPS'},
+                               {"18",'HAS_FULL_KEYS'},
+                               {"19",'NEW_REC_CORE'},
+                               {"19",'NEW_RAND'},
+                               {"20",'NEW_BOOL_GUARD'},
+                               {"20",'HAS_FLOOR'},
+                               {"20",'HAS_CEIL'},
+                               {"21",'NEW_STACKTRACE'},
+                               {"23",'EEP48'},
+                               {"27",'OTP27_MAYBE'}],
+                              AppendCopts),
+
+%% Ensure they are in erl_opts.
+
+%% Make sure debug_info is always included for documentation
+AllOpts = [{debug_info, true} | Copts],
+
+Conf1 = case lists:keyfind(erl_opts, 1, Conf0) of
+            {erl_opts,Opts} ->                  %Existing erl_opts
+                %% Make sure debug_info is included in the final options
+                OptsWithDebug = case lists:member(debug_info, Opts) of
+                                    true -> lists:delete(debug_info, Opts) ++ [{debug_info, true}];
+                                    false -> Opts ++ [{debug_info, true}]
+                                end,
+                NewOpts = {erl_opts, OptsWithDebug ++ Copts},
+                lists:keyreplace(erl_opts, 1, Conf0, NewOpts);
+            false ->                            %No erl_opts
+                Conf0 ++ [{erl_opts, AllOpts}]
+        end,
+
+%% TestConfig = [{cover_enabled, true}, {cover_opts, [verbose]}],
+
+%% Aliases = [{alias, [
+%%     {test, [eunit, {ct, "--cover"}, cover]}
+%% ]}],
+
+%% Conf1 ++ TestConfig ++ Aliases.
+%%
+
+Conf1.

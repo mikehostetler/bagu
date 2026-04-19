@@ -1,9 +1,32 @@
+defmodule Moto.Scripts.AddNumbers do
+  use Moto.Tool,
+    description: "Adds two integers together.",
+    schema: Zoi.object(%{a: Zoi.integer(), b: Zoi.integer()})
+
+  @impl true
+  def run(%{a: a, b: b}, _context) do
+    sum = a + b
+    IO.puts("[tool:add_numbers] #{a} + #{b} = #{sum}")
+    {:ok, %{sum: sum}}
+  end
+end
+
 defmodule Moto.Scripts.ChatAgent do
   use Moto.Agent
 
   agent do
     name "script_chat_agent"
-    system_prompt "You are a concise assistant. Keep answers short and direct."
+    model :fast
+    system_prompt """
+    You are a concise assistant.
+    Keep answers short and direct.
+    For any addition or arithmetic request, you must use the add_numbers tool.
+    Do not do arithmetic in your head when that tool applies.
+    """
+  end
+
+  tools do
+    tool Moto.Scripts.AddNumbers
   end
 end
 
@@ -13,14 +36,17 @@ defmodule Moto.Scripts.ChatAgentCLI do
 
   def main(argv) do
     argv = normalize_argv(argv)
-    resolved_model = Jido.AI.resolve_model(:fast)
+    resolved_model = ChatAgent.model()
     anthropic_api_key = Application.get_env(:req_llm, :anthropic_api_key)
+    demo_prompt =
+      "Use the add_numbers tool to add 17 and 25. Do not do the math yourself. Reply with only the sum."
 
     Logger.configure(level: :error)
 
     IO.puts("Moto demo agent")
-    IO.puts("Model alias: :fast")
-    IO.puts("Resolved model: #{resolved_model}")
+    IO.puts("Configured model: #{inspect(ChatAgent.configured_model())}")
+    IO.puts("Resolved model: #{inspect(resolved_model)}")
+    IO.puts("Tools: #{Enum.join(ChatAgent.tool_names(), ", ")}")
     IO.puts("")
 
     if is_nil(anthropic_api_key) or anthropic_api_key == "" do
@@ -33,7 +59,10 @@ defmodule Moto.Scripts.ChatAgentCLI do
 
     try do
       case argv do
-        [] -> interactive_loop(pid)
+        [] ->
+          run_demo(pid, demo_prompt)
+          interactive_loop(pid)
+
         _ -> one_shot(pid, Enum.join(argv, " "))
       end
     after
@@ -43,6 +72,14 @@ defmodule Moto.Scripts.ChatAgentCLI do
 
   defp normalize_argv(["--" | rest]), do: rest
   defp normalize_argv(argv), do: argv
+
+  defp run_demo(pid, prompt) do
+    IO.puts("Running tool-call demo:")
+    IO.puts("  #{prompt}")
+    IO.puts("")
+    one_shot(pid, prompt)
+    IO.puts("")
+  end
 
   defp one_shot(pid, prompt) do
     case ChatAgent.chat(pid, prompt) do
@@ -57,6 +94,7 @@ defmodule Moto.Scripts.ChatAgentCLI do
 
   defp interactive_loop(pid) do
     IO.puts("Enter a prompt. Type `exit` or press Ctrl-D to quit.")
+    IO.puts("Try: Add 8 and 13.")
     IO.puts("")
     loop(pid)
   end
