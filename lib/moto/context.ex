@@ -5,7 +5,10 @@ defmodule Moto.Context do
     "__moto_hooks__",
     "__moto_guardrails__",
     "__moto_memory__",
-    "__tool_guardrail_callback__"
+    "__tool_guardrail_callback__",
+    "__moto_request_id__",
+    "__moto_server__",
+    "__moto_subagent_depth__"
   ]
 
   @type t :: map()
@@ -37,6 +40,25 @@ defmodule Moto.Context do
   def validate_default(other),
     do: {:error, "context defaults must be maps, got: #{inspect(other)}"}
 
+  @spec strip_internal(t()) :: t()
+  def strip_internal(context) when is_map(context) do
+    Enum.reduce(Map.keys(context), context, fn key, acc ->
+      if internal_key?(key) do
+        Map.delete(acc, key)
+      else
+        acc
+      end
+    end)
+  end
+
+  @spec sanitize_for_subagent(t()) :: t()
+  def sanitize_for_subagent(context) when is_map(context) do
+    context
+    |> strip_internal()
+    |> Map.delete(:memory)
+    |> Map.delete("memory")
+  end
+
   defp validate_key(key) when is_atom(key) do
     validate_reserved_key(Atom.to_string(key))
   end
@@ -60,6 +82,13 @@ defmodule Moto.Context do
     do: {:error, "context key #{key} is reserved for Moto internals"}
 
   defp validate_reserved_key(_key), do: :ok
+
+  defp internal_key?(key) when is_atom(key) do
+    internal_key?(Atom.to_string(key))
+  end
+
+  defp internal_key?(key) when is_binary(key), do: String.trim(key) in @reserved_keys
+  defp internal_key?(_key), do: false
 
   defp drop_equivalent_keys(acc, key) do
     Enum.reduce(Map.keys(acc), acc, fn existing_key, memo ->

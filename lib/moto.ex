@@ -30,6 +30,15 @@ defmodule Moto do
     end
   end
 
+  def model(model) when is_binary(model) do
+    trimmed = String.trim(model)
+
+    case resolve_string_alias(trimmed) do
+      {:ok, alias_name} -> model(alias_name)
+      :error -> Jido.AI.resolve_model(trimmed)
+    end
+  end
+
   def model(model), do: Jido.AI.resolve_model(model)
 
   @doc """
@@ -66,12 +75,14 @@ defmodule Moto do
 
   The imported format currently supports `name`, `model`, `system_prompt`,
   default `context`,
-  published tool names via `tools`, published plugin names via `plugins`,
+  published tool names via `tools`, published subagent definitions via
+  `subagents`, published plugin names via `plugins`,
   published hook names via `hooks`, and published guardrail names via
   `guardrails`.
 
   Imported tools and plugins must be resolved through the explicit
-  `:available_tools`, `:available_plugins`, `:available_hooks`, and
+  `:available_tools`, `:available_subagents`, `:available_plugins`,
+  `:available_hooks`, and
   `:available_guardrails` registries passed in `opts`.
   """
   @spec import_agent(map() | binary(), keyword()) :: {:ok, DynamicAgent.t()} | {:error, term()}
@@ -160,13 +171,12 @@ defmodule Moto do
 
   defp resolve_server(server, _opts), do: {:ok, server}
 
-  defp finalize_request_result(_server, _request, {:error, :timeout} = error), do: error
+  @doc false
+  @spec finalize_chat_request(pid() | atom() | {:via, module(), term()}, String.t(), term()) ::
+          {:ok, term()} | {:error, term()}
+  def finalize_chat_request(_server, _request_id, {:error, :timeout} = error), do: error
 
-  defp finalize_request_result(
-         server,
-         %Request.Handle{id: request_id} = _request,
-         fallback_result
-       ) do
+  def finalize_chat_request(server, request_id, fallback_result) when is_binary(request_id) do
     case Jido.AgentServer.state(server) do
       {:ok, %{agent: agent}} ->
         case Request.get_request(agent, request_id) do
@@ -189,6 +199,27 @@ defmodule Moto do
 
       {:error, _reason} ->
         fallback_result
+    end
+  end
+
+  defp finalize_request_result(_server, _request, {:error, :timeout} = error), do: error
+
+  defp finalize_request_result(
+         server,
+         %Request.Handle{id: request_id} = _request,
+         fallback_result
+       ) do
+    finalize_chat_request(server, request_id, fallback_result)
+  end
+
+  defp resolve_string_alias(name) when is_binary(name) do
+    known_aliases =
+      Map.keys(model_aliases()) ++
+        Map.keys(Jido.AI.model_aliases())
+
+    case Enum.find(known_aliases, &(Atom.to_string(&1) == name)) do
+      nil -> :error
+      alias_name -> {:ok, alias_name}
     end
   end
 end

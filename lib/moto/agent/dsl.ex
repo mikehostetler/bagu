@@ -19,6 +19,12 @@ defmodule Moto.Agent.Dsl do
     defstruct [:module, :__spark_metadata__]
   end
 
+  defmodule Subagent do
+    @moduledoc false
+
+    defstruct [:agent, :as, :description, :target, :__spark_metadata__]
+  end
+
   defmodule ContextEntry do
     @moduledoc false
 
@@ -196,6 +202,49 @@ defmodule Moto.Agent.Dsl do
     Register Moto plugins for this agent.
     """,
     entities: [@plugin_entity]
+  }
+
+  @subagent_entity %Spark.Dsl.Entity{
+    name: :subagent,
+    describe: """
+    Register a Moto subagent specialist for this agent.
+    """,
+    target: Subagent,
+    args: [:agent],
+    schema: [
+      agent: [
+        type: :atom,
+        required: true,
+        doc: "A Moto-compatible agent module that can be delegated to."
+      ],
+      as: [
+        type: :string,
+        required: false,
+        doc: "Optional published tool name override for this subagent."
+      ],
+      description: [
+        type: :string,
+        required: false,
+        doc: "Optional tool description override for this subagent."
+      ],
+      target: [
+        type: :any,
+        required: false,
+        default: :ephemeral,
+        doc: """
+        Delegation mode for this subagent. Supports :ephemeral,
+        {:peer, "id"}, and {:peer, {:context, key}}.
+        """
+      ]
+    ]
+  }
+
+  @subagents_section %Spark.Dsl.Section{
+    name: :subagents,
+    describe: """
+    Register subagent specialists for this agent.
+    """,
+    entities: [@subagent_entity]
   }
 
   @context_entry %Spark.Dsl.Entity{
@@ -457,6 +506,7 @@ defmodule Moto.Agent.Dsl do
       @context_section,
       @memory_section,
       @tools_section,
+      @subagents_section,
       @plugins_section,
       @hooks_section,
       @guardrails_section
@@ -467,6 +517,7 @@ defmodule Moto.Agent.Dsl do
       Moto.Agent.Verifiers.VerifyMemory,
       Moto.Agent.Verifiers.VerifyTools,
       Moto.Agent.Verifiers.VerifyAshResources,
+      Moto.Agent.Verifiers.VerifySubagents,
       Moto.Agent.Verifiers.VerifyPlugins,
       Moto.Agent.Verifiers.VerifyHooks,
       Moto.Agent.Verifiers.VerifyGuardrails

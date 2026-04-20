@@ -27,6 +27,18 @@ defmodule Moto.DynamicAgent.Spec do
                       |> Zoi.max(128)
                       |> Zoi.regex(~r/^[a-z][a-z0-9_]*$/)
 
+  @subagent_agent_name_schema Zoi.string()
+                              |> Zoi.trim()
+                              |> Zoi.min(1)
+                              |> Zoi.max(128)
+                              |> Zoi.regex(~r/^[A-Za-z0-9][A-Za-z0-9_-]*$/)
+
+  @subagent_tool_name_schema Zoi.string()
+                             |> Zoi.trim()
+                             |> Zoi.min(1)
+                             |> Zoi.max(128)
+                             |> Zoi.regex(~r/^[a-z][a-z0-9_]*$/)
+
   @hook_name_schema Zoi.string()
                     |> Zoi.trim()
                     |> Zoi.min(1)
@@ -42,6 +54,7 @@ defmodule Moto.DynamicAgent.Spec do
   @default_hooks %{before_turn: [], after_turn: [], on_interrupt: []}
   @default_guardrails %{input: [], output: [], tool: []}
   @default_memory nil
+  @default_subagents []
 
   @model_map_schema Zoi.object(
                       %{
@@ -75,6 +88,34 @@ defmodule Moto.DynamicAgent.Spec do
                   coerce: true,
                   unrecognized_keys: :error
                 )
+
+  @subagent_schema Zoi.object(
+                     %{
+                       agent: @subagent_agent_name_schema,
+                       as: @subagent_tool_name_schema |> Zoi.optional(),
+                       description:
+                         Zoi.string()
+                         |> Zoi.trim()
+                         |> Zoi.min(1)
+                         |> Zoi.max(1_000)
+                         |> Zoi.optional(),
+                       target:
+                         Zoi.string()
+                         |> Zoi.trim()
+                         |> Zoi.min(1)
+                         |> Zoi.default("ephemeral"),
+                       peer_id:
+                         Zoi.string()
+                         |> Zoi.trim()
+                         |> Zoi.min(1)
+                         |> Zoi.optional(),
+                       peer_id_context_key:
+                         Zoi.union([Zoi.string() |> Zoi.trim() |> Zoi.min(1), Zoi.atom()])
+                         |> Zoi.optional()
+                     },
+                     coerce: true,
+                     unrecognized_keys: :error
+                   )
 
   @guardrails_schema Zoi.object(
                        %{
@@ -143,6 +184,7 @@ defmodule Moto.DynamicAgent.Spec do
               context: Zoi.map() |> Zoi.default(%{}),
               memory: Zoi.union([@memory_schema, Zoi.literal(nil)]) |> Zoi.default(nil),
               tools: Zoi.list(@tool_name_schema) |> Zoi.default([]),
+              subagents: Zoi.list(@subagent_schema) |> Zoi.default(@default_subagents),
               plugins: Zoi.list(@plugin_name_schema) |> Zoi.default([]),
               hooks: @hooks_schema |> Zoi.default(@default_hooks),
               guardrails: @guardrails_schema |> Zoi.default(@default_guardrails)
@@ -166,6 +208,7 @@ defmodule Moto.DynamicAgent.Spec do
           context: map(),
           memory: Moto.Memory.config() | nil,
           tools: [String.t()],
+          subagents: [map()],
           plugins: [String.t()],
           hooks: %{
             before_turn: [String.t()],
@@ -187,6 +230,7 @@ defmodule Moto.DynamicAgent.Spec do
     context: %{},
     memory: @default_memory,
     tools: [],
+    subagents: @default_subagents,
     plugins: [],
     hooks: @default_hooks,
     guardrails: @default_guardrails
@@ -200,6 +244,7 @@ defmodule Moto.DynamicAgent.Spec do
     with :ok <- validate_context(spec.context),
          {:ok, normalized_memory} <- Moto.Memory.normalize_imported(spec.memory),
          {:ok, spec} <- validate_tools(spec, Keyword.get(opts, :available_tools, %{})),
+         {:ok, spec} <- validate_subagents(spec, Keyword.get(opts, :available_subagents, %{})),
          {:ok, spec} <- validate_plugins(spec, Keyword.get(opts, :available_plugins, %{})),
          {:ok, spec} <- validate_hooks(spec, Keyword.get(opts, :available_hooks, %{})) do
       validate_guardrails(
@@ -219,6 +264,11 @@ defmodule Moto.DynamicAgent.Spec do
            validate_tools(
              %{spec | model: normalized_model, memory: normalized_memory},
              Keyword.get(opts, :available_tools, %{})
+           ),
+         {:ok, normalized_spec} <-
+           validate_subagents(
+             normalized_spec,
+             Keyword.get(opts, :available_subagents, %{})
            ),
          {:ok, normalized_spec} <-
            validate_plugins(
@@ -257,6 +307,7 @@ defmodule Moto.DynamicAgent.Spec do
       "context" => spec.context,
       "memory" => externalize_memory(spec.memory),
       "tools" => spec.tools,
+      "subagents" => spec.subagents,
       "plugins" => spec.plugins,
       "hooks" => spec.hooks,
       "guardrails" => spec.guardrails
@@ -407,6 +458,38 @@ defmodule Moto.DynamicAgent.Spec do
     end
   end
 
+  defp validate_subagents(%__MODULE__{} = spec, available_subagents)
+       when is_map(available_subagents) do
+    cond do
+      not subagents_unique?(spec.subagents) ->
+        {:error, "subagent names must be unique"}
+
+      spec.subagents == [] ->
+        {:ok, spec}
+
+      map_size(available_subagents) == 0 ->
+        {:error, "subagents require an available_subagents registry when importing Moto agents"}
+
+      true ->
+        spec.subagents
+        |> Enum.reduce_while({:ok, spec}, fn subagent, {:ok, spec_acc} ->
+          with {:ok, agent_module} <-
+                 Moto.Subagent.resolve_subagent_name(subagent.agent, available_subagents),
+               {:ok, _normalized} <-
+                 Moto.Subagent.new(
+                   agent_module,
+                   as: Map.get(subagent, :as),
+                   description: Map.get(subagent, :description),
+                   target: imported_subagent_target(subagent)
+                 ) do
+            {:cont, {:ok, spec_acc}}
+          else
+            {:error, reason} -> {:halt, {:error, reason}}
+          end
+        end)
+    end
+  end
+
   defp validate_hooks(%__MODULE__{} = spec, available_hooks) when is_map(available_hooks) do
     cond do
       not hooks_unique?(spec.hooks) ->
@@ -475,6 +558,31 @@ defmodule Moto.DynamicAgent.Spec do
 
   defp guardrails_empty?(guardrails) do
     Enum.all?(guardrails, fn {_stage, guardrail_names} -> guardrail_names == [] end)
+  end
+
+  defp subagents_unique?(subagents) do
+    names =
+      Enum.map(subagents, fn subagent ->
+        Map.get(subagent, :as) || Map.fetch!(subagent, :agent)
+      end)
+
+    Enum.uniq(names) == names
+  end
+
+  defp imported_subagent_target(%{target: "ephemeral"}), do: :ephemeral
+
+  defp imported_subagent_target(%{target: "peer", peer_id: peer_id})
+       when is_binary(peer_id) and peer_id != "" do
+    {:peer, peer_id}
+  end
+
+  defp imported_subagent_target(%{target: "peer", peer_id_context_key: key})
+       when (is_binary(key) and key != "") or is_atom(key) do
+    {:peer, {:context, key}}
+  end
+
+  defp imported_subagent_target(%{target: target}) do
+    target
   end
 
   defp format_zoi_errors(errors) do

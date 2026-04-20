@@ -7,6 +7,7 @@ defmodule Moto.DynamicAgent do
     :spec,
     :runtime_module,
     :tool_modules,
+    :subagents,
     :plugin_modules,
     :hook_modules,
     :guardrail_modules
@@ -15,6 +16,7 @@ defmodule Moto.DynamicAgent do
     :spec,
     :runtime_module,
     :tool_modules,
+    :subagents,
     :plugin_modules,
     :hook_modules,
     :guardrail_modules
@@ -24,6 +26,7 @@ defmodule Moto.DynamicAgent do
           spec: Spec.t(),
           runtime_module: module(),
           tool_modules: [module()],
+          subagents: [Moto.Subagent.t()],
           plugin_modules: [module()],
           hook_modules: Moto.Hooks.stage_map(),
           guardrail_modules: Moto.Guardrails.stage_map()
@@ -94,19 +97,38 @@ defmodule Moto.DynamicAgent do
   def format_error(%{message: message}) when is_binary(message), do: message
   def format_error(reason), do: inspect(reason)
 
-  defp build(%Spec{} = spec, tool_registry, plugin_registry, hook_registry, guardrail_registry) do
+  defp build(
+         %Spec{} = spec,
+         tool_registry,
+         subagent_registry,
+         plugin_registry,
+         hook_registry,
+         guardrail_registry
+       ) do
     with {:ok, direct_tool_modules} <- Moto.Tool.resolve_tool_names(spec.tools, tool_registry),
+         {:ok, resolved_subagents} <-
+           resolve_imported_subagents(spec.subagents, subagent_registry),
          {:ok, plugin_modules} <- Moto.Plugin.resolve_plugin_names(spec.plugins, plugin_registry),
          {:ok, plugin_tool_modules} <- Moto.Plugin.plugin_actions(plugin_modules),
+         {:ok, direct_tool_names} <-
+           Moto.Tool.action_names(direct_tool_modules ++ plugin_tool_modules),
+         subagent_tool_modules <-
+           resolved_subagents
+           |> Enum.with_index()
+           |> Enum.map(fn {subagent, index} ->
+             Moto.Subagent.tool_module(generated_module_base(spec), subagent, index)
+           end),
          {:ok, hook_modules} <- resolve_imported_hooks(spec.hooks, hook_registry),
          {:ok, guardrail_modules} <-
            resolve_imported_guardrails(spec.guardrails, guardrail_registry),
-         tool_modules = direct_tool_modules ++ plugin_tool_modules,
-         {:ok, _tool_names} <- Moto.Tool.action_names(tool_modules),
+         tool_modules = direct_tool_modules ++ plugin_tool_modules ++ subagent_tool_modules,
+         :ok <-
+           ensure_unique_tool_names(direct_tool_names ++ Enum.map(resolved_subagents, & &1.name)),
          {:ok, runtime_module} <-
            ensure_runtime_module(
              spec,
              tool_modules,
+             resolved_subagents,
              plugin_modules,
              hook_modules,
              guardrail_modules
@@ -116,10 +138,26 @@ defmodule Moto.DynamicAgent do
          spec: spec,
          runtime_module: runtime_module,
          tool_modules: tool_modules,
+         subagents: resolved_subagents,
          plugin_modules: plugin_modules,
          hook_modules: hook_modules,
          guardrail_modules: guardrail_modules
        }}
+    end
+  end
+
+  defp ensure_unique_tool_names(tool_names) do
+    if Enum.uniq(tool_names) == tool_names do
+      :ok
+    else
+      duplicates =
+        tool_names
+        |> Enum.frequencies()
+        |> Enum.filter(fn {_name, count} -> count > 1 end)
+        |> Enum.map(&elem(&1, 0))
+        |> Enum.sort()
+
+      {:error, "duplicate tool names in imported Moto agent: #{Enum.join(duplicates, ", ")}"}
     end
   end
 
@@ -190,6 +228,7 @@ defmodule Moto.DynamicAgent do
   defp ensure_runtime_module(
          %Spec{} = spec,
          tool_modules,
+         subagents,
          plugin_modules,
          hook_modules,
          guardrail_modules
@@ -197,7 +236,14 @@ defmodule Moto.DynamicAgent do
     runtime_plugins = runtime_plugins(plugin_modules, spec.memory)
 
     runtime_module =
-      generated_module(spec, tool_modules, runtime_plugins, hook_modules, guardrail_modules)
+      generated_module(
+        spec,
+        tool_modules,
+        subagents,
+        runtime_plugins,
+        hook_modules,
+        guardrail_modules
+      )
 
     if Code.ensure_loaded?(runtime_module) do
       {:ok, runtime_module}
@@ -206,6 +252,7 @@ defmodule Moto.DynamicAgent do
         runtime_module,
         spec,
         tool_modules,
+        subagents,
         runtime_plugins,
         hook_modules,
         guardrail_modules
@@ -216,6 +263,7 @@ defmodule Moto.DynamicAgent do
   defp generated_module(
          %Spec{} = spec,
          tool_modules,
+         subagents,
          runtime_plugins,
          hook_modules,
          guardrail_modules
@@ -224,6 +272,14 @@ defmodule Moto.DynamicAgent do
       %{
         spec: Spec.to_external_map(spec),
         tools: Enum.map(tool_modules, &inspect/1),
+        subagents:
+          Enum.map(subagents, fn subagent ->
+            %{
+              name: subagent.name,
+              agent: inspect(subagent.agent),
+              target: externalize_subagent_target(subagent.target)
+            }
+          end),
         plugins: Enum.map(runtime_plugins, &inspect/1),
         hooks:
           Enum.into(hook_modules, %{}, fn {stage, modules} ->
@@ -247,6 +303,7 @@ defmodule Moto.DynamicAgent do
          runtime_module,
          %Spec{} = spec,
          tool_modules,
+         subagents,
          runtime_plugins,
          hook_modules,
          guardrail_modules
@@ -259,6 +316,14 @@ defmodule Moto.DynamicAgent do
       else
         nil
       end
+
+    generated_tool_modules =
+      subagents
+      |> Enum.with_index()
+      |> Enum.map(fn {subagent, index} ->
+        tool_module = Moto.Subagent.tool_module(generated_module_base(spec), subagent, index)
+        Moto.Subagent.tool_module_ast(tool_module, subagent)
+      end)
 
     quoted =
       quote location: :keep do
@@ -281,6 +346,8 @@ defmodule Moto.DynamicAgent do
             end
           end
         end
+
+        unquote_splicing(generated_tool_modules)
 
         use Jido.AI.Agent,
           name: unquote(spec.name),
@@ -324,6 +391,12 @@ defmodule Moto.DynamicAgent do
     |> Moto.Plugin.normalize_available_plugins()
   end
 
+  defp available_subagent_registry(opts) do
+    opts
+    |> Keyword.get(:available_subagents, [])
+    |> Moto.Subagent.normalize_available_subagents()
+  end
+
   defp available_hook_registry(opts) do
     opts
     |> Keyword.get(:available_hooks, [])
@@ -358,6 +431,51 @@ defmodule Moto.DynamicAgent do
     end)
   end
 
+  defp resolve_imported_subagents(subagents, subagent_registry) do
+    subagents
+    |> Enum.reduce_while({:ok, []}, fn subagent_spec, {:ok, acc} ->
+      with {:ok, agent_module} <-
+             Moto.Subagent.resolve_subagent_name(subagent_spec.agent, subagent_registry),
+           {:ok, subagent} <-
+             Moto.Subagent.new(
+               agent_module,
+               as: Map.get(subagent_spec, :as),
+               description: Map.get(subagent_spec, :description),
+               target: imported_subagent_target(subagent_spec)
+             ) do
+        {:cont, {:ok, acc ++ [subagent]}}
+      else
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp imported_subagent_target(%{target: "ephemeral"}), do: :ephemeral
+  defp imported_subagent_target(%{target: "peer", peer_id: peer_id}), do: {:peer, peer_id}
+
+  defp imported_subagent_target(%{target: "peer", peer_id_context_key: key}),
+    do: {:peer, {:context, key}}
+
+  defp generated_module_base(%Spec{} = spec) do
+    suffix =
+      spec
+      |> Spec.fingerprint()
+      |> String.slice(0, 12)
+      |> String.upcase()
+
+    Module.concat([__MODULE__, Generated, "Runtime#{suffix}"])
+  end
+
+  defp externalize_subagent_target(:ephemeral), do: %{"target" => "ephemeral"}
+
+  defp externalize_subagent_target({:peer, peer_id}) when is_binary(peer_id) do
+    %{"target" => "peer", "peer_id" => peer_id}
+  end
+
+  defp externalize_subagent_target({:peer, {:context, key}}) do
+    %{"target" => "peer", "peer_id_context_key" => to_string(key)}
+  end
+
   defp runtime_plugins(plugin_modules, nil), do: [Moto.Plugins.RuntimeCompat | plugin_modules]
 
   defp runtime_plugins(plugin_modules, memory_config) do
@@ -366,11 +484,13 @@ defmodule Moto.DynamicAgent do
 
   defp with_registries(opts, fun) when is_list(opts) and is_function(fun, 1) do
     with {:ok, tool_registry} <- available_tool_registry(opts),
+         {:ok, subagent_registry} <- available_subagent_registry(opts),
          {:ok, plugin_registry} <- available_plugin_registry(opts),
          {:ok, hook_registry} <- available_hook_registry(opts),
          {:ok, guardrail_registry} <- available_guardrail_registry(opts) do
       fun.(%{
         tools: tool_registry,
+        subagents: subagent_registry,
         plugins: plugin_registry,
         hooks: hook_registry,
         guardrails: guardrail_registry
@@ -380,6 +500,7 @@ defmodule Moto.DynamicAgent do
 
   defp build_from_source(source, %{
          tools: tool_registry,
+         subagents: subagent_registry,
          plugins: plugin_registry,
          hooks: hook_registry,
          guardrails: guardrail_registry
@@ -387,11 +508,19 @@ defmodule Moto.DynamicAgent do
     with {:ok, spec} <-
            Spec.new(source,
              available_tools: tool_registry,
+             available_subagents: subagent_registry,
              available_plugins: plugin_registry,
              available_hooks: hook_registry,
              available_guardrails: guardrail_registry
            ) do
-      build(spec, tool_registry, plugin_registry, hook_registry, guardrail_registry)
+      build(
+        spec,
+        tool_registry,
+        subagent_registry,
+        plugin_registry,
+        hook_registry,
+        guardrail_registry
+      )
     end
   end
 
@@ -425,6 +554,8 @@ defmodule Moto.DynamicAgent do
       encode_yaml_memory(spec.memory),
       "tools:",
       encode_yaml_tools(spec.tools),
+      "subagents:",
+      encode_yaml_subagents(spec.subagents),
       "plugins:",
       encode_yaml_plugins(spec.plugins),
       "hooks:",
@@ -438,6 +569,28 @@ defmodule Moto.DynamicAgent do
 
   defp encode_yaml_tools([]), do: "  []"
   defp encode_yaml_tools(tools), do: Enum.map_join(tools, "\n", &"  - #{Jason.encode!(&1)}")
+
+  defp encode_yaml_subagents([]), do: "  []"
+
+  defp encode_yaml_subagents(subagents) do
+    Enum.map_join(subagents, "\n", fn subagent ->
+      lines =
+        [
+          "  - agent: #{Jason.encode!(subagent["agent"] || subagent[:agent])}"
+        ] ++
+          maybe_yaml_line("as", subagent["as"] || subagent[:as]) ++
+          maybe_yaml_line("description", subagent["description"] || subagent[:description]) ++
+          ["    target: #{Jason.encode!(subagent["target"] || subagent[:target])}"] ++
+          maybe_yaml_line("peer_id", subagent["peer_id"] || subagent[:peer_id], "    ") ++
+          maybe_yaml_line(
+            "peer_id_context_key",
+            subagent["peer_id_context_key"] || subagent[:peer_id_context_key],
+            "    "
+          )
+
+      Enum.join(lines, "\n")
+    end)
+  end
 
   defp encode_yaml_context(context) when context == %{}, do: "  {}"
 
@@ -521,4 +674,12 @@ defmodule Moto.DynamicAgent do
 
   defp yaml_key(key) when is_atom(key), do: Atom.to_string(key)
   defp yaml_key(key) when is_binary(key), do: key
+
+  defp maybe_yaml_line(key, value, indent \\ "    ")
+  defp maybe_yaml_line(_key, nil, _indent), do: []
+  defp maybe_yaml_line(_key, "", _indent), do: []
+
+  defp maybe_yaml_line(key, value, indent) do
+    ["#{indent}#{key}: #{Jason.encode!(value)}"]
+  end
 end

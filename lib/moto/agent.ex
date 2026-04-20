@@ -27,6 +27,7 @@ defmodule Moto.Agent do
   - `context`
   - `memory`
   - `tools`
+  - `subagents`
   - `plugins`
   - `hooks`
   - `guardrails`
@@ -34,6 +35,8 @@ defmodule Moto.Agent do
   A nested runtime module is generated automatically and uses `Jido.AI.Agent`
   with the configured tool modules. The `tools` block currently supports
   explicit `Moto.Tool` modules and `ash_resource` expansion via `AshJido`.
+  The `subagents` block compiles specialist agents into tool-like delegation
+  capabilities while keeping the parent agent in control.
   The `plugins` block accepts `Moto.Plugin` modules and merges their declared
   action-backed tools into the same LLM-visible tool registry.
   """
@@ -125,6 +128,44 @@ defmodule Moto.Agent do
   end
 
   @doc false
+  def resolve_subagents!(owner_module, entries) when is_list(entries) do
+    entries
+    |> Enum.reduce_while({:ok, []}, fn %Moto.Agent.Dsl.Subagent{} = entry, {:ok, acc} ->
+      case Moto.Subagent.new(
+             entry.agent,
+             as: entry.as,
+             description: entry.description,
+             target: entry.target
+           ) do
+        {:ok, subagent} ->
+          {:cont, {:ok, acc ++ [subagent]}}
+
+        {:error, message} ->
+          {:halt, {:error, message}}
+      end
+    end)
+    |> case do
+      {:ok, subagents} ->
+        case Moto.Subagent.subagent_names(subagents) do
+          {:ok, _names} ->
+            subagents
+
+          {:error, message} ->
+            raise Spark.Error.DslError,
+              message: message,
+              path: [:subagents],
+              module: owner_module
+        end
+
+      {:error, message} ->
+        raise Spark.Error.DslError,
+          message: message,
+          path: [:subagents],
+          module: owner_module
+    end
+  end
+
+  @doc false
   def prepare_chat_opts(opts, nil) when is_list(opts) do
     with :ok <- reject_tool_context(opts),
          {:ok, context} <- normalize_request_context(opts, %{}),
@@ -177,7 +218,8 @@ defmodule Moto.Agent do
                  @moto_context_defaults
                ),
              {:ok, agent, action} <-
-               Moto.Guardrails.on_before_cmd(agent, action, @moto_guardrail_defaults) do
+               Moto.Guardrails.on_before_cmd(agent, action, @moto_guardrail_defaults),
+             {:ok, agent, action} <- Moto.Subagent.on_before_cmd(agent, action) do
           {:ok, agent, action}
         end
       end
@@ -190,7 +232,8 @@ defmodule Moto.Agent do
              {:ok, agent, directives} <-
                Moto.Guardrails.on_after_cmd(agent, action, directives, @moto_guardrail_defaults),
              {:ok, agent, directives} <-
-               Moto.Memory.on_after_cmd(agent, action, directives, @moto_memory_defaults) do
+               Moto.Memory.on_after_cmd(agent, action, directives, @moto_memory_defaults),
+             {:ok, agent, directives} <- Moto.Subagent.on_after_cmd(agent, action, directives) do
           {:ok, agent, directives}
         end
       end
@@ -300,6 +343,11 @@ defmodule Moto.Agent do
       env.module
       |> Spark.Dsl.Extension.get_entities([:plugins])
 
+    subagent_entities =
+      env.module
+      |> Spark.Dsl.Extension.get_entities([:subagents])
+      |> Enum.filter(&match?(%Moto.Agent.Dsl.Subagent{}, &1))
+
     context_entities =
       env.module
       |> Spark.Dsl.Extension.get_entities([:context])
@@ -349,6 +397,8 @@ defmodule Moto.Agent do
       plugin_entities
       |> Enum.filter(&match?(%Moto.Agent.Dsl.Plugin{}, &1))
       |> Enum.map(& &1.module)
+
+    configured_subagents = __MODULE__.resolve_subagents!(env.module, subagent_entities)
 
     configured_hooks =
       hook_entities
@@ -449,6 +499,15 @@ defmodule Moto.Agent do
             module: env.module
       end
 
+    subagent_tool_modules =
+      configured_subagents
+      |> Enum.with_index()
+      |> Enum.map(fn {subagent, index} ->
+        Moto.Subagent.tool_module(env.module, subagent, index)
+      end)
+
+    subagent_tool_names = Enum.map(configured_subagents, & &1.name)
+
     ash_resource_info =
       case Moto.Agent.AshResources.expand(ash_resources) do
         {:ok, ash_resource_info} ->
@@ -466,10 +525,16 @@ defmodule Moto.Agent do
       |> maybe_add_memory_plugin(configured_memory)
 
     tool_modules =
-      direct_tool_modules ++ ash_resource_info.tool_modules ++ plugin_tool_modules
+      direct_tool_modules ++
+        ash_resource_info.tool_modules ++
+        plugin_tool_modules ++
+        subagent_tool_modules
 
     tool_names =
-      direct_tool_names ++ ash_resource_info.tool_names ++ plugin_tool_names
+      direct_tool_names ++
+        ash_resource_info.tool_names ++
+        plugin_tool_names ++
+        subagent_tool_names
 
     if Enum.uniq(tool_names) != tool_names do
       duplicates =
@@ -557,8 +622,17 @@ defmodule Moto.Agent do
         end
       end
 
+    subagent_tool_definitions =
+      configured_subagents
+      |> Enum.with_index()
+      |> Enum.map(fn {subagent, index} ->
+        tool_module = Enum.at(subagent_tool_modules, index)
+        Moto.Subagent.tool_module_ast(tool_module, subagent)
+      end)
+
     quote location: :keep do
       unquote(request_transformer_definition)
+      unquote_splicing(subagent_tool_definitions)
 
       defmodule unquote(runtime_module) do
         use Jido.AI.Agent,
@@ -665,6 +739,18 @@ defmodule Moto.Agent do
       """
       @spec tool_names() :: [String.t()]
       def tool_names, do: unquote(Macro.escape(tool_names))
+
+      @doc """
+      Returns the configured subagent definitions.
+      """
+      @spec subagents() :: [Moto.Subagent.t()]
+      def subagents, do: unquote(Macro.escape(configured_subagents))
+
+      @doc """
+      Returns the configured published subagent names.
+      """
+      @spec subagent_names() :: [String.t()]
+      def subagent_names, do: unquote(Macro.escape(subagent_tool_names))
 
       @doc """
       Returns the configured Moto plugin modules.

@@ -210,8 +210,7 @@ defmodule Moto.Guardrails do
         Moto.Hooks.notify_interrupt(agent, request_id, interrupt)
 
         {:ok, agent,
-         {:ai_react_request_error,
-          %{request_id: request_id, reason: :interrupt, message: query}}}
+         {:ai_react_request_error, %{request_id: request_id, reason: :interrupt, message: query}}}
     end
   end
 

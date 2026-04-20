@@ -234,8 +234,7 @@ defmodule Moto.Hooks do
         )
 
         {:ok, agent,
-         {:ai_react_request_error,
-          %{request_id: request_id, reason: :interrupt, message: query}}}
+         {:ai_react_request_error, %{request_id: request_id, reason: :interrupt, message: query}}}
 
       {:error, reason} ->
         agent =
