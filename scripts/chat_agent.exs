@@ -24,6 +24,7 @@ defmodule Moto.Scripts.ChatAgentCLI do
     IO.puts("Configured model: #{inspect(ChatAgent.configured_model())}")
     IO.puts("Resolved model: #{inspect(resolved_model)}")
     IO.puts("Default context: #{inspect(ChatAgent.context())}")
+    IO.puts("Memory: #{inspect(ChatAgent.memory())}")
     IO.puts("Plugins: #{Enum.join(ChatAgent.plugin_names(), ", ")}")
     IO.puts("Tools: #{Enum.join(ChatAgent.tool_names(), ", ")}")
     IO.puts("Before-turn hooks: #{Enum.map_join(ChatAgent.before_turn_hooks(), ", ", &inspect/1)}")
@@ -45,6 +46,7 @@ defmodule Moto.Scripts.ChatAgentCLI do
     try do
       case argv do
         [] ->
+          run_memory_demo(pid)
           run_demo(pid, demo_prompt)
           run_input_guardrail_demo(pid)
           run_output_guardrail_demo(pid)
@@ -67,6 +69,19 @@ defmodule Moto.Scripts.ChatAgentCLI do
     IO.puts("  #{prompt}")
     IO.puts("")
     one_shot(pid, prompt)
+    IO.puts("")
+  end
+
+  defp run_memory_demo(pid) do
+    first = "Remember that my favorite color is blue."
+    second = "What is my favorite color?"
+
+    IO.puts("Running memory demo:")
+    IO.puts("  #{first}")
+    one_shot(pid, first, session: "memory-demo")
+    IO.puts("")
+    IO.puts("  #{second}")
+    one_shot(pid, second, session: "memory-demo")
     IO.puts("")
   end
 
@@ -112,7 +127,12 @@ defmodule Moto.Scripts.ChatAgentCLI do
   end
 
   defp one_shot(pid, prompt) do
-    opts = [context: %{notify_pid: self(), session: "cli"}]
+    one_shot(pid, prompt, session: "cli")
+  end
+
+  defp one_shot(pid, prompt, opts) when is_list(opts) do
+    session = Keyword.get(opts, :session, "cli")
+    opts = [context: %{notify_pid: self(), session: session}]
 
     case ChatAgent.chat(pid, prompt, opts) do
       {:ok, reply} ->

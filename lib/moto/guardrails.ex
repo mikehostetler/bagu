@@ -192,7 +192,9 @@ defmodule Moto.Guardrails do
           |> Request.fail_request(request_id, error)
           |> put_request_guardrail_meta(request_id, Map.put(guardrail_meta, :error, error))
 
-        {:ok, agent, Jido.Actions.Control.Noop}
+        {:ok, agent,
+         {:ai_react_request_error,
+          %{request_id: request_id, reason: :guardrail_blocked, message: query}}}
 
       {:interrupt, label, %Interrupt{} = interrupt} ->
         agent =
@@ -206,7 +208,10 @@ defmodule Moto.Guardrails do
           )
 
         Moto.Hooks.notify_interrupt(agent, request_id, interrupt)
-        {:ok, agent, Jido.Actions.Control.Noop}
+
+        {:ok, agent,
+         {:ai_react_request_error,
+          %{request_id: request_id, reason: :interrupt, message: query}}}
     end
   end
 

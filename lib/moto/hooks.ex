@@ -233,7 +233,9 @@ defmodule Moto.Hooks do
           interrupt_input(agent, request_id, hook_meta, interrupt)
         )
 
-        {:ok, agent, Jido.Actions.Control.Noop}
+        {:ok, agent,
+         {:ai_react_request_error,
+          %{request_id: request_id, reason: :interrupt, message: query}}}
 
       {:error, reason} ->
         agent =
@@ -249,7 +251,9 @@ defmodule Moto.Hooks do
             llm_opts: input.llm_opts
           })
 
-        {:ok, agent, Jido.Actions.Control.Noop}
+        {:ok, agent,
+         {:ai_react_request_error,
+          %{request_id: request_id, reason: :hook_failed, message: query}}}
     end
   end
 

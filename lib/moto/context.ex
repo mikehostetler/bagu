@@ -4,6 +4,7 @@ defmodule Moto.Context do
   @reserved_keys [
     "__moto_hooks__",
     "__moto_guardrails__",
+    "__moto_memory__",
     "__tool_guardrail_callback__"
   ]
 

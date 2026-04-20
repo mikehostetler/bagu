@@ -25,6 +25,7 @@ defmodule Moto.Agent do
   - `model`
   - `system_prompt` as a string, module callback, or MFA tuple
   - `context`
+  - `memory`
   - `tools`
   - `plugins`
   - `hooks`
@@ -110,6 +111,20 @@ defmodule Moto.Agent do
   end
 
   @doc false
+  def resolve_memory!(owner_module, entries) when is_list(entries) do
+    case Moto.Memory.normalize_dsl(entries) do
+      {:ok, normalized} ->
+        normalized
+
+      {:error, message} ->
+        raise Spark.Error.DslError,
+          message: message,
+          path: [:memory],
+          module: owner_module
+    end
+  end
+
+  @doc false
   def prepare_chat_opts(opts, nil) when is_list(opts) do
     with :ok <- reject_tool_context(opts),
          {:ok, context} <- normalize_request_context(opts, %{}),
@@ -134,16 +149,25 @@ defmodule Moto.Agent do
   def hook_runtime_ast(
         default_hooks,
         default_context \\ %{},
-        default_guardrails \\ Moto.Guardrails.default_stage_map()
+        default_guardrails \\ Moto.Guardrails.default_stage_map(),
+        default_memory \\ nil
       ) do
     quote location: :keep do
       @moto_hook_defaults unquote(Macro.escape(default_hooks))
       @moto_context_defaults unquote(Macro.escape(default_context))
       @moto_guardrail_defaults unquote(Macro.escape(default_guardrails))
+      @moto_memory_defaults unquote(Macro.escape(default_memory))
 
       @impl true
       def on_before_cmd(agent, action) do
         with {:ok, agent, action} <- super(agent, action),
+             {:ok, agent, action} <-
+               Moto.Memory.on_before_cmd(
+                 agent,
+                 action,
+                 @moto_memory_defaults,
+                 @moto_context_defaults
+               ),
              {:ok, agent, action} <-
                Moto.Hooks.on_before_cmd(
                  __MODULE__,
@@ -164,7 +188,9 @@ defmodule Moto.Agent do
              {:ok, agent, directives} <-
                Moto.Hooks.on_after_cmd(__MODULE__, agent, action, directives, @moto_hook_defaults),
              {:ok, agent, directives} <-
-               Moto.Guardrails.on_after_cmd(agent, action, directives, @moto_guardrail_defaults) do
+               Moto.Guardrails.on_after_cmd(agent, action, directives, @moto_guardrail_defaults),
+             {:ok, agent, directives} <-
+               Moto.Memory.on_after_cmd(agent, action, directives, @moto_memory_defaults) do
           {:ok, agent, directives}
         end
       end
@@ -279,6 +305,18 @@ defmodule Moto.Agent do
       |> Spark.Dsl.Extension.get_entities([:context])
       |> Enum.filter(&match?(%Moto.Agent.Dsl.ContextEntry{}, &1))
 
+    memory_entities =
+      env.module
+      |> Spark.Dsl.Extension.get_entities([:memory])
+      |> Enum.filter(
+        &(match?(%Moto.Agent.Dsl.MemoryMode{}, &1) or
+            match?(%Moto.Agent.Dsl.MemoryNamespace{}, &1) or
+            match?(%Moto.Agent.Dsl.MemorySharedNamespace{}, &1) or
+            match?(%Moto.Agent.Dsl.MemoryCapture{}, &1) or
+            match?(%Moto.Agent.Dsl.MemoryInject{}, &1) or
+            match?(%Moto.Agent.Dsl.MemoryRetrieve{}, &1))
+      )
+
     hook_entities =
       env.module
       |> Spark.Dsl.Extension.get_entities([:hooks])
@@ -343,6 +381,26 @@ defmodule Moto.Agent do
     configured_guardrails = __MODULE__.resolve_guardrails!(env.module, configured_guardrails)
     configured_context = __MODULE__.resolve_context!(env.module, context_entities)
 
+    memory_section_anno =
+      env.module
+      |> Module.get_attribute(:spark_dsl_config)
+      |> case do
+        %{} = dsl -> Spark.Dsl.Extension.get_section_anno(dsl, [:memory])
+        _ -> nil
+      end
+
+    configured_memory =
+      cond do
+        memory_entities != [] ->
+          __MODULE__.resolve_memory!(env.module, memory_entities)
+
+        not is_nil(memory_section_anno) ->
+          Moto.Memory.default_config()
+
+        true ->
+          nil
+      end
+
     direct_tool_names =
       case Moto.Tool.tool_names(direct_tool_modules) do
         {:ok, tool_names} ->
@@ -403,7 +461,9 @@ defmodule Moto.Agent do
             module: env.module
       end
 
-    runtime_plugins = [Moto.Plugins.RuntimeCompat | plugin_modules]
+    runtime_plugins =
+      [Moto.Plugins.RuntimeCompat | plugin_modules]
+      |> maybe_add_memory_plugin(configured_memory)
 
     tool_modules =
       direct_tool_modules ++ ash_resource_info.tool_modules ++ plugin_tool_modules
@@ -448,17 +508,31 @@ defmodule Moto.Agent do
         description: "Moto.Agent requires `system_prompt` inside `agent do ... end`."
     end
 
-    {runtime_system_prompt, runtime_request_transformer, dynamic_system_prompt} =
+    {runtime_system_prompt, dynamic_system_prompt} =
       case __MODULE__.resolve_system_prompt!(env.module, configured_system_prompt) do
         {:static, prompt} ->
-          {prompt, nil, nil}
+          {prompt, nil}
 
         {:dynamic, spec} ->
-          {nil, request_transformer_module, spec}
+          {nil, spec}
+      end
+
+    request_transformer_system_prompt =
+      case dynamic_system_prompt do
+        nil -> runtime_system_prompt
+        spec -> spec
+      end
+
+    effective_request_transformer =
+      if is_nil(dynamic_system_prompt) and
+           not Moto.Memory.requires_request_transformer?(configured_memory) do
+        nil
+      else
+        request_transformer_module
       end
 
     request_transformer_definition =
-      if is_nil(dynamic_system_prompt) do
+      if is_nil(effective_request_transformer) do
         quote do
         end
       else
@@ -467,11 +541,11 @@ defmodule Moto.Agent do
             @moduledoc false
             @behaviour Jido.AI.Reasoning.ReAct.RequestTransformer
 
-            @system_prompt_spec unquote(Macro.escape(dynamic_system_prompt))
+            @system_prompt_spec unquote(Macro.escape(request_transformer_system_prompt))
 
             @impl true
             def transform_request(request, state, config, runtime_context) do
-              Moto.Agent.SystemPrompt.transform_request(
+              Moto.Agent.RequestTransformer.transform_request(
                 @system_prompt_spec,
                 request,
                 state,
@@ -493,13 +567,15 @@ defmodule Moto.Agent do
           model: unquote(Macro.escape(resolved_model)),
           tools: unquote(Macro.escape(tool_modules)),
           plugins: unquote(Macro.escape(runtime_plugins)),
-          request_transformer: unquote(runtime_request_transformer)
+          default_plugins: %{__memory__: false},
+          request_transformer: unquote(effective_request_transformer)
 
         unquote(
           __MODULE__.hook_runtime_ast(
             configured_hooks,
             configured_context,
-            configured_guardrails
+            configured_guardrails,
+            configured_memory
           )
         )
       end
@@ -552,7 +628,7 @@ defmodule Moto.Agent do
       Returns the generated request transformer used for a dynamic system prompt, if any.
       """
       @spec request_transformer() :: module() | nil
-      def request_transformer, do: unquote(runtime_request_transformer)
+      def request_transformer, do: unquote(effective_request_transformer)
 
       @doc """
       Returns the configured model before alias resolution.
@@ -571,6 +647,12 @@ defmodule Moto.Agent do
       """
       @spec context() :: map()
       def context, do: unquote(Macro.escape(configured_context))
+
+      @doc """
+      Returns the configured memory settings for this agent, if any.
+      """
+      @spec memory() :: Moto.Memory.config() | nil
+      def memory, do: unquote(Macro.escape(configured_memory))
 
       @doc """
       Returns the configured tool modules.
@@ -662,5 +744,11 @@ defmodule Moto.Agent do
       @spec requires_actor?() :: boolean()
       def requires_actor?, do: unquote(ash_resource_info.require_actor?)
     end
+  end
+
+  defp maybe_add_memory_plugin(runtime_plugins, nil), do: runtime_plugins
+
+  defp maybe_add_memory_plugin(runtime_plugins, memory_config) do
+    runtime_plugins ++ [Moto.Memory.runtime_plugin(memory_config)]
   end
 end

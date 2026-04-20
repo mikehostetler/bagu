@@ -6,6 +6,16 @@
     "tenant": "imported-demo",
     "channel": "json"
   },
+  "memory": {
+    "mode": "conversation",
+    "namespace": "context",
+    "context_namespace_key": "session",
+    "capture": "conversation",
+    "retrieve": {
+      "limit": 4
+    },
+    "inject": "system_prompt"
+  },
   "tools": [
     "add_numbers"
   ],

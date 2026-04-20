@@ -194,7 +194,7 @@ defmodule Moto.DynamicAgent do
          hook_modules,
          guardrail_modules
        ) do
-    runtime_plugins = runtime_plugins(plugin_modules)
+    runtime_plugins = runtime_plugins(plugin_modules, spec.memory)
 
     runtime_module =
       generated_module(spec, tool_modules, runtime_plugins, hook_modules, guardrail_modules)
@@ -251,16 +251,49 @@ defmodule Moto.DynamicAgent do
          hook_modules,
          guardrail_modules
        ) do
+    request_transformer_module = Module.concat(runtime_module, RequestTransformer)
+
+    effective_request_transformer =
+      if Moto.Memory.requires_request_transformer?(spec.memory) do
+        request_transformer_module
+      else
+        nil
+      end
+
     quoted =
       quote location: :keep do
+        if unquote(Macro.escape(effective_request_transformer)) do
+          defmodule unquote(request_transformer_module) do
+            @moduledoc false
+            @behaviour Jido.AI.Reasoning.ReAct.RequestTransformer
+
+            @system_prompt_spec unquote(Macro.escape(spec.system_prompt))
+
+            @impl true
+            def transform_request(request, state, config, runtime_context) do
+              Moto.Agent.RequestTransformer.transform_request(
+                @system_prompt_spec,
+                request,
+                state,
+                config,
+                runtime_context
+              )
+            end
+          end
+        end
+
         use Jido.AI.Agent,
           name: unquote(spec.name),
           system_prompt: unquote(spec.system_prompt),
           model: unquote(Macro.escape(spec.model)),
           tools: unquote(Macro.escape(tool_modules)),
-          plugins: unquote(Macro.escape(runtime_plugins))
+          plugins: unquote(Macro.escape(runtime_plugins)),
+          default_plugins: %{__memory__: false},
+          request_transformer: unquote(Macro.escape(effective_request_transformer))
 
-        unquote(Moto.Agent.hook_runtime_ast(hook_modules, spec.context, guardrail_modules))
+        unquote(
+          Moto.Agent.hook_runtime_ast(hook_modules, spec.context, guardrail_modules, spec.memory)
+        )
       end
 
     case Module.create(runtime_module, quoted, Macro.Env.location(__ENV__)) do
@@ -325,7 +358,11 @@ defmodule Moto.DynamicAgent do
     end)
   end
 
-  defp runtime_plugins(plugin_modules), do: [Moto.Plugins.RuntimeCompat | plugin_modules]
+  defp runtime_plugins(plugin_modules, nil), do: [Moto.Plugins.RuntimeCompat | plugin_modules]
+
+  defp runtime_plugins(plugin_modules, memory_config) do
+    [Moto.Plugins.RuntimeCompat | plugin_modules] ++ [Moto.Memory.runtime_plugin(memory_config)]
+  end
 
   defp with_registries(opts, fun) when is_list(opts) and is_function(fun, 1) do
     with {:ok, tool_registry} <- available_tool_registry(opts),
@@ -384,6 +421,8 @@ defmodule Moto.DynamicAgent do
       prompt_block,
       "context:",
       encode_yaml_context(spec.context),
+      "memory:",
+      encode_yaml_memory(spec.memory),
       "tools:",
       encode_yaml_tools(spec.tools),
       "plugins:",
@@ -410,6 +449,46 @@ defmodule Moto.DynamicAgent do
 
   defp encode_yaml_plugins([]), do: "  []"
   defp encode_yaml_plugins(plugins), do: Enum.map_join(plugins, "\n", &"  - #{Jason.encode!(&1)}")
+
+  defp encode_yaml_memory(nil), do: "  null"
+
+  defp encode_yaml_memory(%{namespace: :per_agent} = memory) do
+    [
+      "  mode: #{Jason.encode!(Atom.to_string(memory.mode))}",
+      "  namespace: \"per_agent\"",
+      "  capture: #{Jason.encode!(Atom.to_string(memory.capture))}",
+      "  retrieve:",
+      "    limit: #{memory.retrieve.limit}",
+      "  inject: #{Jason.encode!(Atom.to_string(memory.inject))}"
+    ]
+    |> Enum.join("\n")
+  end
+
+  defp encode_yaml_memory(%{namespace: {:shared, shared_namespace}} = memory) do
+    [
+      "  mode: #{Jason.encode!(Atom.to_string(memory.mode))}",
+      "  namespace: \"shared\"",
+      "  shared_namespace: #{Jason.encode!(shared_namespace)}",
+      "  capture: #{Jason.encode!(Atom.to_string(memory.capture))}",
+      "  retrieve:",
+      "    limit: #{memory.retrieve.limit}",
+      "  inject: #{Jason.encode!(Atom.to_string(memory.inject))}"
+    ]
+    |> Enum.join("\n")
+  end
+
+  defp encode_yaml_memory(%{namespace: {:context, key}} = memory) do
+    [
+      "  mode: #{Jason.encode!(Atom.to_string(memory.mode))}",
+      "  namespace: \"context\"",
+      "  context_namespace_key: #{Jason.encode!(key)}",
+      "  capture: #{Jason.encode!(Atom.to_string(memory.capture))}",
+      "  retrieve:",
+      "    limit: #{memory.retrieve.limit}",
+      "  inject: #{Jason.encode!(Atom.to_string(memory.inject))}"
+    ]
+    |> Enum.join("\n")
+  end
 
   defp encode_yaml_hooks(hooks) do
     Enum.map_join([:before_turn, :after_turn, :on_interrupt], "\n", fn stage ->

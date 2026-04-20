@@ -142,4 +142,13 @@ defmodule Moto.Agent.SystemPrompt do
         [system_message | messages]
     end
   end
+
+  @spec extract_system_prompt([map()]) :: String.t() | nil
+  def extract_system_prompt([%{role: role, content: content} | _rest])
+      when role in [:system, "system"] and is_binary(content) do
+    content
+  end
+
+  def extract_system_prompt([_ | rest]), do: extract_system_prompt(rest)
+  def extract_system_prompt([]), do: nil
 end

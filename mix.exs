@@ -28,7 +28,9 @@ defmodule Moto.MixProject do
       {:dotenvy, "~> 1.1"},
       {:jason, "~> 1.4"},
       {:jido, path: "../jido", override: true},
-      {:jido_ai, path: "../jido_ai"},
+      {:jido_ai, path: "../jido_ai", override: true},
+      {:jido_memory,
+       git: "https://github.com/agentjido/jido_memory.git", branch: "main", override: true},
       {:spark, "~> 2.6"},
       {:yaml_elixir, "~> 2.12"},
       {:zoi, "~> 0.17"}

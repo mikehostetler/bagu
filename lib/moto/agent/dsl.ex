@@ -25,6 +25,42 @@ defmodule Moto.Agent.Dsl do
     defstruct [:key, :value, :__spark_metadata__]
   end
 
+  defmodule MemoryMode do
+    @moduledoc false
+
+    defstruct [:value, :__spark_metadata__]
+  end
+
+  defmodule MemoryNamespace do
+    @moduledoc false
+
+    defstruct [:value, :__spark_metadata__]
+  end
+
+  defmodule MemorySharedNamespace do
+    @moduledoc false
+
+    defstruct [:value, :__spark_metadata__]
+  end
+
+  defmodule MemoryCapture do
+    @moduledoc false
+
+    defstruct [:value, :__spark_metadata__]
+  end
+
+  defmodule MemoryInject do
+    @moduledoc false
+
+    defstruct [:value, :__spark_metadata__]
+  end
+
+  defmodule MemoryRetrieve do
+    @moduledoc false
+
+    defstruct [:limit, :__spark_metadata__]
+  end
+
   defmodule BeforeTurnHook do
     @moduledoc false
 
@@ -191,6 +227,118 @@ defmodule Moto.Agent.Dsl do
     entities: [@context_entry]
   }
 
+  @memory_mode_entity %Spark.Dsl.Entity{
+    name: :mode,
+    describe: """
+    Configure the Moto memory mode.
+    """,
+    target: MemoryMode,
+    args: [:value],
+    schema: [
+      value: [
+        type: :any,
+        required: true,
+        doc: "Only :conversation is supported in v1."
+      ]
+    ]
+  }
+
+  @memory_namespace_entity %Spark.Dsl.Entity{
+    name: :namespace,
+    describe: """
+    Configure the memory namespace policy.
+    """,
+    target: MemoryNamespace,
+    args: [:value],
+    schema: [
+      value: [
+        type: :any,
+        required: true,
+        doc: "Supports :per_agent, :shared, or {:context, key}."
+      ]
+    ]
+  }
+
+  @memory_shared_namespace_entity %Spark.Dsl.Entity{
+    name: :shared_namespace,
+    describe: """
+    Configure the shared namespace used when namespace is :shared.
+    """,
+    target: MemorySharedNamespace,
+    args: [:value],
+    schema: [
+      value: [
+        type: :string,
+        required: true,
+        doc: "The shared namespace name."
+      ]
+    ]
+  }
+
+  @memory_capture_entity %Spark.Dsl.Entity{
+    name: :capture,
+    describe: """
+    Configure conversation capture behavior for Moto memory.
+    """,
+    target: MemoryCapture,
+    args: [:value],
+    schema: [
+      value: [
+        type: :any,
+        required: true,
+        doc: "Supports :conversation or :off."
+      ]
+    ]
+  }
+
+  @memory_inject_entity %Spark.Dsl.Entity{
+    name: :inject,
+    describe: """
+    Configure how retrieved memory is projected into a turn.
+    """,
+    target: MemoryInject,
+    args: [:value],
+    schema: [
+      value: [
+        type: :any,
+        required: true,
+        doc: "Supports :system_prompt or :context."
+      ]
+    ]
+  }
+
+  @memory_retrieve_entity %Spark.Dsl.Entity{
+    name: :retrieve,
+    describe: """
+    Configure retrieval options for Moto memory.
+    """,
+    target: MemoryRetrieve,
+    args: [],
+    schema: [
+      limit: [
+        type: :integer,
+        required: false,
+        default: 5,
+        doc: "Maximum number of recent memory records to retrieve."
+      ]
+    ]
+  }
+
+  @memory_section %Spark.Dsl.Section{
+    name: :memory,
+    describe: """
+    Configure conversation memory for this agent.
+    """,
+    entities: [
+      @memory_mode_entity,
+      @memory_namespace_entity,
+      @memory_shared_namespace_entity,
+      @memory_capture_entity,
+      @memory_inject_entity,
+      @memory_retrieve_entity
+    ]
+  }
+
   @before_turn_hook_entity %Spark.Dsl.Entity{
     name: :before_turn,
     describe: """
@@ -307,6 +455,7 @@ defmodule Moto.Agent.Dsl do
     sections: [
       @agent_section,
       @context_section,
+      @memory_section,
       @tools_section,
       @plugins_section,
       @hooks_section,
@@ -315,6 +464,7 @@ defmodule Moto.Agent.Dsl do
     verifiers: [
       Moto.Agent.Verifiers.VerifyModel,
       Moto.Agent.Verifiers.VerifyContext,
+      Moto.Agent.Verifiers.VerifyMemory,
       Moto.Agent.Verifiers.VerifyTools,
       Moto.Agent.Verifiers.VerifyAshResources,
       Moto.Agent.Verifiers.VerifyPlugins,

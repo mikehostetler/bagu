@@ -41,6 +41,7 @@ defmodule Moto.DynamicAgent.Spec do
 
   @default_hooks %{before_turn: [], after_turn: [], on_interrupt: []}
   @default_guardrails %{input: [], output: [], tool: []}
+  @default_memory nil
 
   @model_map_schema Zoi.object(
                       %{
@@ -85,6 +86,50 @@ defmodule Moto.DynamicAgent.Spec do
                        unrecognized_keys: :error
                      )
 
+  @memory_retrieve_schema Zoi.object(
+                            %{
+                              limit: Zoi.integer() |> Zoi.default(5)
+                            },
+                            coerce: true,
+                            unrecognized_keys: :error
+                          )
+
+  @memory_schema Zoi.object(
+                   %{
+                     mode:
+                       Zoi.string()
+                       |> Zoi.trim()
+                       |> Zoi.min(1)
+                       |> Zoi.default("conversation"),
+                     namespace:
+                       Zoi.string()
+                       |> Zoi.trim()
+                       |> Zoi.min(1)
+                       |> Zoi.default("per_agent"),
+                     shared_namespace:
+                       Zoi.string()
+                       |> Zoi.trim()
+                       |> Zoi.min(1)
+                       |> Zoi.optional(),
+                     context_namespace_key:
+                       Zoi.union([Zoi.string() |> Zoi.trim() |> Zoi.min(1), Zoi.atom()])
+                       |> Zoi.optional(),
+                     capture:
+                       Zoi.string()
+                       |> Zoi.trim()
+                       |> Zoi.min(1)
+                       |> Zoi.default("conversation"),
+                     retrieve: @memory_retrieve_schema |> Zoi.default(%{limit: 5}),
+                     inject:
+                       Zoi.string()
+                       |> Zoi.trim()
+                       |> Zoi.min(1)
+                       |> Zoi.default("system_prompt")
+                   },
+                   coerce: true,
+                   unrecognized_keys: :error
+                 )
+
   @schema Zoi.struct(
             __MODULE__,
             %{
@@ -96,6 +141,7 @@ defmodule Moto.DynamicAgent.Spec do
                   @model_map_schema
                 ]),
               context: Zoi.map() |> Zoi.default(%{}),
+              memory: Zoi.union([@memory_schema, Zoi.literal(nil)]) |> Zoi.default(nil),
               tools: Zoi.list(@tool_name_schema) |> Zoi.default([]),
               plugins: Zoi.list(@plugin_name_schema) |> Zoi.default([]),
               hooks: @hooks_schema |> Zoi.default(@default_hooks),
@@ -118,6 +164,7 @@ defmodule Moto.DynamicAgent.Spec do
           system_prompt: String.t(),
           model: model_input(),
           context: map(),
+          memory: Moto.Memory.config() | nil,
           tools: [String.t()],
           plugins: [String.t()],
           hooks: %{
@@ -138,6 +185,7 @@ defmodule Moto.DynamicAgent.Spec do
     :system_prompt,
     :model,
     context: %{},
+    memory: @default_memory,
     tools: [],
     plugins: [],
     hooks: @default_hooks,
@@ -150,10 +198,14 @@ defmodule Moto.DynamicAgent.Spec do
   @spec new(map() | t(), keyword()) :: {:ok, t()} | {:error, term()}
   def new(%__MODULE__{} = spec, opts) do
     with :ok <- validate_context(spec.context),
+         {:ok, normalized_memory} <- Moto.Memory.normalize_imported(spec.memory),
          {:ok, spec} <- validate_tools(spec, Keyword.get(opts, :available_tools, %{})),
          {:ok, spec} <- validate_plugins(spec, Keyword.get(opts, :available_plugins, %{})),
          {:ok, spec} <- validate_hooks(spec, Keyword.get(opts, :available_hooks, %{})) do
-      validate_guardrails(spec, Keyword.get(opts, :available_guardrails, %{}))
+      validate_guardrails(
+        %{spec | memory: normalized_memory},
+        Keyword.get(opts, :available_guardrails, %{})
+      )
     end
   end
 
@@ -162,9 +214,10 @@ defmodule Moto.DynamicAgent.Spec do
          {:ok, normalized_model} <- normalize_model(spec.model),
          :ok <- validate_model(normalized_model),
          :ok <- validate_context(spec.context),
+         {:ok, normalized_memory} <- Moto.Memory.normalize_imported(spec.memory),
          {:ok, normalized_spec} <-
            validate_tools(
-             %{spec | model: normalized_model},
+             %{spec | model: normalized_model, memory: normalized_memory},
              Keyword.get(opts, :available_tools, %{})
            ),
          {:ok, normalized_spec} <-
@@ -202,6 +255,7 @@ defmodule Moto.DynamicAgent.Spec do
       "model" => externalize_model(spec.model),
       "system_prompt" => spec.system_prompt,
       "context" => spec.context,
+      "memory" => externalize_memory(spec.memory),
       "tools" => spec.tools,
       "plugins" => spec.plugins,
       "hooks" => spec.hooks,
@@ -280,6 +334,40 @@ defmodule Moto.DynamicAgent.Spec do
 
   defp externalize_model(model) when is_atom(model), do: Atom.to_string(model)
   defp externalize_model(model), do: model
+
+  defp externalize_memory(nil), do: nil
+
+  defp externalize_memory(%{namespace: :per_agent} = memory) do
+    %{
+      "mode" => Atom.to_string(memory.mode),
+      "namespace" => "per_agent",
+      "capture" => Atom.to_string(memory.capture),
+      "retrieve" => %{"limit" => memory.retrieve.limit},
+      "inject" => Atom.to_string(memory.inject)
+    }
+  end
+
+  defp externalize_memory(%{namespace: {:shared, shared_namespace}} = memory) do
+    %{
+      "mode" => Atom.to_string(memory.mode),
+      "namespace" => "shared",
+      "shared_namespace" => shared_namespace,
+      "capture" => Atom.to_string(memory.capture),
+      "retrieve" => %{"limit" => memory.retrieve.limit},
+      "inject" => Atom.to_string(memory.inject)
+    }
+  end
+
+  defp externalize_memory(%{namespace: {:context, key}} = memory) do
+    %{
+      "mode" => Atom.to_string(memory.mode),
+      "namespace" => "context",
+      "context_namespace_key" => key,
+      "capture" => Atom.to_string(memory.capture),
+      "retrieve" => %{"limit" => memory.retrieve.limit},
+      "inject" => Atom.to_string(memory.inject)
+    }
+  end
 
   defp validate_tools(%__MODULE__{} = spec, available_tools) when is_map(available_tools) do
     cond do

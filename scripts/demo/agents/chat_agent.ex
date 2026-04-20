@@ -18,6 +18,14 @@ defmodule Moto.Scripts.Demo.Agents.ChatAgent do
     put :channel, "cli"
   end
 
+  memory do
+    mode :conversation
+    namespace {:context, :session}
+    capture :conversation
+    retrieve limit: 4
+    inject :system_prompt
+  end
+
   plugins do
     plugin Moto.Scripts.Demo.Plugins.MathPlugin
   end

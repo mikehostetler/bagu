@@ -21,7 +21,7 @@ Today, Moto can:
 
 - define agents with a small Spark DSL via `use Moto.Agent`
 - configure agent `name`, `model`, `system_prompt`, default `context`, `tools`,
-  `plugins`, `hooks`, and `guardrails`
+  `memory`, `plugins`, `hooks`, and `guardrails`
 - resolve models through Moto-owned aliases like `:fast`, direct model strings,
   inline maps, and `%LLMDB.Model{}`
 - support static or dynamic system prompts through strings, module callbacks,
@@ -35,10 +35,13 @@ Today, Moto can:
   per-request overrides
 - define reusable `Moto.Guardrail` modules and attach them as default
   input/output/tool validation stages or per-request overrides
+- enable conversation-first memory with bounded retrieval and opt-in
+  auto-capture on top of `jido_memory`
 - start many runtime instances from the same agent module under the shared
   `Moto.Runtime`
 - import constrained agents from JSON or YAML at runtime with explicit
-  allowlists for tools, plugins, and hooks, including default imported context
+  allowlists for tools, plugins, hooks, and guardrails, including default
+  imported context and memory settings
 - run local demo scripts that exercise full LLM + tool-call loops
 
 Moto is intentionally opinionated. It keeps the public surface focused on
@@ -65,6 +68,7 @@ The generated runtime currently uses:
 
 - the DSL-configured `model` value, defaulting to `:fast`
 - the DSL-configured default `context`
+- the DSL-configured `memory`
 - the DSL-configured `tools`
 - the DSL-configured `plugins`
 - the DSL-configured `hooks`
@@ -98,6 +102,7 @@ The DSL currently supports:
 - `model`
 - `system_prompt`
 - `context`
+- `memory`
 - `tools`
 - `plugins`
 - `hooks`
@@ -198,6 +203,53 @@ end
 
 Those defaults are available through `MyApp.ChatAgent.context/0` and are merged
 with per-turn `context:` passed to `chat/3`.
+
+## Memory
+
+Moto memory is conversation-first and opt-in. It is implemented on top of
+`jido_memory`, but Moto keeps the public surface narrow:
+
+```elixir
+defmodule MyApp.ChatAgent do
+  use Moto.Agent
+
+  agent do
+    model :fast
+    system_prompt "You are a concise assistant."
+  end
+
+  memory do
+    mode :conversation
+    namespace {:context, :session}
+    capture :conversation
+    retrieve limit: 5
+    inject :system_prompt
+  end
+end
+```
+
+V1 memory supports only:
+
+- `mode :conversation`
+- `namespace :per_agent`
+- `namespace :shared` with `shared_namespace "..."`
+- `namespace {:context, key}`
+- `capture :conversation` or `:off`
+- `retrieve limit: n`
+- `inject :system_prompt` or `:context`
+
+`inject :system_prompt` appends a bounded `Relevant memory:` section to the
+effective system prompt for the turn.
+
+`inject :context` exposes retrieved records at `context.memory` for hooks,
+tools, and plugins without automatically projecting memory into the prompt.
+
+Memory is opt-in:
+
+- no `memory do ... end` means no memory lifecycle at all
+- `capture :off` disables writes but still allows retrieval from an existing
+  namespace
+- imported JSON/YAML agents support the same constrained memory subset
 
 ## Define A Tool
 
