@@ -141,4 +141,34 @@ defmodule MotoTest.SubagentsTest do
                :calls
              ])
   end
+
+  test "falls back to live subagent metadata when request state has not been updated yet" do
+    runtime = OrchestratorAgent.runtime_module()
+    agent = new_runtime_agent(runtime)
+
+    assert {:ok, _agent, {:ai_react_start, params}} =
+             runtime.on_before_cmd(
+               agent,
+               {:ai_react_start,
+                %{
+                  query: "delegate",
+                  request_id: "req-subagent-meta-live-1",
+                  tool_context: %{tenant: "live"}
+                }}
+             )
+
+    research_tool = find_tool(OrchestratorAgent, "research_agent")
+
+    assert {:ok, %{result: "research:Collect notes:tenant=live:depth=1"}} =
+             research_tool.run(%{task: "Collect notes"}, params.tool_context)
+
+    assert [
+             %{
+               name: "research_agent",
+               mode: :ephemeral,
+               outcome: :ok
+             }
+           ] =
+             Moto.Subagent.request_calls(self(), "req-subagent-meta-live-1")
+  end
 end

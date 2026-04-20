@@ -603,25 +603,31 @@ Or use the shared runtime facade directly:
 {:ok, reply} = MyApp.ChatAgent.chat(pid, "Say hello.")
 ```
 
-## Demo Script
+## Demo CLI
 
 Interactive:
 
 ```bash
-mix run scripts/chat_agent.exs
+mix moto chat
 ```
 
-By default, the script runs one built-in tool-call demo first, then drops into
-interactive mode. It also runs visible input, output, tool, and interrupt demo
-passes first. You should see the configured default context printed at startup
-and a tool log line like
-`[tool:add_numbers tenant=demo channel=cli session=cli] 17 + 25 = 42` when the
-tool executes.
+This starts the demo agent in a simple REPL immediately. Type `exit` to quit.
+Use `--log-level debug` for a compact per-turn trace or `--log-level trace` for
+full config and event detail.
 
 One-shot:
 
 ```bash
-mix run scripts/chat_agent.exs -- "Use the add_numbers tool to add 17 and 25. Reply with only the sum."
+mix moto chat -- "Use the add_numbers tool to add 17 and 25. Reply with only the sum."
+mix moto chat --log-level debug -- "Remember that my favorite color is blue."
+mix moto chat --log-level trace -- "Use the add_numbers tool to add 17 and 25. Reply with only the sum."
+```
+
+The script entrypoint delegates to the same CLI:
+
+```bash
+mix run scripts/chat_agent.exs
+mix run scripts/chat_agent.exs -- --log-level debug
 ```
 
 Imported JSON agent:
@@ -632,6 +638,14 @@ mix run scripts/imported_chat_agent.exs -- "Use the add_numbers tool to add 17 a
 ```
 
 The sample imported agent spec lives at `priv/moto/sample_math_agent.json`.
+
+Orchestrator demo:
+
+```bash
+mix moto orchestrator
+mix moto orchestrator -- "Use the research_agent specialist to explain vector databases."
+mix moto orchestrator --log-level trace -- "Use the writer_specialist specialist to rewrite this copy: our setup is easier now."
+```
 
 ## Dynamic Import
 

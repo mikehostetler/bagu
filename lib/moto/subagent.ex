@@ -267,6 +267,40 @@ defmodule Moto.Subagent do
 
   def get_request_meta(_agent, _request_id), do: nil
 
+  @doc """
+  Returns the recorded subagent calls for a request.
+
+  This prefers persisted request metadata when available, and falls back to the
+  transient ETS buffer used during live ReAct runs.
+  """
+  @spec request_calls(pid() | String.t() | Jido.Agent.t(), String.t()) :: [map()]
+  def request_calls(server_or_agent, request_id) when is_binary(request_id) do
+    stored_calls = stored_request_calls(server_or_agent, request_id)
+    pending_calls = pending_request_calls(server_or_agent, request_id)
+
+    (stored_calls ++ pending_calls)
+    |> Enum.uniq()
+  end
+
+  def request_calls(_server_or_agent, _request_id), do: []
+
+  @doc """
+  Returns the recorded subagent calls for the latest request on a running agent.
+  """
+  @spec latest_request_calls(pid() | String.t()) :: [map()]
+  def latest_request_calls(server_or_id) do
+    case Jido.AgentServer.state(server_or_id) do
+      {:ok, %{agent: agent}} ->
+        case agent.state.last_request_id do
+          request_id when is_binary(request_id) -> request_calls(server_or_id, request_id)
+          _ -> []
+        end
+
+      _ ->
+        []
+    end
+  end
+
   defp delegate(%__MODULE__{target: :ephemeral} = subagent, task, context) do
     child_id = "moto-subagent-#{System.unique_integer([:positive])}"
     started_at = System.monotonic_time(:millisecond)
@@ -279,6 +313,7 @@ defmodule Moto.Subagent do
              call_metadata(
                subagent,
                :ephemeral,
+               task,
                child_id,
                child_request_id,
                child_result_meta,
@@ -291,6 +326,7 @@ defmodule Moto.Subagent do
              call_metadata(
                subagent,
                :ephemeral,
+               task,
                child_id,
                child_request_id,
                child_result_meta,
@@ -303,6 +339,7 @@ defmodule Moto.Subagent do
              call_metadata(
                subagent,
                :ephemeral,
+               task,
                child_id,
                child_request_id,
                child_result_meta,
@@ -328,6 +365,7 @@ defmodule Moto.Subagent do
            call_metadata(
              subagent,
              :peer,
+             task,
              peer_id,
              child_request_id,
              child_result_meta,
@@ -340,6 +378,7 @@ defmodule Moto.Subagent do
            call_metadata(
              subagent,
              :peer,
+             task,
              peer_id,
              child_request_id,
              child_result_meta,
@@ -352,6 +391,7 @@ defmodule Moto.Subagent do
            call_metadata(
              subagent,
              :peer,
+             task,
              peer_id,
              child_request_id,
              child_result_meta,
@@ -530,6 +570,16 @@ defmodule Moto.Subagent do
 
   defp drain_request_meta(_server, _request_id), do: []
 
+  defp lookup_request_meta(server, request_id) when is_pid(server) and is_binary(request_id) do
+    ensure_meta_table()
+
+    @meta_table
+    |> :ets.lookup({server, request_id})
+    |> Enum.map(fn {{^server, ^request_id}, metadata} -> metadata end)
+  end
+
+  defp lookup_request_meta(_server, _request_id), do: []
+
   defp put_request_meta(agent, request_id, %{calls: calls}) do
     state =
       update_in(agent.state, [:requests, request_id], fn
@@ -555,6 +605,7 @@ defmodule Moto.Subagent do
   defp call_metadata(
          subagent,
          mode,
+         task,
          child_id,
          child_request_id,
          child_result_meta,
@@ -565,6 +616,7 @@ defmodule Moto.Subagent do
       name: subagent.name,
       agent: subagent.agent,
       mode: mode,
+      task_preview: task_preview(task),
       child_id: child_id,
       child_request_id: child_request_id,
       duration_ms: System.monotonic_time(:millisecond) - started_at,
@@ -578,6 +630,7 @@ defmodule Moto.Subagent do
       name: subagent.name,
       agent: subagent.agent,
       mode: target_mode(subagent.target),
+      task_preview: nil,
       child_id: nil,
       child_request_id: nil,
       duration_ms: 0,
@@ -588,6 +641,46 @@ defmodule Moto.Subagent do
 
   defp target_mode(:ephemeral), do: :ephemeral
   defp target_mode({:peer, _}), do: :peer
+
+  defp task_preview(task) when is_binary(task) do
+    task
+    |> String.replace(~r/\s+/, " ")
+    |> String.trim()
+    |> String.slice(0, 140)
+  end
+
+  defp task_preview(_task), do: nil
+
+  defp stored_request_calls(%Jido.Agent{} = agent, request_id) do
+    case get_request_meta(agent, request_id) do
+      %{calls: calls} when is_list(calls) -> calls
+      _ -> []
+    end
+  end
+
+  defp stored_request_calls(server, request_id) do
+    try do
+      case Jido.AgentServer.state(server) do
+        {:ok, %{agent: agent}} -> stored_request_calls(agent, request_id)
+        _ -> []
+      end
+    catch
+      :exit, _reason -> []
+    end
+  end
+
+  defp pending_request_calls(server, request_id) when is_pid(server) do
+    lookup_request_meta(server, request_id)
+  end
+
+  defp pending_request_calls(server_id, request_id) when is_binary(server_id) do
+    case Moto.whereis(server_id) do
+      nil -> []
+      pid -> lookup_request_meta(pid, request_id)
+    end
+  end
+
+  defp pending_request_calls(_server_or_agent, _request_id), do: []
 
   defp normalize_subagent_name(name) when is_binary(name) do
     trimmed = String.trim(name)

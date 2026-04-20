@@ -27,6 +27,7 @@ defmodule Moto.Agent.RequestTransformer do
 
     with {:ok, prompt} <- resolve_base_prompt(system_prompt_spec, input),
          combined <- maybe_append_memory(prompt, runtime_context) do
+      Moto.Debug.record_prompt_preview(runtime_context, combined, request)
       {:ok, %{messages: apply_prompt(Map.get(request, :messages, []), combined)}}
     end
   end
