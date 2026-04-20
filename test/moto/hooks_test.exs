@@ -68,6 +68,28 @@ defmodule MotoTest.HooksTest do
            } = tool_context[:__moto_hooks__]
   end
 
+  test "rejects malformed request-scoped hook specs with a tagged error" do
+    assert {:error, {:invalid_hook_spec, message}} =
+             Moto.Agent.prepare_chat_opts([hooks: [1, 2]], nil)
+
+    assert message =~ "hooks must be a keyword list or map"
+  end
+
+  test "fails malformed before_turn override lists cleanly instead of raising" do
+    assert {:ok, pid} = ChatAgent.start_link(id: "invalid-hook-override-test")
+
+    bad_hook = fn _input -> {:ok, [1, 2]} end
+
+    try do
+      assert {:error, {:hook, :before_turn, reason}} =
+               Moto.chat(pid, "hello", hooks: [before_turn: bad_hook])
+
+      assert reason =~ "before_turn hook must return {:ok, map_or_keyword_overrides}"
+    after
+      :ok = Moto.stop_agent(pid)
+    end
+  end
+
   test "runs before_turn hooks in declaration order and rewrites request params" do
     runtime = HookedAgent.runtime_module()
     agent = new_runtime_agent(runtime)

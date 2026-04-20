@@ -190,6 +190,6 @@ defmodule Moto.Demo.OrchestratorCLI do
   defp join_prompt(args), do: Enum.join(args, " ")
 
   defp agent_module do
-    Module.concat([Moto, Scripts, OrchestratorDemo, Agents, ManagerAgent])
+    Module.concat([Moto, Examples, Orchestrator, Agents, ManagerAgent])
   end
 end

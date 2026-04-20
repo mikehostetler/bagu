@@ -1,4 +1,4 @@
-defmodule Moto.Scripts.Demo.Hooks.ReplyWithFinalAnswer do
+defmodule Moto.Examples.Chat.Hooks.ReplyWithFinalAnswer do
   use Moto.Hook, name: "reply_with_final_answer"
 
   @impl true

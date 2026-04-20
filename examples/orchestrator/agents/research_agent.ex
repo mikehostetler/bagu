@@ -1,4 +1,4 @@
-defmodule Moto.Scripts.OrchestratorDemo.Agents.ResearchAgent do
+defmodule Moto.Examples.Orchestrator.Agents.ResearchAgent do
   use Moto.Agent
 
   agent do

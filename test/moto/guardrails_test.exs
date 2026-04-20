@@ -61,6 +61,13 @@ defmodule MotoTest.GuardrailsTest do
            } = tool_context[:__moto_guardrails__]
   end
 
+  test "rejects malformed request-scoped guardrail specs with a tagged error" do
+    assert {:error, {:invalid_guardrail_spec, message}} =
+             Moto.Agent.prepare_chat_opts([guardrails: [1, 2]], nil)
+
+    assert message =~ "guardrails must be a keyword list or map"
+  end
+
   test "runs input guardrails and blocks before the LLM call" do
     runtime = GuardrailedAgent.runtime_module()
     agent = new_runtime_agent(runtime)

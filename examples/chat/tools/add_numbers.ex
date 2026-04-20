@@ -1,4 +1,4 @@
-defmodule Moto.Scripts.Demo.Tools.AddNumbers do
+defmodule Moto.Examples.Chat.Tools.AddNumbers do
   use Moto.Tool,
     description: "Adds two integers together.",
     schema: Zoi.object(%{a: Zoi.integer(), b: Zoi.integer()})

@@ -17,16 +17,20 @@ defmodule Moto.ImportedSubagent do
       |> Keyword.fetch!(:path)
       |> resolve_path(__CALLER__.file)
 
-    dynamic_agent =
+    imported_agent =
       path
       |> Moto.import_agent_file!(Keyword.delete(opts, :path))
 
     quote location: :keep do
-      @moto_imported_subagent unquote(Macro.escape(dynamic_agent))
+      @moto_imported_subagent unquote(Macro.escape(imported_agent))
 
       @doc false
-      @spec dynamic_agent() :: Moto.DynamicAgent.t()
-      def dynamic_agent, do: @moto_imported_subagent
+      @spec imported_agent() :: Moto.ImportedAgent.t()
+      def imported_agent, do: @moto_imported_subagent
+
+      @doc false
+      @spec dynamic_agent() :: Moto.ImportedAgent.t()
+      def dynamic_agent, do: imported_agent()
 
       @spec name() :: String.t()
       def name, do: @moto_imported_subagent.spec.name

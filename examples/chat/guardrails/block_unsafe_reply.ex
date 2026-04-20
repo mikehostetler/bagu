@@ -1,4 +1,4 @@
-defmodule Moto.Scripts.Demo.Guardrails.BlockUnsafeReply do
+defmodule Moto.Examples.Chat.Guardrails.BlockUnsafeReply do
   use Moto.Guardrail, name: "block_unsafe_reply"
 
   @impl true

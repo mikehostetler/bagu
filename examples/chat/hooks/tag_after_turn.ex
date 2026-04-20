@@ -1,4 +1,4 @@
-defmodule Moto.Scripts.Demo.Hooks.TagAfterTurn do
+defmodule Moto.Examples.Chat.Hooks.TagAfterTurn do
   use Moto.Hook, name: "tag_after_turn"
 
   @impl true

@@ -1,5 +1,8 @@
-defmodule MotoTest.DynamicAgentTest do
+defmodule MotoTest.ImportedAgentTest do
   use MotoTest.Support.Case, async: false
+
+  alias Moto.DynamicAgent
+  alias Moto.DynamicAgent.Spec, as: DynamicSpec
 
   alias MotoTest.{
     AddNumbers,
@@ -16,7 +19,7 @@ defmodule MotoTest.DynamicAgentTest do
     SafeReplyGuardrail
   }
 
-  test "imports a constrained dynamic agent from JSON" do
+  test "imports a constrained imported agent from JSON" do
     json = """
     {
       "name": "json_agent",
@@ -38,7 +41,7 @@ defmodule MotoTest.DynamicAgentTest do
     }
     """
 
-    assert {:ok, %DynamicAgent{} = agent} =
+    assert {:ok, %ImportedAgent{} = agent} =
              Moto.import_agent(
                json,
                available_tools: [AddNumbers],
@@ -75,7 +78,30 @@ defmodule MotoTest.DynamicAgentTest do
     assert agent.guardrail_modules.tool == [ApproveLargeMathToolGuardrail]
   end
 
-  test "imports a constrained dynamic agent from YAML" do
+  test "keeps dynamic-agent compatibility wrappers working" do
+    assert {:ok, %DynamicSpec{} = spec} =
+             DynamicSpec.new(
+               %{
+                 "name" => "compat_agent",
+                 "model" => "fast",
+                 "system_prompt" => "You are concise.",
+                 "tools" => ["add_numbers"]
+               },
+               available_tools: [AddNumbers]
+             )
+
+    assert {:ok, %DynamicAgent{} = agent} =
+             DynamicAgent.import(spec, available_tools: [AddNumbers])
+
+    assert {:ok, encoded} = Moto.encode_agent(agent, format: :json)
+    assert encoded =~ "\"name\": \"compat_agent\""
+
+    assert {:ok, pid} = Moto.start_agent(agent, id: "dynamic-agent-compat")
+    assert Moto.whereis("dynamic-agent-compat") == pid
+    assert :ok = Moto.stop_agent(pid)
+  end
+
+  test "imports a constrained imported agent from YAML" do
     yaml = """
     name: "yaml_agent"
     model:
@@ -107,7 +133,7 @@ defmodule MotoTest.DynamicAgentTest do
         - "approve_large_math_tool"
     """
 
-    assert {:ok, %DynamicAgent{} = agent} =
+    assert {:ok, %ImportedAgent{} = agent} =
              Moto.import_agent(
                yaml,
                format: :yaml,
@@ -142,8 +168,8 @@ defmodule MotoTest.DynamicAgentTest do
     assert agent.guardrail_modules.tool == [ApproveLargeMathToolGuardrail]
   end
 
-  test "imports a constrained dynamic agent from file" do
-    path = Path.join(System.tmp_dir!(), "moto-dynamic-agent.json")
+  test "imports a constrained imported agent from file" do
+    path = Path.join(System.tmp_dir!(), "moto-imported-agent.json")
 
     on_exit(fn -> File.rm(path) end)
 
@@ -152,7 +178,7 @@ defmodule MotoTest.DynamicAgentTest do
       ~s({"name":"file_agent","model":"fast","system_prompt":"You are concise.","context":{"tenant":"file","channel":"imported"},"tools":["add_numbers"],"plugins":["math_plugin"],"hooks":{"before_turn":["inject_tenant"],"after_turn":["normalize_reply"],"on_interrupt":["notify_ops"]},"guardrails":{"input":["safe_prompt"],"output":["safe_reply"],"tool":["approve_large_math_tool"]}})
     )
 
-    assert {:ok, %DynamicAgent{} = agent} =
+    assert {:ok, %ImportedAgent{} = agent} =
              Moto.import_agent_file(
                path,
                available_tools: [AddNumbers],
@@ -173,7 +199,7 @@ defmodule MotoTest.DynamicAgentTest do
   end
 
   test "imports constrained subagents and compiles them into generated tool modules" do
-    assert {:ok, %DynamicAgent{} = agent} =
+    assert {:ok, %ImportedAgent{} = agent} =
              Moto.import_agent(
                %{
                  "name" => "subagent_import_agent",
@@ -214,7 +240,7 @@ defmodule MotoTest.DynamicAgentTest do
     assert encoded_yaml =~ "agent: \"research_agent\""
   end
 
-  test "starts an imported dynamic agent under the shared runtime" do
+  test "starts an imported agent under the shared runtime" do
     json = """
     {
       "name": "runtime_agent",
@@ -229,7 +255,7 @@ defmodule MotoTest.DynamicAgentTest do
     }
     """
 
-    assert {:ok, %DynamicAgent{} = agent} =
+    assert {:ok, %ImportedAgent{} = agent} =
              Moto.import_agent(
                json,
                available_tools: [AddNumbers],
@@ -238,14 +264,14 @@ defmodule MotoTest.DynamicAgentTest do
                available_guardrails: [SafePromptGuardrail]
              )
 
-    assert {:ok, pid} = Moto.start_agent(agent, id: "dynamic-agent-test")
+    assert {:ok, pid} = Moto.start_agent(agent, id: "imported-agent-test")
     assert is_pid(pid)
-    assert Moto.whereis("dynamic-agent-test") == pid
+    assert Moto.whereis("imported-agent-test") == pid
     assert :ok = Moto.stop_agent(pid)
   end
 
   test "merges imported default context into runtime requests" do
-    assert {:ok, %DynamicAgent{} = agent} =
+    assert {:ok, %ImportedAgent{} = agent} =
              Moto.import_agent(%{
                "name" => "runtime_context_agent",
                "model" => "fast",
@@ -280,7 +306,7 @@ defmodule MotoTest.DynamicAgentTest do
            }
   end
 
-  test "imports and round-trips memory settings in constrained dynamic agent specs" do
+  test "imports and round-trips memory settings in constrained imported agent specs" do
     json = """
     {
       "name": "memory_json_agent",
@@ -299,7 +325,7 @@ defmodule MotoTest.DynamicAgentTest do
     }
     """
 
-    assert {:ok, %DynamicAgent{} = agent} = Moto.import_agent(json)
+    assert {:ok, %ImportedAgent{} = agent} = Moto.import_agent(json)
 
     assert agent.spec.memory == %{
              mode: :conversation,
@@ -319,8 +345,8 @@ defmodule MotoTest.DynamicAgentTest do
     assert encoded_yaml =~ "context_namespace_key: \"session\""
   end
 
-  test "imported dynamic agents retrieve and capture memory across turns" do
-    assert {:ok, %DynamicAgent{} = agent} =
+  test "imported agents retrieve and capture memory across turns" do
+    assert {:ok, %ImportedAgent{} = agent} =
              Moto.import_agent(%{
                "name" => "imported_memory_agent",
                "model" => "fast",
@@ -388,7 +414,7 @@ defmodule MotoTest.DynamicAgentTest do
     assert reason =~ "memory mode must be :conversation"
   end
 
-  test "rejects unexpected keys in imported dynamic agent specs" do
+  test "rejects unexpected keys in imported agent specs" do
     assert {:error, reason} =
              Moto.import_agent(%{
                "name" => "bad_agent",
@@ -400,7 +426,7 @@ defmodule MotoTest.DynamicAgentTest do
     assert reason =~ "unrecognized"
   end
 
-  test "rejects unknown bare model aliases in imported dynamic agent specs" do
+  test "rejects unknown bare model aliases in imported agent specs" do
     assert {:error, reason} =
              Moto.import_agent(%{
                "name" => "bad_model_agent",
@@ -411,7 +437,7 @@ defmodule MotoTest.DynamicAgentTest do
     assert reason =~ "known alias string"
   end
 
-  test "rejects unknown tool names in imported dynamic agent specs" do
+  test "rejects unknown tool names in imported agent specs" do
     assert {:error, reason} =
              Moto.import_agent(
                %{
@@ -426,7 +452,7 @@ defmodule MotoTest.DynamicAgentTest do
     assert reason =~ "unknown tool"
   end
 
-  test "rejects duplicate tool names in imported dynamic agent specs" do
+  test "rejects duplicate tool names in imported agent specs" do
     assert {:error, reason} =
              Moto.import_agent(
                %{
@@ -441,7 +467,7 @@ defmodule MotoTest.DynamicAgentTest do
     assert reason =~ "tools must be unique"
   end
 
-  test "rejects unknown plugin names in imported dynamic agent specs" do
+  test "rejects unknown plugin names in imported agent specs" do
     assert {:error, reason} =
              Moto.import_agent(
                %{
@@ -456,7 +482,7 @@ defmodule MotoTest.DynamicAgentTest do
     assert reason =~ "unknown plugin"
   end
 
-  test "rejects duplicate plugin names in imported dynamic agent specs" do
+  test "rejects duplicate plugin names in imported agent specs" do
     assert {:error, reason} =
              Moto.import_agent(
                %{
@@ -471,7 +497,7 @@ defmodule MotoTest.DynamicAgentTest do
     assert reason =~ "plugins must be unique"
   end
 
-  test "rejects duplicate hook names within a stage in imported dynamic agent specs" do
+  test "rejects duplicate hook names within a stage in imported agent specs" do
     assert {:error, reason} =
              Moto.import_agent(
                %{
@@ -486,7 +512,7 @@ defmodule MotoTest.DynamicAgentTest do
     assert reason =~ "hook names must be unique"
   end
 
-  test "rejects duplicate guardrail names within a stage in imported dynamic agent specs" do
+  test "rejects duplicate guardrail names within a stage in imported agent specs" do
     assert {:error, reason} =
              Moto.import_agent(
                %{
@@ -501,7 +527,7 @@ defmodule MotoTest.DynamicAgentTest do
     assert reason =~ "guardrail names must be unique"
   end
 
-  test "rejects unknown hook names in imported dynamic agent specs" do
+  test "rejects unknown hook names in imported agent specs" do
     assert {:error, reason} =
              Moto.import_agent(
                %{
@@ -516,7 +542,7 @@ defmodule MotoTest.DynamicAgentTest do
     assert reason =~ "unknown hook"
   end
 
-  test "rejects unknown guardrail names in imported dynamic agent specs" do
+  test "rejects unknown guardrail names in imported agent specs" do
     assert {:error, reason} =
              Moto.import_agent(
                %{

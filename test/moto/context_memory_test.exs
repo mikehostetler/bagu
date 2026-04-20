@@ -17,6 +17,11 @@ defmodule MotoTest.ContextMemoryTest do
     assert Keyword.get(opts, :tool_context) == %{tenant: "acme", locale: "en-US"}
   end
 
+  test "rejects malformed context lists with a tagged error instead of raising" do
+    assert {:error, {:invalid_context, :expected_map}} =
+             Moto.Agent.prepare_chat_opts([context: [1, 2]], nil)
+  end
+
   test "merges default agent context with per-turn context" do
     assert {:ok, opts} =
              Moto.Agent.prepare_chat_opts(

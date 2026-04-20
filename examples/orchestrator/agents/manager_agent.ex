@@ -1,4 +1,4 @@
-defmodule Moto.Scripts.OrchestratorDemo.Agents.ManagerAgent do
+defmodule Moto.Examples.Orchestrator.Agents.ManagerAgent do
   use Moto.Agent
 
   agent do
@@ -20,9 +20,9 @@ defmodule Moto.Scripts.OrchestratorDemo.Agents.ManagerAgent do
   end
 
   subagents do
-    subagent Moto.Scripts.OrchestratorDemo.Agents.ResearchAgent
+    subagent Moto.Examples.Orchestrator.Agents.ResearchAgent
 
-    subagent Moto.Scripts.OrchestratorDemo.Subagents.ImportedWriterSpecialist,
+    subagent Moto.Examples.Orchestrator.Subagents.ImportedWriterSpecialist,
       description: "Ask the writing specialist to draft or rewrite polished copy"
   end
 end

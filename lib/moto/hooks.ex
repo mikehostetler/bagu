@@ -147,9 +147,14 @@ defmodule Moto.Hooks do
   def normalize_request_hooks(nil), do: {:ok, default_stage_map()}
 
   def normalize_request_hooks(hooks) when is_list(hooks) or is_map(hooks) do
-    hooks
-    |> Map.new()
-    |> normalize_stage_map(:runtime)
+    case Moto.Context.coerce_map(hooks) do
+      {:ok, normalized} ->
+        normalize_stage_map(normalized, :runtime)
+
+      :error ->
+        {:error,
+         {:invalid_hook_spec, "hooks must be a keyword list or map, got: #{inspect(hooks)}"}}
+    end
   end
 
   def normalize_request_hooks(other),
@@ -480,33 +485,34 @@ defmodule Moto.Hooks do
 
   defp apply_before_turn_overrides(%BeforeTurn{} = input, overrides)
        when is_map(overrides) or is_list(overrides) do
-    overrides = Map.new(overrides)
-    allowed_keys = [:message, :context, :allowed_tools, :llm_opts, :metadata]
+    with {:ok, overrides} <- normalize_override_map(overrides) do
+      allowed_keys = [:message, :context, :allowed_tools, :llm_opts, :metadata]
 
-    case Map.keys(overrides) -- allowed_keys do
-      [] ->
-        with {:ok, context} <-
-               normalize_override_context(Map.get(overrides, :context)),
-             {:ok, allowed_tools} <-
-               normalize_override_allowed_tools(Map.get(overrides, :allowed_tools)),
-             {:ok, llm_opts} <- normalize_override_llm_opts(Map.get(overrides, :llm_opts)),
-             {:ok, metadata} <- normalize_override_metadata(Map.get(overrides, :metadata)),
-             {:ok, message} <-
-               normalize_override_message(Map.get(overrides, :message, input.message)) do
-          {:ok,
-           %BeforeTurn{
-             input
-             | message: message,
-               context: merge_optional(input.context, context),
-               allowed_tools: coalesce_optional(allowed_tools, input.allowed_tools),
-               llm_opts: coalesce_optional(llm_opts, input.llm_opts),
-               metadata: Map.merge(input.metadata, metadata)
-           }}
-        end
+      case Map.keys(overrides) -- allowed_keys do
+        [] ->
+          with {:ok, context} <-
+                 normalize_override_context(Map.get(overrides, :context)),
+               {:ok, allowed_tools} <-
+                 normalize_override_allowed_tools(Map.get(overrides, :allowed_tools)),
+               {:ok, llm_opts} <- normalize_override_llm_opts(Map.get(overrides, :llm_opts)),
+               {:ok, metadata} <- normalize_override_metadata(Map.get(overrides, :metadata)),
+               {:ok, message} <-
+                 normalize_override_message(Map.get(overrides, :message, input.message)) do
+            {:ok,
+             %BeforeTurn{
+               input
+               | message: message,
+                 context: merge_optional(input.context, context),
+                 allowed_tools: coalesce_optional(allowed_tools, input.allowed_tools),
+                 llm_opts: coalesce_optional(llm_opts, input.llm_opts),
+                 metadata: Map.merge(input.metadata, metadata)
+             }}
+          end
 
-      invalid_keys ->
-        {:error,
-         "before_turn hook returned unsupported override keys: #{Enum.join(Enum.map(invalid_keys, &inspect/1), ", ")}"}
+        invalid_keys ->
+          {:error,
+           "before_turn hook returned unsupported override keys: #{Enum.join(Enum.map(invalid_keys, &inspect/1), ", ")}"}
+      end
     end
   end
 
@@ -523,7 +529,17 @@ defmodule Moto.Hooks do
 
   defp normalize_override_context(nil), do: {:ok, %{}}
   defp normalize_override_context(value) when is_map(value), do: {:ok, value}
-  defp normalize_override_context(value) when is_list(value), do: {:ok, Map.new(value)}
+
+  defp normalize_override_context(value) when is_list(value) do
+    case Moto.Context.coerce_map(value) do
+      {:ok, normalized} ->
+        {:ok, normalized}
+
+      :error ->
+        {:error,
+         "before_turn context override must be a map or keyword list, got: #{inspect(value)}"}
+    end
+  end
 
   defp normalize_override_context(other),
     do:
@@ -547,12 +563,35 @@ defmodule Moto.Hooks do
 
   defp normalize_override_metadata(nil), do: {:ok, %{}}
   defp normalize_override_metadata(value) when is_map(value), do: {:ok, value}
-  defp normalize_override_metadata(value) when is_list(value), do: {:ok, Map.new(value)}
+
+  defp normalize_override_metadata(value) when is_list(value) do
+    case Moto.Context.coerce_map(value) do
+      {:ok, normalized} ->
+        {:ok, normalized}
+
+      :error ->
+        {:error,
+         "before_turn metadata override must be a map or keyword list, got: #{inspect(value)}"}
+    end
+  end
 
   defp normalize_override_metadata(other),
     do:
       {:error,
        "before_turn metadata override must be a map or keyword list, got: #{inspect(other)}"}
+
+  defp normalize_override_map(overrides) when is_map(overrides), do: {:ok, overrides}
+
+  defp normalize_override_map(overrides) when is_list(overrides) do
+    case Moto.Context.coerce_map(overrides) do
+      {:ok, normalized} ->
+        {:ok, normalized}
+
+      :error ->
+        {:error,
+         "before_turn hook must return {:ok, map_or_keyword_overrides}, got: #{inspect(overrides)}"}
+    end
+  end
 
   defp merge_optional(left, right) when is_map(right) and map_size(right) > 0,
     do: Map.merge(left || %{}, right)

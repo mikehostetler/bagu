@@ -4,7 +4,7 @@ defmodule Moto do
   """
 
   alias Jido.AI.Request
-  alias Moto.DynamicAgent
+  alias Moto.ImportedAgent
 
   @doc """
   Returns Moto-owned model aliases from application config.
@@ -46,8 +46,12 @@ defmodule Moto do
   """
   def start_agent(agent, opts \\ [])
 
-  @spec start_agent(DynamicAgent.t(), keyword()) :: DynamicSupervisor.on_start_child()
-  def start_agent(%DynamicAgent{} = agent, opts), do: DynamicAgent.start_link(agent, opts)
+  @spec start_agent(ImportedAgent.t(), keyword()) :: DynamicSupervisor.on_start_child()
+  def start_agent(%ImportedAgent{} = agent, opts), do: ImportedAgent.start_link(agent, opts)
+
+  @spec start_agent(Moto.DynamicAgent.t(), keyword()) :: DynamicSupervisor.on_start_child()
+  def start_agent(%Moto.DynamicAgent{} = agent, opts),
+    do: Moto.DynamicAgent.start_link(agent, opts)
 
   @spec start_agent(module() | struct(), keyword()) :: DynamicSupervisor.on_start_child()
   def start_agent(agent, opts), do: Moto.Runtime.start_agent(agent, opts)
@@ -71,7 +75,7 @@ defmodule Moto do
   def list_agents(opts \\ []), do: Moto.Runtime.list_agents(opts)
 
   @doc """
-  Imports a constrained dynamic Moto agent from a map, JSON string, or YAML string.
+  Imports a constrained Moto agent from a map, JSON string, or YAML string.
 
   The imported format currently supports `name`, `model`, `system_prompt`,
   default `context`,
@@ -85,51 +89,63 @@ defmodule Moto do
   `:available_hooks`, and
   `:available_guardrails` registries passed in `opts`.
   """
-  @spec import_agent(map() | binary(), keyword()) :: {:ok, DynamicAgent.t()} | {:error, term()}
-  def import_agent(source, opts \\ []), do: DynamicAgent.import(source, opts)
+  @spec import_agent(map() | binary(), keyword()) :: {:ok, ImportedAgent.t()} | {:error, term()}
+  def import_agent(source, opts \\ []), do: ImportedAgent.import(source, opts)
 
   @doc """
-  Imports a constrained dynamic Moto agent and raises on failure.
+  Imports a constrained Moto agent and raises on failure.
   """
-  @spec import_agent!(map() | binary(), keyword()) :: DynamicAgent.t()
+  @spec import_agent!(map() | binary(), keyword()) :: ImportedAgent.t()
   def import_agent!(source, opts \\ []) do
     case import_agent(source, opts) do
       {:ok, agent} -> agent
-      {:error, reason} -> raise ArgumentError, message: DynamicAgent.format_error(reason)
+      {:error, reason} -> raise ArgumentError, message: ImportedAgent.format_error(reason)
     end
   end
 
   @doc """
-  Imports a constrained dynamic Moto agent from a `.json`, `.yaml`, or `.yml` file.
+  Imports a constrained Moto agent from a `.json`, `.yaml`, or `.yml` file.
   """
-  @spec import_agent_file(Path.t(), keyword()) :: {:ok, DynamicAgent.t()} | {:error, term()}
-  def import_agent_file(path, opts \\ []), do: DynamicAgent.import_file(path, opts)
+  @spec import_agent_file(Path.t(), keyword()) :: {:ok, ImportedAgent.t()} | {:error, term()}
+  def import_agent_file(path, opts \\ []), do: ImportedAgent.import_file(path, opts)
 
   @doc """
-  Imports a constrained dynamic Moto agent from a file and raises on failure.
+  Imports a constrained Moto agent from a file and raises on failure.
   """
-  @spec import_agent_file!(Path.t(), keyword()) :: DynamicAgent.t()
+  @spec import_agent_file!(Path.t(), keyword()) :: ImportedAgent.t()
   def import_agent_file!(path, opts \\ []) do
     case import_agent_file(path, opts) do
       {:ok, agent} -> agent
-      {:error, reason} -> raise ArgumentError, message: DynamicAgent.format_error(reason)
+      {:error, reason} -> raise ArgumentError, message: ImportedAgent.format_error(reason)
     end
   end
 
   @doc """
   Encodes an imported Moto agent as JSON or YAML.
   """
-  @spec encode_agent(DynamicAgent.t(), keyword()) :: {:ok, binary()} | {:error, term()}
-  def encode_agent(%DynamicAgent{} = agent, opts \\ []), do: DynamicAgent.encode(agent, opts)
+  @spec encode_agent(ImportedAgent.t() | Moto.DynamicAgent.t(), keyword()) ::
+          {:ok, binary()} | {:error, term()}
+  def encode_agent(agent, opts \\ [])
+  def encode_agent(%ImportedAgent{} = agent, opts), do: ImportedAgent.encode(agent, opts)
+  def encode_agent(%Moto.DynamicAgent{} = agent, opts), do: Moto.DynamicAgent.encode(agent, opts)
 
   @doc """
   Encodes an imported Moto agent as JSON or YAML and raises on failure.
   """
-  @spec encode_agent!(DynamicAgent.t(), keyword()) :: binary()
-  def encode_agent!(%DynamicAgent{} = agent, opts \\ []) do
+  @spec encode_agent!(ImportedAgent.t() | Moto.DynamicAgent.t(), keyword()) :: binary()
+  def encode_agent!(agent, opts \\ [])
+
+  def encode_agent!(%ImportedAgent{} = agent, opts) do
     case encode_agent(agent, opts) do
       {:ok, encoded} -> encoded
-      {:error, reason} -> raise ArgumentError, message: DynamicAgent.format_error(reason)
+      {:error, reason} -> raise ArgumentError, message: ImportedAgent.format_error(reason)
+    end
+  end
+
+  def encode_agent!(%Moto.DynamicAgent{} = agent, opts) do
+    case encode_agent(agent, opts) do
+      {:ok, encoded} -> encoded
+      {:error, reason} -> raise ArgumentError, message: ImportedAgent.format_error(reason)
     end
   end
 

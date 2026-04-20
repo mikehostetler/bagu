@@ -1,4 +1,4 @@
-defmodule Moto.Scripts.Demo.Hooks.NotifyInterrupt do
+defmodule Moto.Examples.Chat.Hooks.NotifyInterrupt do
   use Moto.Hook, name: "notify_interrupt"
 
   @impl true

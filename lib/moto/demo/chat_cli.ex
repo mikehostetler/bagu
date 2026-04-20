@@ -240,6 +240,6 @@ defmodule Moto.Demo.ChatCLI do
   defp join_prompt(args), do: Enum.join(args, " ")
 
   defp agent_module do
-    Module.concat([Moto, Scripts, Demo, Agents, ChatAgent])
+    Module.concat([Moto, Examples, Chat, Agents, ChatAgent])
   end
 end

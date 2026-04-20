@@ -10,7 +10,7 @@ defmodule MotoTest.Support.Case do
       import ExUnit.CaptureLog
       import MotoTest.Support.Helpers
 
-      alias Moto.DynamicAgent
+      alias Moto.ImportedAgent
       alias MotoTest.Support.{Accounts, AshResourceAgent, User}
     end
   end

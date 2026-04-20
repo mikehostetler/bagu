@@ -17,7 +17,15 @@ defmodule Moto.Interrupt do
   def new(%__MODULE__{} = interrupt), do: interrupt
 
   def new(attrs) when is_map(attrs) or is_list(attrs) do
-    attrs = Map.new(attrs)
+    attrs =
+      case Moto.Context.coerce_map(attrs) do
+        {:ok, normalized} ->
+          normalized
+
+        :error ->
+          raise ArgumentError,
+                "Moto.Interrupt.new/1 expected a map or keyword list, got: #{inspect(attrs)}"
+      end
 
     %__MODULE__{
       id: normalize_id(Map.get(attrs, :id, Map.get(attrs, "id"))),
@@ -39,6 +47,13 @@ defmodule Moto.Interrupt do
   defp normalize_message(_), do: "Moto agent interrupted"
 
   defp normalize_data(data) when is_map(data), do: data
-  defp normalize_data(data) when is_list(data), do: Map.new(data)
+
+  defp normalize_data(data) when is_list(data) do
+    case Moto.Context.coerce_map(data) do
+      {:ok, normalized} -> normalized
+      :error -> %{}
+    end
+  end
+
   defp normalize_data(_), do: %{}
 end

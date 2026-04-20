@@ -118,9 +118,15 @@ defmodule Moto.Guardrails do
   def normalize_request_guardrails(nil), do: {:ok, default_stage_map()}
 
   def normalize_request_guardrails(guardrails) when is_list(guardrails) or is_map(guardrails) do
-    guardrails
-    |> Map.new()
-    |> normalize_stage_map(:runtime)
+    case Moto.Context.coerce_map(guardrails) do
+      {:ok, normalized} ->
+        normalize_stage_map(normalized, :runtime)
+
+      :error ->
+        {:error,
+         {:invalid_guardrail_spec,
+          "guardrails must be a keyword list or map, got: #{inspect(guardrails)}"}}
+    end
   end
 
   def normalize_request_guardrails(other),

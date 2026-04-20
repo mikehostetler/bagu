@@ -14,9 +14,25 @@ defmodule Moto.Context do
   @type t :: map()
 
   @spec normalize(term()) :: {:ok, t()} | {:error, {:invalid_context, :expected_map}}
-  def normalize(context) when is_map(context), do: {:ok, context}
-  def normalize(context) when is_list(context), do: {:ok, Map.new(context)}
-  def normalize(_context), do: {:error, {:invalid_context, :expected_map}}
+  def normalize(context) do
+    case coerce_map(context) do
+      {:ok, normalized} -> {:ok, normalized}
+      :error -> {:error, {:invalid_context, :expected_map}}
+    end
+  end
+
+  @spec coerce_map(term()) :: {:ok, t()} | :error
+  def coerce_map(context) when is_map(context), do: {:ok, context}
+
+  def coerce_map(context) when is_list(context) do
+    if Keyword.keyword?(context) do
+      {:ok, Map.new(context)}
+    else
+      :error
+    end
+  end
+
+  def coerce_map(_context), do: :error
 
   @spec merge(t(), t()) :: t()
   def merge(defaults, runtime) when is_map(defaults) and is_map(runtime) do

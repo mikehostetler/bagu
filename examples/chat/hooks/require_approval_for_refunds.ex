@@ -1,4 +1,4 @@
-defmodule Moto.Scripts.Demo.Hooks.RequireApprovalForRefunds do
+defmodule Moto.Examples.Chat.Hooks.RequireApprovalForRefunds do
   use Moto.Hook, name: "require_approval_for_refunds"
 
   @impl true

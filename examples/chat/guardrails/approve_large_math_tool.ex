@@ -1,4 +1,4 @@
-defmodule Moto.Scripts.Demo.Guardrails.ApproveLargeMathTool do
+defmodule Moto.Examples.Chat.Guardrails.ApproveLargeMathTool do
   use Moto.Guardrail, name: "approve_large_math_tool"
 
   @threshold 100

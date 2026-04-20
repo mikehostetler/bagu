@@ -1,4 +1,4 @@
-defmodule Moto.Scripts.Demo.Guardrails.BlockSecretPrompt do
+defmodule Moto.Examples.Chat.Guardrails.BlockSecretPrompt do
   use Moto.Guardrail, name: "block_secret_prompt"
 
   @impl true

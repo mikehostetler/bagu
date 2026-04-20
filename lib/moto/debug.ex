@@ -51,7 +51,8 @@ defmodule Moto.Debug do
         {:error, :request_not_found}
 
       request ->
-        {:ok, build_summary(agent, request_id, request, %{}, stored_subagent_calls(agent, request_id))}
+        {:ok,
+         build_summary(agent, request_id, request, %{}, stored_subagent_calls(agent, request_id))}
     end
   end
 
@@ -234,7 +235,8 @@ defmodule Moto.Debug do
 
   defp pending_runtime_meta(_server_or_id, _request_id), do: %{}
 
-  defp maybe_store_runtime_meta(runtime_context, attrs) when is_map(runtime_context) and is_map(attrs) do
+  defp maybe_store_runtime_meta(runtime_context, attrs)
+       when is_map(runtime_context) and is_map(attrs) do
     case {resolve_server(Map.get(runtime_context, Moto.Subagent.server_key())),
           Map.get(runtime_context, Moto.Subagent.request_id_key())} do
       {{:ok, server}, request_id} when is_binary(request_id) ->

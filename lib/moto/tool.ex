@@ -204,7 +204,7 @@ defmodule Moto.Tool do
   end
 
   @doc """
-  Normalizes an available-tools registry for dynamic agent imports.
+  Normalizes an available-tools registry for imported agent specs.
 
   Accepts either:
 

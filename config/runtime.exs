@@ -2,6 +2,7 @@ import Config
 import Dotenvy
 
 app_root = System.get_env("RELEASE_ROOT") || Path.expand("..", __DIR__)
+
 default_react_token_secret =
   :crypto.hash(:sha256, "moto:react_token_secret:#{Path.expand(app_root)}")
   |> Base.url_encode64(padding: false)

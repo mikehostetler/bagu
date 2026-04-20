@@ -185,7 +185,7 @@ defmodule Moto.Plugin do
     do: {:error, "plugin entries must be modules or lists of modules, got: #{inspect(other)}"}
 
   @doc """
-  Normalizes an available-plugins registry for dynamic Moto agent imports.
+  Normalizes an available-plugins registry for imported agent specs.
 
   Accepts either:
 

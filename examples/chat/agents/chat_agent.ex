@@ -1,4 +1,4 @@
-defmodule Moto.Scripts.Demo.Agents.ChatAgent do
+defmodule Moto.Examples.Chat.Agents.ChatAgent do
   use Moto.Agent
 
   agent do
@@ -27,19 +27,19 @@ defmodule Moto.Scripts.Demo.Agents.ChatAgent do
   end
 
   plugins do
-    plugin Moto.Scripts.Demo.Plugins.MathPlugin
+    plugin Moto.Examples.Chat.Plugins.MathPlugin
   end
 
   hooks do
-    before_turn Moto.Scripts.Demo.Hooks.ReplyWithFinalAnswer
-    after_turn Moto.Scripts.Demo.Hooks.TagAfterTurn
-    after_turn Moto.Scripts.Demo.Hooks.RequireApprovalForRefunds
-    on_interrupt Moto.Scripts.Demo.Hooks.NotifyInterrupt
+    before_turn Moto.Examples.Chat.Hooks.ReplyWithFinalAnswer
+    after_turn Moto.Examples.Chat.Hooks.TagAfterTurn
+    after_turn Moto.Examples.Chat.Hooks.RequireApprovalForRefunds
+    on_interrupt Moto.Examples.Chat.Hooks.NotifyInterrupt
   end
 
   guardrails do
-    input Moto.Scripts.Demo.Guardrails.BlockSecretPrompt
-    output Moto.Scripts.Demo.Guardrails.BlockUnsafeReply
-    tool Moto.Scripts.Demo.Guardrails.ApproveLargeMathTool
+    input Moto.Examples.Chat.Guardrails.BlockSecretPrompt
+    output Moto.Examples.Chat.Guardrails.BlockUnsafeReply
+    tool Moto.Examples.Chat.Guardrails.ApproveLargeMathTool
   end
 end
