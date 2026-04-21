@@ -10,6 +10,7 @@ defmodule MotoTest.ImportedAgentTest do
     InjectTenantHook,
     InterruptBeforeHook,
     MathPlugin,
+    ModuleMathSkill,
     NormalizeReplyHook,
     NotifyOpsHook,
     ResearchSpecialist,
@@ -76,6 +77,72 @@ defmodule MotoTest.ImportedAgentTest do
     assert agent.guardrail_modules.input == [SafePromptGuardrail]
     assert agent.guardrail_modules.output == [SafeReplyGuardrail]
     assert agent.guardrail_modules.tool == [ApproveLargeMathToolGuardrail]
+  end
+
+  test "imports skills and mcp tool sync settings" do
+    assert {:ok, %ImportedAgent{} = agent} =
+             Moto.import_agent(
+               %{
+                 "name" => "skills_agent",
+                 "model" => "fast",
+                 "system_prompt" => "You are skill-aware.",
+                 "skills" => ["module-math-skill"],
+                 "mcp_tools" => [%{"endpoint" => "github", "prefix" => "github_"}]
+               },
+               available_skills: [ModuleMathSkill]
+             )
+
+    assert agent.skill_refs == [ModuleMathSkill]
+    assert agent.mcp_tools == [%{endpoint: "github", prefix: "github_"}]
+    assert Enum.member?(agent.tool_modules, MotoTest.MultiplyNumbers)
+
+    assert {:ok, encoded_json} = Moto.encode_agent(agent, format: :json)
+    assert encoded_json =~ "\"skills\""
+    assert encoded_json =~ "\"mcp_tools\""
+  end
+
+  test "imports runtime skill paths relative to the spec file" do
+    root =
+      Path.join(System.tmp_dir!(), "moto-imported-skill-#{System.unique_integer([:positive])}")
+
+    skill_dir = Path.join(root, "skills/math-discipline")
+    spec_dir = Path.join(root, "agents")
+    spec_path = Path.join(spec_dir, "agent.json")
+
+    File.mkdir_p!(skill_dir)
+    File.mkdir_p!(spec_dir)
+
+    File.write!(
+      Path.join(skill_dir, "SKILL.md"),
+      """
+      ---
+      name: math-discipline
+      description: Runtime skill for imported Moto agents.
+      allowed-tools: add_numbers
+      ---
+
+      # Imported Math Discipline
+
+      Use the add_numbers tool for arithmetic.
+      """
+    )
+
+    File.write!(
+      spec_path,
+      Jason.encode!(%{
+        name: "runtime_skill_agent",
+        model: "fast",
+        system_prompt: "You are concise.",
+        skills: ["math-discipline"],
+        skill_paths: ["../skills"]
+      })
+    )
+
+    on_exit(fn -> File.rm_rf!(root) end)
+
+    assert {:ok, %ImportedAgent{} = agent} = Moto.import_agent_file(spec_path)
+    assert agent.skill_refs == ["math-discipline"]
+    assert agent.spec.skill_paths == [Path.expand("../skills", spec_dir)]
   end
 
   test "keeps dynamic-agent compatibility wrappers working" do
@@ -299,7 +366,7 @@ defmodule MotoTest.ImportedAgentTest do
              session: "runtime"
            }
 
-    assert params.runtime_context == %{
+    assert Moto.Context.strip_internal(params.runtime_context) == %{
              "tenant" => "imported",
              "channel" => "json",
              session: "runtime"

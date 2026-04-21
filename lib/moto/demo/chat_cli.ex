@@ -89,6 +89,8 @@ defmodule Moto.Demo.ChatCLI do
       IO.puts("Configured model: #{inspect(chat_agent.configured_model())}")
       IO.puts("Default context: #{inspect(chat_agent.context())}")
       IO.puts("Memory: #{inspect(chat_agent.memory())}")
+      IO.puts("Skills: #{format_list(chat_agent.skill_names())}")
+      IO.puts("MCP tools: #{inspect(chat_agent.mcp_tools())}")
       IO.puts("Plugins: #{Enum.join(chat_agent.plugin_names(), ", ")}")
       IO.puts("Tools: #{Enum.join(chat_agent.tool_names(), ", ")}")
 
@@ -237,4 +239,7 @@ defmodule Moto.Demo.ChatCLI do
   defp agent_module do
     Module.concat([Moto, Examples, Chat, Agents, ChatAgent])
   end
+
+  defp format_list([]), do: "(none)"
+  defp format_list(items), do: Enum.join(items, ", ")
 end

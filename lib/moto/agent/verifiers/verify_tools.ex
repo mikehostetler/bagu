@@ -7,21 +7,33 @@ defmodule Moto.Agent.Verifiers.VerifyTools do
   def verify(dsl_state) do
     dsl_state
     |> Spark.Dsl.Verifier.get_entities([:tools])
-    |> Enum.filter(&match?(%Moto.Agent.Dsl.Tool{}, &1))
-    |> Enum.reduce_while({:ok, MapSet.new()}, fn tool_ref, {:ok, seen_names} ->
-      module = tool_ref.module
+    |> Enum.reduce_while({:ok, MapSet.new()}, fn
+      %Moto.Agent.Dsl.Tool{} = tool_ref, {:ok, seen_names} ->
+        module = tool_ref.module
 
-      case Moto.Tool.tool_name(module) do
-        {:ok, name} ->
-          if MapSet.member?(seen_names, name) do
-            {:halt, {:error, duplicate_tool_error(dsl_state, tool_ref, name)}}
-          else
-            {:cont, {:ok, MapSet.put(seen_names, name)}}
-          end
+        case Moto.Tool.tool_name(module) do
+          {:ok, name} ->
+            if MapSet.member?(seen_names, name) do
+              {:halt, {:error, duplicate_tool_error(dsl_state, tool_ref, name)}}
+            else
+              {:cont, {:ok, MapSet.put(seen_names, name)}}
+            end
 
-        {:error, message} ->
-          {:halt, {:error, tool_error(dsl_state, tool_ref, message)}}
-      end
+          {:error, message} ->
+            {:halt, {:error, tool_error(dsl_state, tool_ref, message)}}
+        end
+
+      %Moto.Agent.Dsl.MCPTools{} = mcp_ref, {:ok, seen_names} ->
+        case Moto.MCP.validate_dsl_entry(mcp_ref) do
+          :ok ->
+            {:cont, {:ok, seen_names}}
+
+          {:error, message} ->
+            {:halt, {:error, mcp_error(dsl_state, mcp_ref, message)}}
+        end
+
+      _other, {:ok, seen_names} ->
+        {:cont, {:ok, seen_names}}
     end)
     |> case do
       {:ok, _} -> :ok
@@ -44,6 +56,15 @@ defmodule Moto.Agent.Verifiers.VerifyTools do
       path: [:tools, :tool],
       module: Spark.Dsl.Verifier.get_persisted(dsl_state, :module),
       location: Spark.Dsl.Entity.anno(tool_ref)
+    )
+  end
+
+  defp mcp_error(dsl_state, mcp_ref, message) do
+    Spark.Error.DslError.exception(
+      message: message,
+      path: [:tools, :mcp_tools],
+      module: Spark.Dsl.Verifier.get_persisted(dsl_state, :module),
+      location: Spark.Dsl.Entity.anno(mcp_ref)
     )
   end
 end

@@ -7,6 +7,8 @@ defmodule Moto.ImportedAgent do
     :spec,
     :runtime_module,
     :tool_modules,
+    :skill_refs,
+    :mcp_tools,
     :subagents,
     :plugin_modules,
     :hook_modules,
@@ -16,6 +18,8 @@ defmodule Moto.ImportedAgent do
     :spec,
     :runtime_module,
     :tool_modules,
+    :skill_refs,
+    :mcp_tools,
     :subagents,
     :plugin_modules,
     :hook_modules,
@@ -26,6 +30,8 @@ defmodule Moto.ImportedAgent do
           spec: Spec.t(),
           runtime_module: module(),
           tool_modules: [module()],
+          skill_refs: [Moto.Skill.ref()],
+          mcp_tools: Moto.MCP.config(),
           subagents: [Moto.Subagent.t()],
           plugin_modules: [module()],
           hook_modules: Moto.Hooks.stage_map(),
@@ -62,7 +68,9 @@ defmodule Moto.ImportedAgent do
   def import_file(path, opts \\ []) when is_binary(path) do
     with {:ok, contents} <- File.read(path),
          {:ok, format} <- detect_file_format(path, Keyword.get(opts, :format)),
-         {:ok, agent} <- __MODULE__.import(contents, Keyword.put(opts, :format, format)) do
+         {:ok, attrs} <- decode(contents, format),
+         expanded_attrs <- expand_skill_paths(attrs, Path.dirname(path)),
+         {:ok, agent} <- __MODULE__.import(expanded_attrs, opts) do
       {:ok, agent}
     else
       {:error, :enoent} ->
@@ -84,6 +92,8 @@ defmodule Moto.ImportedAgent do
       agent.spec,
       agent.runtime_module,
       agent.tool_modules,
+      agent.skill_refs,
+      agent.mcp_tools,
       agent.subagents,
       agent.plugin_modules,
       agent.hook_modules,
@@ -114,18 +124,24 @@ defmodule Moto.ImportedAgent do
   defp build(
          %Spec{} = spec,
          tool_registry,
+         skill_registry,
          subagent_registry,
          plugin_registry,
          hook_registry,
          guardrail_registry
        ) do
     with {:ok, direct_tool_modules} <- Moto.Tool.resolve_tool_names(spec.tools, tool_registry),
+         {:ok, skill_refs} <- resolve_imported_skills(spec.skills, skill_registry),
          {:ok, resolved_subagents} <-
            resolve_imported_subagents(spec.subagents, subagent_registry),
          {:ok, plugin_modules} <- Moto.Plugin.resolve_plugin_names(spec.plugins, plugin_registry),
          {:ok, plugin_tool_modules} <- Moto.Plugin.plugin_actions(plugin_modules),
+         skill_tool_modules =
+           Moto.Skill.action_modules(%{refs: skill_refs, load_paths: spec.skill_paths}),
          {:ok, direct_tool_names} <-
-           Moto.Tool.action_names(direct_tool_modules ++ plugin_tool_modules),
+           Moto.Tool.action_names(
+             direct_tool_modules ++ skill_tool_modules ++ plugin_tool_modules
+           ),
          subagent_tool_modules <-
            resolved_subagents
            |> Enum.with_index()
@@ -135,13 +151,17 @@ defmodule Moto.ImportedAgent do
          {:ok, hook_modules} <- resolve_imported_hooks(spec.hooks, hook_registry),
          {:ok, guardrail_modules} <-
            resolve_imported_guardrails(spec.guardrails, guardrail_registry),
-         tool_modules = direct_tool_modules ++ plugin_tool_modules ++ subagent_tool_modules,
+         tool_modules =
+           direct_tool_modules ++
+             skill_tool_modules ++ plugin_tool_modules ++ subagent_tool_modules,
          :ok <-
            ensure_unique_tool_names(direct_tool_names ++ Enum.map(resolved_subagents, & &1.name)),
          {:ok, runtime_module} <-
            ensure_runtime_module(
              spec,
              tool_modules,
+             skill_refs,
+             spec.mcp_tools,
              resolved_subagents,
              plugin_modules,
              hook_modules,
@@ -152,6 +172,8 @@ defmodule Moto.ImportedAgent do
          spec: spec,
          runtime_module: runtime_module,
          tool_modules: tool_modules,
+         skill_refs: skill_refs,
+         mcp_tools: spec.mcp_tools,
          subagents: resolved_subagents,
          plugin_modules: plugin_modules,
          hook_modules: hook_modules,
@@ -210,6 +232,20 @@ defmodule Moto.ImportedAgent do
   defp decode(_source, format),
     do: {:error, "unsupported format #{inspect(format)}; expected :json, :yaml, or :auto"}
 
+  defp expand_skill_paths(%{} = attrs, base_dir) when is_binary(base_dir) do
+    skill_paths = Map.get(attrs, "skill_paths", Map.get(attrs, :skill_paths, []))
+
+    expanded_paths =
+      Enum.map(skill_paths, fn
+        path when is_binary(path) -> Path.expand(path, base_dir)
+        other -> other
+      end)
+
+    attrs
+    |> maybe_put("skill_paths", expanded_paths)
+    |> maybe_put(:skill_paths, expanded_paths)
+  end
+
   defp detect_source_format(source) do
     case String.trim_leading(source) do
       <<"{"::utf8, _::binary>> -> :json
@@ -239,9 +275,15 @@ defmodule Moto.ImportedAgent do
   defp detect_file_format(_path, other),
     do: {:error, "unsupported format #{inspect(other)}; expected :json or :yaml"}
 
+  defp maybe_put(map, key, value) do
+    if Map.has_key?(map, key), do: Map.put(map, key, value), else: map
+  end
+
   defp ensure_runtime_module(
          %Spec{} = spec,
          tool_modules,
+         skill_refs,
+         mcp_tools,
          subagents,
          plugin_modules,
          hook_modules,
@@ -253,6 +295,8 @@ defmodule Moto.ImportedAgent do
       generated_module(
         spec,
         tool_modules,
+        skill_refs,
+        mcp_tools,
         subagents,
         runtime_plugins,
         hook_modules,
@@ -266,6 +310,8 @@ defmodule Moto.ImportedAgent do
         runtime_module,
         spec,
         tool_modules,
+        skill_refs,
+        mcp_tools,
         subagents,
         plugin_modules,
         runtime_plugins,
@@ -278,6 +324,8 @@ defmodule Moto.ImportedAgent do
   defp generated_module(
          %Spec{} = spec,
          tool_modules,
+         skill_refs,
+         mcp_tools,
          subagents,
          runtime_plugins,
          hook_modules,
@@ -287,6 +335,12 @@ defmodule Moto.ImportedAgent do
       %{
         spec: Spec.to_external_map(spec),
         tools: Enum.map(tool_modules, &inspect/1),
+        skills:
+          Enum.map(skill_refs, fn
+            module when is_atom(module) -> inspect(module)
+            name when is_binary(name) -> name
+          end),
+        mcp_tools: mcp_tools,
         subagents:
           Enum.map(subagents, fn subagent ->
             %{
@@ -318,6 +372,8 @@ defmodule Moto.ImportedAgent do
          runtime_module,
          %Spec{} = spec,
          tool_modules,
+         skill_refs,
+         mcp_tools,
          subagents,
          plugin_modules,
          runtime_plugins,
@@ -325,9 +381,11 @@ defmodule Moto.ImportedAgent do
          guardrail_modules
        ) do
     request_transformer_module = Module.concat(runtime_module, RequestTransformer)
+    skill_config = %{refs: skill_refs, load_paths: spec.skill_paths}
 
     effective_request_transformer =
-      if Moto.Memory.requires_request_transformer?(spec.memory) do
+      if Moto.Memory.requires_request_transformer?(spec.memory) or
+           Moto.Skill.requires_request_transformer?(skill_config) do
         request_transformer_module
       else
         nil
@@ -349,11 +407,13 @@ defmodule Moto.ImportedAgent do
             @behaviour Jido.AI.Reasoning.ReAct.RequestTransformer
 
             @system_prompt_spec unquote(Macro.escape(spec.system_prompt))
+            @skills_config unquote(Macro.escape(skill_config))
 
             @impl true
             def transform_request(request, state, config, runtime_context) do
               Moto.Agent.RequestTransformer.transform_request(
                 @system_prompt_spec,
+                @skills_config,
                 request,
                 state,
                 config,
@@ -379,7 +439,9 @@ defmodule Moto.ImportedAgent do
             hook_modules,
             spec.context,
             guardrail_modules,
-            spec.memory
+            spec.memory,
+            skill_config,
+            mcp_tools
           )
         )
 
@@ -397,6 +459,8 @@ defmodule Moto.ImportedAgent do
                 spec,
                 runtime_module,
                 tool_modules,
+                skill_refs,
+                mcp_tools,
                 subagents,
                 plugin_modules,
                 hook_modules,
@@ -428,6 +492,12 @@ defmodule Moto.ImportedAgent do
     opts
     |> Keyword.get(:available_tools, [])
     |> Moto.Tool.normalize_available_tools()
+  end
+
+  defp available_skill_registry(opts) do
+    opts
+    |> Keyword.get(:available_skills, [])
+    |> Moto.Skill.normalize_available_skills()
   end
 
   defp available_plugin_registry(opts) do
@@ -474,6 +544,10 @@ defmodule Moto.ImportedAgent do
         {:error, reason} -> {:halt, {:error, reason}}
       end
     end)
+  end
+
+  defp resolve_imported_skills(skill_names, skill_registry) do
+    Moto.Skill.resolve_skill_refs(skill_names, skill_registry)
   end
 
   defp resolve_imported_subagents(subagents, subagent_registry) do
@@ -528,7 +602,11 @@ defmodule Moto.ImportedAgent do
   end
 
   defp request_transformer(%Spec{} = spec, runtime_module) do
-    if Moto.Memory.requires_request_transformer?(spec.memory) do
+    if Moto.Memory.requires_request_transformer?(spec.memory) or
+         Moto.Skill.requires_request_transformer?(%{
+           refs: spec.skills,
+           load_paths: spec.skill_paths
+         }) do
       Module.concat(runtime_module, RequestTransformer)
     else
       nil
@@ -539,6 +617,8 @@ defmodule Moto.ImportedAgent do
          %Spec{} = spec,
          runtime_module,
          tool_modules,
+         skill_refs,
+         mcp_tools,
          subagents,
          plugin_modules,
          hook_modules,
@@ -558,8 +638,10 @@ defmodule Moto.ImportedAgent do
       model: Moto.model(spec.model),
       context: spec.context,
       memory: spec.memory,
+      skills: %{refs: skill_refs, load_paths: spec.skill_paths},
       tools: tool_modules,
       tool_names: definition_tool_names(tool_modules, subagents),
+      mcp_tools: mcp_tools,
       subagents: subagents,
       subagent_names: Enum.map(subagents, & &1.name),
       plugins: plugin_modules,
@@ -589,12 +671,14 @@ defmodule Moto.ImportedAgent do
 
   defp with_registries(opts, fun) when is_list(opts) and is_function(fun, 1) do
     with {:ok, tool_registry} <- available_tool_registry(opts),
+         {:ok, skill_registry} <- available_skill_registry(opts),
          {:ok, subagent_registry} <- available_subagent_registry(opts),
          {:ok, plugin_registry} <- available_plugin_registry(opts),
          {:ok, hook_registry} <- available_hook_registry(opts),
          {:ok, guardrail_registry} <- available_guardrail_registry(opts) do
       fun.(%{
         tools: tool_registry,
+        skills: skill_registry,
         subagents: subagent_registry,
         plugins: plugin_registry,
         hooks: hook_registry,
@@ -605,6 +689,7 @@ defmodule Moto.ImportedAgent do
 
   defp build_from_source(source, %{
          tools: tool_registry,
+         skills: skill_registry,
          subagents: subagent_registry,
          plugins: plugin_registry,
          hooks: hook_registry,
@@ -613,6 +698,7 @@ defmodule Moto.ImportedAgent do
     with {:ok, spec} <-
            Spec.new(source,
              available_tools: tool_registry,
+             available_skills: skill_registry,
              available_subagents: subagent_registry,
              available_plugins: plugin_registry,
              available_hooks: hook_registry,
@@ -621,6 +707,7 @@ defmodule Moto.ImportedAgent do
       build(
         spec,
         tool_registry,
+        skill_registry,
         subagent_registry,
         plugin_registry,
         hook_registry,
@@ -659,6 +746,12 @@ defmodule Moto.ImportedAgent do
       encode_yaml_memory(spec.memory),
       "tools:",
       encode_yaml_tools(spec.tools),
+      "skills:",
+      encode_yaml_skills(spec.skills),
+      "skill_paths:",
+      encode_yaml_skill_paths(spec.skill_paths),
+      "mcp_tools:",
+      encode_yaml_mcp_tools(spec.mcp_tools),
       "subagents:",
       encode_yaml_subagents(spec.subagents),
       "plugins:",
@@ -674,6 +767,27 @@ defmodule Moto.ImportedAgent do
 
   defp encode_yaml_tools([]), do: "  []"
   defp encode_yaml_tools(tools), do: Enum.map_join(tools, "\n", &"  - #{Jason.encode!(&1)}")
+
+  defp encode_yaml_skills([]), do: "  []"
+  defp encode_yaml_skills(skills), do: Enum.map_join(skills, "\n", &"  - #{Jason.encode!(&1)}")
+
+  defp encode_yaml_skill_paths([]), do: "  []"
+
+  defp encode_yaml_skill_paths(paths) do
+    Enum.map_join(paths, "\n", &"  - #{Jason.encode!(&1)}")
+  end
+
+  defp encode_yaml_mcp_tools([]), do: "  []"
+
+  defp encode_yaml_mcp_tools(entries) do
+    Enum.map_join(entries, "\n", fn entry ->
+      endpoint = entry["endpoint"] || entry[:endpoint]
+      prefix = entry["prefix"] || entry[:prefix]
+
+      ["  - endpoint: #{Jason.encode!(endpoint)}" | maybe_yaml_line("prefix", prefix, "    ")]
+      |> Enum.join("\n")
+    end)
+  end
 
   defp encode_yaml_subagents([]), do: "  []"
 

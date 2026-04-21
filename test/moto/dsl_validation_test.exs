@@ -207,6 +207,43 @@ defmodule MotoTest.DslValidationTest do
     end
   end
 
+  test "rejects invalid skill refs at compile time" do
+    assert_raise Spark.Error.DslError, ~r/invalid skill name/, fn ->
+      Code.compile_string("""
+      defmodule MotoTest.InvalidSkillRefAgent do
+        use Moto.Agent
+
+        agent do
+          system_prompt "This should fail."
+        end
+
+        skills do
+          skill "Bad Skill"
+        end
+      end
+      """)
+    end
+  end
+
+  test "rejects invalid skill load paths at compile time" do
+    assert_raise Spark.Error.DslError, ~r/skill load paths must not be empty/, fn ->
+      Code.compile_string("""
+      defmodule MotoTest.InvalidSkillPathAgent do
+        use Moto.Agent
+
+        agent do
+          system_prompt "This should fail."
+        end
+
+        skills do
+          skill "valid-skill"
+          load_path "   "
+        end
+      end
+      """)
+    end
+  end
+
   test "rejects invalid subagent modules at compile time" do
     assert_raise Spark.Error.DslError, ~r/not a valid Moto subagent/, fn ->
       Code.compile_string("""

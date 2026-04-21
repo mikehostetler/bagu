@@ -87,6 +87,35 @@ defmodule Moto.Agent.Build do
     end
   end
 
+  @spec resolve_skills!(module(), list(), String.t()) :: Moto.Skill.config() | nil
+  def resolve_skills!(owner_module, entries, base_dir)
+      when is_list(entries) and is_binary(base_dir) do
+    case Moto.Skill.normalize_dsl(entries, base_dir) do
+      {:ok, normalized} ->
+        normalized
+
+      {:error, message} ->
+        raise Spark.Error.DslError,
+          message: message,
+          path: [:skills],
+          module: owner_module
+    end
+  end
+
+  @spec resolve_mcp!(module(), list()) :: Moto.MCP.config()
+  def resolve_mcp!(owner_module, entries) when is_list(entries) do
+    case Moto.MCP.normalize_dsl(entries) do
+      {:ok, normalized} ->
+        normalized
+
+      {:error, message} ->
+        raise Spark.Error.DslError,
+          message: message,
+          path: [:tools, :mcp_tools],
+          module: owner_module
+    end
+  end
+
   @spec resolve_subagents!(module(), list()) :: [Moto.Subagent.t()]
   def resolve_subagents!(owner_module, entries) when is_list(entries) do
     entries
@@ -140,6 +169,7 @@ defmodule Moto.Agent.Build do
 
     tool_entities = Spark.Dsl.Extension.get_entities(env.module, [:tools])
     plugin_entities = Spark.Dsl.Extension.get_entities(env.module, [:plugins])
+    skill_entities = Spark.Dsl.Extension.get_entities(env.module, [:skills])
 
     subagent_entities =
       env.module
@@ -161,6 +191,17 @@ defmodule Moto.Agent.Build do
             match?(%Moto.Agent.Dsl.MemoryCapture{}, &1) or
             match?(%Moto.Agent.Dsl.MemoryInject{}, &1) or
             match?(%Moto.Agent.Dsl.MemoryRetrieve{}, &1))
+      )
+
+    mcp_entities =
+      tool_entities
+      |> Enum.filter(&match?(%Moto.Agent.Dsl.MCPTools{}, &1))
+
+    skill_refs =
+      skill_entities
+      |> Enum.filter(
+        &(match?(%Moto.Agent.Dsl.SkillRef{}, &1) or
+            match?(%Moto.Agent.Dsl.SkillPath{}, &1))
       )
 
     hook_entities =
@@ -248,6 +289,11 @@ defmodule Moto.Agent.Build do
           nil
       end
 
+    configured_skills =
+      resolve_skills!(env.module, skill_refs, Path.dirname(env.file))
+
+    configured_mcp_tools = resolve_mcp!(env.module, mcp_entities)
+
     direct_tool_names =
       case Moto.Tool.tool_names(direct_tool_modules) do
         {:ok, tool_names} ->
@@ -281,6 +327,32 @@ defmodule Moto.Agent.Build do
           raise Spark.Error.DslError,
             message: message,
             path: [:plugins, :plugin],
+            module: env.module
+      end
+
+    skill_tool_modules =
+      case Moto.Tool.action_names(Moto.Skill.action_modules(configured_skills)) do
+        {:ok, _skill_tool_names} ->
+          Moto.Skill.action_modules(configured_skills)
+
+        {:error, message} ->
+          raise Spark.Error.DslError,
+            message: message,
+            path: [:skills, :skill],
+            module: env.module
+      end
+
+    skill_names = Moto.Skill.skill_names(configured_skills)
+
+    skill_tool_names =
+      case Moto.Tool.action_names(skill_tool_modules) do
+        {:ok, skill_tool_names} ->
+          skill_tool_names
+
+        {:error, message} ->
+          raise Spark.Error.DslError,
+            message: message,
+            path: [:skills, :skill],
             module: env.module
       end
 
@@ -322,12 +394,14 @@ defmodule Moto.Agent.Build do
     tool_modules =
       direct_tool_modules ++
         ash_resource_info.tool_modules ++
+        skill_tool_modules ++
         plugin_tool_modules ++
         subagent_tool_modules
 
     tool_names =
       direct_tool_names ++
         ash_resource_info.tool_names ++
+        skill_tool_names ++
         plugin_tool_names ++
         subagent_tool_names
 
@@ -385,7 +459,8 @@ defmodule Moto.Agent.Build do
 
     effective_request_transformer =
       if is_nil(dynamic_system_prompt) and
-           not Moto.Memory.requires_request_transformer?(configured_memory) do
+           not Moto.Memory.requires_request_transformer?(configured_memory) and
+           not Moto.Skill.requires_request_transformer?(configured_skills) do
         nil
       else
         request_transformer_module
@@ -403,8 +478,10 @@ defmodule Moto.Agent.Build do
         model: resolved_model,
         context: configured_context,
         memory: configured_memory,
+        skills: configured_skills,
         tools: tool_modules,
         tool_names: tool_names,
+        mcp_tools: configured_mcp_tools,
         subagents: configured_subagents,
         subagent_names: subagent_tool_names,
         plugins: plugin_modules,
@@ -427,11 +504,13 @@ defmodule Moto.Agent.Build do
             @behaviour Jido.AI.Reasoning.ReAct.RequestTransformer
 
             @system_prompt_spec unquote(Macro.escape(request_transformer_system_prompt))
+            @skills_config unquote(Macro.escape(configured_skills))
 
             @impl true
             def transform_request(request, state, config, runtime_context) do
               Moto.Agent.RequestTransformer.transform_request(
                 @system_prompt_spec,
+                @skills_config,
                 request,
                 state,
                 config,
@@ -469,7 +548,9 @@ defmodule Moto.Agent.Build do
             configured_hooks,
             configured_context,
             configured_guardrails,
-            configured_memory
+            configured_memory,
+            configured_skills,
+            configured_mcp_tools
           )
         )
 
@@ -563,6 +644,18 @@ defmodule Moto.Agent.Build do
       def memory, do: unquote(Macro.escape(configured_memory))
 
       @doc """
+      Returns the configured skill settings for this agent, if any.
+      """
+      @spec skills() :: Moto.Skill.config() | nil
+      def skills, do: unquote(Macro.escape(configured_skills))
+
+      @doc """
+      Returns the configured published skill names.
+      """
+      @spec skill_names() :: [String.t()]
+      def skill_names, do: unquote(Macro.escape(skill_names))
+
+      @doc """
       Returns the configured tool modules.
       """
       @spec tools() :: [module()]
@@ -573,6 +666,12 @@ defmodule Moto.Agent.Build do
       """
       @spec tool_names() :: [String.t()]
       def tool_names, do: unquote(Macro.escape(tool_names))
+
+      @doc """
+      Returns the configured MCP tool sync settings.
+      """
+      @spec mcp_tools() :: Moto.MCP.config()
+      def mcp_tools, do: unquote(Macro.escape(configured_mcp_tools))
 
       @doc """
       Returns the configured subagent definitions.

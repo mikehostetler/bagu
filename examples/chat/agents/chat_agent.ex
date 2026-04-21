@@ -8,8 +8,6 @@ defmodule Moto.Examples.Chat.Agents.ChatAgent do
     system_prompt """
     You are a concise assistant.
     Keep answers short and direct.
-    For any addition or arithmetic request, you must use the add_numbers tool.
-    Do not do arithmetic in your head when that tool applies.
     """
   end
 
@@ -24,6 +22,11 @@ defmodule Moto.Examples.Chat.Agents.ChatAgent do
     capture :conversation
     retrieve limit: 4
     inject :system_prompt
+  end
+
+  skills do
+    skill "math-discipline"
+    load_path "../skills"
   end
 
   plugins do

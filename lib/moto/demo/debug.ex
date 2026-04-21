@@ -123,7 +123,9 @@ defmodule Moto.Demo.Debug do
         IO.puts("debug> request #{summary.request_id} status=#{summary.status}")
         maybe_print_model(summary)
         maybe_print_prompt_summary(summary, level)
+        maybe_print_skill_summary(summary)
         maybe_print_tool_summary(summary)
+        maybe_print_mcp_summary(summary)
         maybe_print_context_keys(summary, level)
         maybe_print_memory_summary(summary.memory)
         maybe_print_subagent_summary(summary.subagents, level)
@@ -168,6 +170,18 @@ defmodule Moto.Demo.Debug do
 
   defp maybe_print_tool_summary(%{tool_names: tool_names}) do
     IO.puts("debug> tools #{Enum.join(tool_names, ", ")}")
+  end
+
+  defp maybe_print_skill_summary(%{skills: []}), do: :ok
+
+  defp maybe_print_skill_summary(%{skills: skills}) do
+    IO.puts("debug> skills #{Enum.join(skills, ", ")}")
+  end
+
+  defp maybe_print_mcp_summary(%{mcp_tools: []}), do: :ok
+
+  defp maybe_print_mcp_summary(%{mcp_tools: mcp_tools}) do
+    IO.puts("debug> mcp #{Enum.join(mcp_tools, ", ")}")
   end
 
   defp maybe_print_context_keys(%{context_preview: []}, _level), do: :ok

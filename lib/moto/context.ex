@@ -5,6 +5,7 @@ defmodule Moto.Context do
     "__moto_hooks__",
     "__moto_guardrails__",
     "__moto_memory__",
+    "__moto_skills__",
     "__tool_guardrail_callback__",
     "__moto_request_id__",
     "__moto_server__",

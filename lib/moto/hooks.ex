@@ -185,7 +185,11 @@ defmodule Moto.Hooks do
         default_context
       ) do
     request_id = params[:request_id] || agent.state[:last_request_id]
-    params = merge_default_context(params, default_context)
+
+    params =
+      params
+      |> merge_default_context(default_context)
+      |> attach_runtime_context(self(), request_id)
 
     {request_hooks, params} = pop_request_hooks(params)
     hooks = combine(defaults, request_hooks)
@@ -394,6 +398,17 @@ defmodule Moto.Hooks do
 
     Map.put(params, :tool_context, merged_context)
   end
+
+  defp attach_runtime_context(params, server, request_id)
+       when is_map(params) and is_pid(server) and is_binary(request_id) do
+    Map.update(params, :tool_context, %{}, fn context ->
+      context
+      |> Map.put(Moto.Subagent.server_key(), server)
+      |> Map.put(Moto.Subagent.request_id_key(), request_id)
+    end)
+  end
+
+  defp attach_runtime_context(params, _server, _request_id), do: params
 
   defp pop_request_hooks(params) when is_map(params) do
     context = Map.get(params, :tool_context, %{}) || %{}

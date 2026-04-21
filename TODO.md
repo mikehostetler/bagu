@@ -20,6 +20,8 @@ The bias here is:
 - [x] `context`
 - [x] `guardrails`
 - [x] `memory`
+- [x] `skills`
+- [x] MCP tool sync
 - [x] imported JSON/YAML agents
 - [x] `ash_resource` integration
 - [x] `subagents`

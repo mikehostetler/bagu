@@ -5,6 +5,7 @@ defmodule Moto.Agent.RequestTransformer do
 
   @spec transform_request(
           Moto.Agent.SystemPrompt.spec() | nil,
+          Moto.Skill.config() | nil,
           map(),
           State.t(),
           Config.t(),
@@ -12,6 +13,7 @@ defmodule Moto.Agent.RequestTransformer do
         ) :: {:ok, %{messages: [map()]}} | {:error, term()}
   def transform_request(
         system_prompt_spec,
+        skills_config,
         request,
         %State{} = state,
         %Config{} = config,
@@ -26,7 +28,7 @@ defmodule Moto.Agent.RequestTransformer do
     }
 
     with {:ok, prompt} <- resolve_base_prompt(system_prompt_spec, input),
-         combined <- maybe_append_memory(prompt, runtime_context) do
+         combined <- combine_prompt_sections(prompt, skills_config, runtime_context) do
       Moto.Debug.record_prompt_preview(runtime_context, combined, request)
       {:ok, %{messages: apply_prompt(Map.get(request, :messages, []), combined)}}
     end
@@ -37,13 +39,20 @@ defmodule Moto.Agent.RequestTransformer do
 
   defp resolve_base_prompt(spec, input), do: Moto.Agent.SystemPrompt.resolve(spec, input)
 
-  defp maybe_append_memory(prompt, runtime_context) do
+  defp combine_prompt_sections(prompt, skills_config, runtime_context) do
     sections =
-      [normalize_prompt(prompt), Moto.Memory.prompt_text(runtime_context)]
+      [
+        normalize_prompt(prompt),
+        skills_prompt(skills_config, runtime_context),
+        Moto.Memory.prompt_text(runtime_context)
+      ]
       |> Enum.reject(&is_nil/1)
 
     Enum.join(sections, "\n\n")
   end
+
+  defp skills_prompt(nil, runtime_context), do: Moto.Skill.prompt_text(runtime_context)
+  defp skills_prompt(_config, runtime_context), do: Moto.Skill.prompt_text(runtime_context)
 
   defp apply_prompt(messages, ""), do: messages
 

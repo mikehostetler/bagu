@@ -71,6 +71,7 @@ defmodule Moto.Demo.ImportedChatCLI do
     available_tools = [AddNumbers]
     available_hooks = [ReplyWithFinalAnswer]
     available_guardrails = [BlockSecretPrompt, BlockUnsafeReply, ApproveLargeMathTool]
+    available_skills = []
     {:ok, tool_registry} = Moto.Tool.normalize_available_tools(available_tools)
     {:ok, hook_registry} = Moto.Hook.normalize_available_hooks(available_hooks)
 
@@ -85,6 +86,7 @@ defmodule Moto.Demo.ImportedChatCLI do
     if log_level == :trace do
       IO.puts("Spec file: #{spec_path}")
       IO.puts("Available tools: #{Enum.join(Map.keys(tool_registry), ", ")}")
+      IO.puts("Available skills: #{format_name_list(Map.keys(%{}))}")
       IO.puts("Available hooks: #{Enum.join(Map.keys(hook_registry), ", ")}")
       IO.puts("Available guardrails: #{Enum.join(Map.keys(guardrail_registry), ", ")}")
     end
@@ -106,6 +108,7 @@ defmodule Moto.Demo.ImportedChatCLI do
       agent =
         Moto.import_agent_file!(spec_path,
           available_tools: available_tools,
+          available_skills: available_skills,
           available_hooks: available_hooks,
           available_guardrails: available_guardrails
         )
@@ -136,6 +139,8 @@ defmodule Moto.Demo.ImportedChatCLI do
   defp print_agent_details(%ImportedAgent{
          spec: spec,
          tool_modules: tool_modules,
+         skill_refs: skill_refs,
+         mcp_tools: mcp_tools,
          hook_modules: hook_modules,
          guardrail_modules: guardrail_modules
        }) do
@@ -144,6 +149,10 @@ defmodule Moto.Demo.ImportedChatCLI do
     IO.puts("Resolved model: #{inspect(Moto.model(spec.model))}")
     IO.puts("Default context: #{inspect(spec.context)}")
     IO.puts("Memory: #{inspect(spec.memory)}")
+    IO.puts("Imported skills: #{format_name_list(spec.skills)}")
+    IO.puts("Skill paths: #{format_name_list(spec.skill_paths)}")
+    IO.puts("Resolved skill refs: #{format_skill_refs(skill_refs)}")
+    IO.puts("MCP tools: #{inspect(mcp_tools)}")
     IO.puts("Imported tools: #{Enum.join(spec.tools, ", ")}")
     IO.puts("Imported hooks: #{format_imported_hooks(spec.hooks)}")
     IO.puts("Imported guardrails: #{format_imported_guardrails(spec.guardrails)}")
@@ -202,6 +211,18 @@ defmodule Moto.Demo.ImportedChatCLI do
 
   defp join_prompt([]), do: nil
   defp join_prompt(args), do: Enum.join(args, " ")
+
+  defp format_name_list([]), do: "(none)"
+  defp format_name_list(items), do: Enum.join(items, ", ")
+
+  defp format_skill_refs([]), do: "(none)"
+
+  defp format_skill_refs(refs) do
+    Enum.map_join(refs, ", ", fn
+      module when is_atom(module) -> inspect(module)
+      name when is_binary(name) -> name
+    end)
+  end
 
   defp one_shot(pid, prompt, log_level) do
     one_shot(pid, prompt, log_level, session: "imported-cli")

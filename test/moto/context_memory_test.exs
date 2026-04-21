@@ -47,7 +47,11 @@ defmodule MotoTest.ContextMemoryTest do
              )
 
     assert Moto.Context.strip_internal(params.tool_context) == %{tenant: "demo", channel: "test"}
-    assert params.runtime_context == %{tenant: "demo", channel: "test"}
+
+    assert Moto.Context.strip_internal(params.runtime_context) == %{
+             tenant: "demo",
+             channel: "test"
+           }
   end
 
   test "retrieves and captures conversation memory across turns" do

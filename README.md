@@ -21,12 +21,15 @@ Today, Moto can:
 
 - define agents with a small Spark DSL via `use Moto.Agent`
 - configure agent `name`, `model`, `system_prompt`, default `context`, `tools`,
-  `memory`, `plugins`, `hooks`, and `guardrails`
+  `memory`, `skills`, `plugins`, `hooks`, and `guardrails`
 - resolve models through Moto-owned aliases like `:fast`, direct model strings,
   inline maps, and `%LLMDB.Model{}`
 - support static or dynamic system prompts through strings, module callbacks,
   and MFA tuples
 - define tools with `use Moto.Tool` as a thin, Zoi-only wrapper over `Jido.Action`
+- compose prompt-level agent skills from Jido.AI skills, including runtime
+  `SKILL.md` files
+- sync remote MCP tool catalogs into an agent with `mcp_tools`
 - attach tools directly or expose all generated `AshJido` actions for an Ash
   resource with `ash_resource`
 - define plugins with `use Moto.Plugin` and let them contribute tools into the
@@ -69,6 +72,7 @@ The generated runtime currently uses:
 - the DSL-configured `model` value, defaulting to `:fast`
 - the DSL-configured default `context`
 - the DSL-configured `memory`
+- the DSL-configured `skills`
 - the DSL-configured `tools`
 - the DSL-configured `plugins`
 - the DSL-configured `hooks`
@@ -103,6 +107,7 @@ The DSL currently supports:
 - `system_prompt`
 - `context`
 - `memory`
+- `skills`
 - `tools`
 - `plugins`
 - `hooks`
@@ -321,6 +326,65 @@ Example:
 {:ok, reply} =
   MyApp.UserAgent.chat(pid, "List users.", context: %{actor: current_user})
 ```
+
+## Attach Skills To An Agent
+
+Moto skills are built on top of `Jido.AI.Skill`.
+
+You can attach:
+
+- module-based skills defined with `use Jido.AI.Skill`
+- runtime-loaded `SKILL.md` files by published skill name plus `load_path`
+
+```elixir
+defmodule MyApp.MathAgent do
+  use Moto.Agent
+
+  agent do
+    model :fast
+    system_prompt "You are a concise assistant."
+  end
+
+  skills do
+    skill "math-discipline"
+    load_path "../skills"
+  end
+end
+```
+
+Moto uses skills in two ways:
+
+- renders skill prompt text into the effective system prompt
+- narrows the visible tool set when the skill declares `allowed-tools`
+
+Module-based skills can also contribute action-backed tools through their
+`actions:` list.
+
+## Sync MCP Tools
+
+Moto can sync remote MCP tools into the agent's tool registry:
+
+```elixir
+defmodule MyApp.GitHubAgent do
+  use Moto.Agent
+
+  agent do
+    model :fast
+    system_prompt "You can use GitHub MCP tools."
+  end
+
+  tools do
+    mcp_tools endpoint: :github, prefix: "github_"
+  end
+end
+```
+
+Moto keeps MCP narrow in this first pass:
+
+- MCP is treated as another tool source
+- tools are synced before the model turn runs
+- Moto does not currently expose raw MCP resources or prompts
+- endpoint configuration still lives in `jido_mcp`
 
 ## Define A Plugin
 
@@ -678,6 +742,8 @@ json = ~S"""
     "tenant": "json-demo",
     "channel": "imported"
   },
+  "skills": ["math-discipline"],
+  "skill_paths": ["../skills"],
   "plugins": ["math_plugin"],
   "hooks": {
     "before_turn": ["reply_with_final_answer"]
@@ -721,6 +787,10 @@ context:
   channel: "imported"
 plugins:
   - "math_plugin"
+skills:
+  - "math-discipline"
+skill_paths:
+  - "../skills"
 hooks:
   before_turn:
     - "reply_with_final_answer"
@@ -752,6 +822,9 @@ The imported-agent path is intentionally narrower than the Elixir DSL:
 - only `system_prompt`
 - only default `context` as a plain map
 - only published tool names through `tools`
+- only published skill names through `skills`
+- only skill load paths through `skill_paths`
+- only MCP sync settings through `mcp_tools`
 - only published plugin names through `plugins`
 - only published hook names through `hooks`
 - only published guardrail names through `guardrails`
@@ -766,6 +839,12 @@ The imported-agent path is intentionally narrower than the Elixir DSL:
 - `plugins` supports:
   - string names like `["math_plugin"]`
   - explicit resolution through `available_plugins: [MyApp.Plugins.Math]`
+- `skills` supports:
+  - string names like `["math-discipline"]`
+  - explicit resolution through `available_skills: [MyApp.Skills.MathDiscipline]`
+  - runtime path loading through `skill_paths`
+- `mcp_tools` supports:
+  - objects like `%{"endpoint" => "github", "prefix" => "github_"}`
 - `hooks` supports:
   - a stage-keyed map like `%{"before_turn" => ["reply_with_final_answer"]}`
   - multiple names per stage
@@ -798,4 +877,5 @@ The top-level helpers are:
 - `Moto.model/1` resolves Moto-owned aliases first, then delegates to Jido.AI.
 - Dynamic imports use a hidden runtime module generated from a validated Zoi spec.
 - Imported tools, plugins, hooks, and guardrails are constrained to explicit allowlist registries.
+- Imported skills can resolve through `available_skills`, runtime `skill_paths`, or both.
 - The nested runtime module still uses `Jido.AI.Agent` underneath.

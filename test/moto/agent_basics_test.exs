@@ -6,7 +6,10 @@ defmodule MotoTest.AgentBasicsTest do
     ContextAgent,
     InlineMapModelAgent,
     MemoryAgent,
+    MCPAgent,
     MfaPromptAgent,
+    RuntimeSkillAgent,
+    SkillAgent,
     ModulePromptAgent,
     PromptCallbacks,
     StringModelAgent,
@@ -47,6 +50,20 @@ defmodule MotoTest.AgentBasicsTest do
            }
 
     assert ChatAgent.memory() == nil
+  end
+
+  test "exposes configured skills and mcp settings" do
+    assert SkillAgent.skills() == %{refs: [MotoTest.ModuleMathSkill], load_paths: []}
+    assert SkillAgent.skill_names() == ["module-math-skill"]
+    assert SkillAgent.request_transformer() == MotoTest.SkillAgent.RuntimeRequestTransformer
+
+    assert RuntimeSkillAgent.skills() == %{
+             refs: ["math-discipline"],
+             load_paths: [Path.expand("../fixtures/skills", "test/support")]
+           }
+
+    assert RuntimeSkillAgent.skill_names() == ["math-discipline"]
+    assert MCPAgent.mcp_tools() == [%{endpoint: :github, prefix: "github_"}]
   end
 
   test "supports module-based dynamic system prompts" do

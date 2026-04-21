@@ -13,10 +13,28 @@ defmodule Moto.Agent.Dsl do
     defstruct [:resource, :__spark_metadata__]
   end
 
+  defmodule MCPTools do
+    @moduledoc false
+
+    defstruct [:endpoint, :prefix, :__spark_metadata__]
+  end
+
   defmodule Plugin do
     @moduledoc false
 
     defstruct [:module, :__spark_metadata__]
+  end
+
+  defmodule SkillRef do
+    @moduledoc false
+
+    defstruct [:skill, :__spark_metadata__]
+  end
+
+  defmodule SkillPath do
+    @moduledoc false
+
+    defstruct [:path, :__spark_metadata__]
   end
 
   defmodule Subagent do
@@ -172,12 +190,33 @@ defmodule Moto.Agent.Dsl do
     ]
   }
 
+  @mcp_tools_entity %Spark.Dsl.Entity{
+    name: :mcp_tools,
+    describe: """
+    Register remote MCP tools from a configured endpoint.
+    """,
+    target: MCPTools,
+    args: [],
+    schema: [
+      endpoint: [
+        type: :any,
+        required: true,
+        doc: "The configured MCP endpoint id."
+      ],
+      prefix: [
+        type: :string,
+        required: false,
+        doc: "Optional prefix to prepend to synced tool names."
+      ]
+    ]
+  }
+
   @tools_section %Spark.Dsl.Section{
     name: :tools,
     describe: """
     Register Moto tools for this agent.
     """,
-    entities: [@tool_entity, @ash_resource_entity]
+    entities: [@tool_entity, @ash_resource_entity, @mcp_tools_entity]
   }
 
   @plugin_entity %Spark.Dsl.Entity{
@@ -202,6 +241,46 @@ defmodule Moto.Agent.Dsl do
     Register Moto plugins for this agent.
     """,
     entities: [@plugin_entity]
+  }
+
+  @skill_ref_entity %Spark.Dsl.Entity{
+    name: :skill,
+    describe: """
+    Register a Jido.AI skill module or runtime skill name for this agent.
+    """,
+    target: SkillRef,
+    args: [:skill],
+    schema: [
+      skill: [
+        type: :any,
+        required: true,
+        doc: "A Jido.AI skill module or runtime skill name."
+      ]
+    ]
+  }
+
+  @skill_path_entity %Spark.Dsl.Entity{
+    name: :load_path,
+    describe: """
+    Load SKILL.md files from a directory or file path at runtime.
+    """,
+    target: SkillPath,
+    args: [:path],
+    schema: [
+      path: [
+        type: :string,
+        required: true,
+        doc: "A directory or SKILL.md file path."
+      ]
+    ]
+  }
+
+  @skills_section %Spark.Dsl.Section{
+    name: :skills,
+    describe: """
+    Register Jido.AI skills for this agent.
+    """,
+    entities: [@skill_ref_entity, @skill_path_entity]
   }
 
   @subagent_entity %Spark.Dsl.Entity{
@@ -506,6 +585,7 @@ defmodule Moto.Agent.Dsl do
       @context_section,
       @memory_section,
       @tools_section,
+      @skills_section,
       @subagents_section,
       @plugins_section,
       @hooks_section,
@@ -517,6 +597,7 @@ defmodule Moto.Agent.Dsl do
       Moto.Agent.Verifiers.VerifyMemory,
       Moto.Agent.Verifiers.VerifyTools,
       Moto.Agent.Verifiers.VerifyAshResources,
+      Moto.Agent.Verifiers.VerifySkills,
       Moto.Agent.Verifiers.VerifySubagents,
       Moto.Agent.Verifiers.VerifyPlugins,
       Moto.Agent.Verifiers.VerifyHooks,

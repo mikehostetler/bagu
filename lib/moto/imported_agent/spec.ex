@@ -45,6 +45,22 @@ defmodule Moto.ImportedAgent.Spec do
                     |> Zoi.max(128)
                     |> Zoi.regex(~r/^[a-z][a-z0-9_]*$/)
 
+  @skill_name_schema Zoi.string()
+                     |> Zoi.trim()
+                     |> Zoi.min(1)
+                     |> Zoi.max(128)
+                     |> Zoi.regex(~r/^[a-z0-9]+(-[a-z0-9]+)*$/)
+
+  @skill_path_schema Zoi.string()
+                     |> Zoi.trim()
+                     |> Zoi.min(1)
+                     |> Zoi.max(4_096)
+
+  @mcp_endpoint_schema Zoi.string()
+                       |> Zoi.trim()
+                       |> Zoi.min(1)
+                       |> Zoi.max(128)
+
   @guardrail_name_schema Zoi.string()
                          |> Zoi.trim()
                          |> Zoi.min(1)
@@ -55,6 +71,9 @@ defmodule Moto.ImportedAgent.Spec do
   @default_guardrails %{input: [], output: [], tool: []}
   @default_memory nil
   @default_subagents []
+  @default_skills []
+  @default_skill_paths []
+  @default_mcp_tools []
 
   @model_map_schema Zoi.object(
                       %{
@@ -127,6 +146,20 @@ defmodule Moto.ImportedAgent.Spec do
                        unrecognized_keys: :error
                      )
 
+  @mcp_tool_schema Zoi.object(
+                     %{
+                       endpoint: @mcp_endpoint_schema,
+                       prefix:
+                         Zoi.string()
+                         |> Zoi.trim()
+                         |> Zoi.min(1)
+                         |> Zoi.max(128)
+                         |> Zoi.optional()
+                     },
+                     coerce: true,
+                     unrecognized_keys: :error
+                   )
+
   @memory_retrieve_schema Zoi.object(
                             %{
                               limit: Zoi.integer() |> Zoi.default(5)
@@ -184,6 +217,9 @@ defmodule Moto.ImportedAgent.Spec do
               context: Zoi.map() |> Zoi.default(%{}),
               memory: Zoi.union([@memory_schema, Zoi.literal(nil)]) |> Zoi.default(nil),
               tools: Zoi.list(@tool_name_schema) |> Zoi.default([]),
+              skills: Zoi.list(@skill_name_schema) |> Zoi.default(@default_skills),
+              skill_paths: Zoi.list(@skill_path_schema) |> Zoi.default(@default_skill_paths),
+              mcp_tools: Zoi.list(@mcp_tool_schema) |> Zoi.default(@default_mcp_tools),
               subagents: Zoi.list(@subagent_schema) |> Zoi.default(@default_subagents),
               plugins: Zoi.list(@plugin_name_schema) |> Zoi.default([]),
               hooks: @hooks_schema |> Zoi.default(@default_hooks),
@@ -208,6 +244,9 @@ defmodule Moto.ImportedAgent.Spec do
           context: map(),
           memory: Moto.Memory.config() | nil,
           tools: [String.t()],
+          skills: [String.t()],
+          skill_paths: [String.t()],
+          mcp_tools: [map()],
           subagents: [map()],
           plugins: [String.t()],
           hooks: %{
@@ -230,6 +269,9 @@ defmodule Moto.ImportedAgent.Spec do
     context: %{},
     memory: @default_memory,
     tools: [],
+    skills: @default_skills,
+    skill_paths: @default_skill_paths,
+    mcp_tools: @default_mcp_tools,
     subagents: @default_subagents,
     plugins: [],
     hooks: @default_hooks,
@@ -243,12 +285,21 @@ defmodule Moto.ImportedAgent.Spec do
   def new(%__MODULE__{} = spec, opts) do
     with :ok <- validate_context(spec.context),
          {:ok, normalized_memory} <- Moto.Memory.normalize_imported(spec.memory),
+         {:ok, normalized_skills} <- Moto.Skill.normalize_imported(spec.skills, spec.skill_paths),
+         {:ok, normalized_mcp_tools} <- Moto.MCP.normalize_imported(spec.mcp_tools),
          {:ok, spec} <- validate_tools(spec, Keyword.get(opts, :available_tools, %{})),
+         {:ok, spec} <- validate_skills(spec, Keyword.get(opts, :available_skills, %{})),
          {:ok, spec} <- validate_subagents(spec, Keyword.get(opts, :available_subagents, %{})),
          {:ok, spec} <- validate_plugins(spec, Keyword.get(opts, :available_plugins, %{})),
          {:ok, spec} <- validate_hooks(spec, Keyword.get(opts, :available_hooks, %{})) do
       validate_guardrails(
-        %{spec | memory: normalized_memory},
+        %{
+          spec
+          | memory: normalized_memory,
+            skills: (normalized_skills && normalized_skills.refs) || [],
+            skill_paths: (normalized_skills && normalized_skills.load_paths) || [],
+            mcp_tools: normalized_mcp_tools
+        },
         Keyword.get(opts, :available_guardrails, %{})
       )
     end
@@ -260,10 +311,24 @@ defmodule Moto.ImportedAgent.Spec do
          :ok <- validate_model(normalized_model),
          :ok <- validate_context(spec.context),
          {:ok, normalized_memory} <- Moto.Memory.normalize_imported(spec.memory),
+         {:ok, normalized_skills} <- Moto.Skill.normalize_imported(spec.skills, spec.skill_paths),
+         {:ok, normalized_mcp_tools} <- Moto.MCP.normalize_imported(spec.mcp_tools),
          {:ok, normalized_spec} <-
            validate_tools(
-             %{spec | model: normalized_model, memory: normalized_memory},
+             %{
+               spec
+               | model: normalized_model,
+                 memory: normalized_memory,
+                 skills: (normalized_skills && normalized_skills.refs) || [],
+                 skill_paths: (normalized_skills && normalized_skills.load_paths) || [],
+                 mcp_tools: normalized_mcp_tools
+             },
              Keyword.get(opts, :available_tools, %{})
+           ),
+         {:ok, normalized_spec} <-
+           validate_skills(
+             normalized_spec,
+             Keyword.get(opts, :available_skills, %{})
            ),
          {:ok, normalized_spec} <-
            validate_subagents(
@@ -307,6 +372,9 @@ defmodule Moto.ImportedAgent.Spec do
       "context" => spec.context,
       "memory" => externalize_memory(spec.memory),
       "tools" => spec.tools,
+      "skills" => spec.skills,
+      "skill_paths" => spec.skill_paths,
+      "mcp_tools" => spec.mcp_tools,
       "subagents" => spec.subagents,
       "plugins" => spec.plugins,
       "hooks" => spec.hooks,
@@ -434,6 +502,22 @@ defmodule Moto.ImportedAgent.Spec do
       true ->
         case Moto.Tool.resolve_tool_names(spec.tools, available_tools) do
           {:ok, _tool_modules} -> {:ok, spec}
+          {:error, reason} -> {:error, reason}
+        end
+    end
+  end
+
+  defp validate_skills(%__MODULE__{} = spec, available_skills) when is_map(available_skills) do
+    cond do
+      Enum.uniq(spec.skills) != spec.skills ->
+        {:error, "skills must be unique"}
+
+      spec.skills == [] ->
+        {:ok, spec}
+
+      true ->
+        case Moto.Skill.resolve_skill_refs(spec.skills, available_skills) do
+          {:ok, _skill_refs} -> {:ok, spec}
           {:error, reason} -> {:error, reason}
         end
     end

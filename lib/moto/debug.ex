@@ -12,7 +12,9 @@ defmodule Moto.Debug do
           input_message: String.t() | nil,
           user_message: String.t() | nil,
           system_prompt: String.t() | nil,
+          skills: [String.t()],
           tool_names: [String.t()],
+          mcp_tools: [String.t()],
           context_preview: [String.t()],
           memory: map() | nil,
           subagents: [map()],
@@ -29,11 +31,17 @@ defmodule Moto.Debug do
   @spec record_prompt_preview(map(), String.t() | nil, map()) :: :ok
   def record_prompt_preview(runtime_context, prompt, request)
       when is_map(runtime_context) and is_map(request) do
-    maybe_store_runtime_meta(runtime_context, %{
+    record_runtime_meta(runtime_context, %{
       system_prompt: normalize_text(prompt),
       message_count: count_messages(request),
       tool_names: tool_names_from_request(Map.get(request, :tools))
     })
+  end
+
+  @spec record_runtime_meta(map(), map()) :: :ok
+  def record_runtime_meta(runtime_context, attrs)
+      when is_map(runtime_context) and is_map(attrs) do
+    maybe_store_runtime_meta(runtime_context, attrs)
   end
 
   @spec request_summary(pid() | String.t()) :: {:ok, summary()} | {:error, term()}
@@ -98,7 +106,9 @@ defmodule Moto.Debug do
       input_message: normalize_text(Map.get(request, :query)),
       user_message: normalize_text(request_message(request, hook_meta, guardrail_meta)),
       system_prompt: normalize_text(system_prompt(debug_meta, agent)),
+      skills: normalize_string_list(debug_meta[:skills]),
       tool_names: effective_tool_names(agent, debug_meta, hook_meta, guardrail_meta),
+      mcp_tools: normalize_string_list(debug_meta[:mcp_tools]),
       context_preview: context_preview(hook_meta, guardrail_meta, memory_meta),
       memory: memory_summary(memory_meta),
       subagents: subagent_calls,
@@ -218,6 +228,16 @@ defmodule Moto.Debug do
   end
 
   defp duration_ms(_request), do: nil
+
+  defp normalize_string_list(values) when is_list(values) do
+    values
+    |> Enum.map(&to_string/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+    |> Enum.sort()
+  end
+
+  defp normalize_string_list(_), do: []
 
   defp pending_runtime_meta(server_or_id, request_id) when is_binary(request_id) do
     case resolve_server(server_or_id) do
