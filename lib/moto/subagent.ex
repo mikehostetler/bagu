@@ -279,7 +279,8 @@ defmodule Moto.Subagent do
     pending_calls = pending_request_calls(server_or_agent, request_id)
 
     (stored_calls ++ pending_calls)
-    |> Enum.uniq()
+    |> Enum.sort_by(&Map.get(&1, :sequence, 0))
+    |> Enum.uniq_by(&request_call_identity/1)
   end
 
   def request_calls(_server_or_agent, _request_id), do: []
@@ -613,6 +614,7 @@ defmodule Moto.Subagent do
          outcome
        ) do
     %{
+      sequence: next_sequence(),
       name: subagent.name,
       agent: subagent.agent,
       mode: mode,
@@ -627,6 +629,7 @@ defmodule Moto.Subagent do
 
   defp error_metadata(subagent, reason) do
     %{
+      sequence: next_sequence(),
       name: subagent.name,
       agent: subagent.agent,
       mode: target_mode(subagent.target),
@@ -650,6 +653,15 @@ defmodule Moto.Subagent do
   end
 
   defp task_preview(_task), do: nil
+
+  defp request_call_identity(%{sequence: sequence}) when is_integer(sequence),
+    do: {:sequence, sequence}
+
+  defp request_call_identity(call) when is_map(call) do
+    {:fallback, Map.get(call, :name), Map.get(call, :child_request_id), Map.get(call, :child_id)}
+  end
+
+  defp next_sequence, do: System.unique_integer([:positive, :monotonic])
 
   defp stored_request_calls(%Jido.Agent{} = agent, request_id) do
     case get_request_meta(agent, request_id) do

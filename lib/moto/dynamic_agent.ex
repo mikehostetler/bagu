@@ -69,6 +69,13 @@ defmodule Moto.DynamicAgent do
     |> ImportedAgent.encode(opts)
   end
 
+  @spec definition(t()) :: map()
+  def definition(%__MODULE__{} = agent) do
+    agent
+    |> unwrap()
+    |> ImportedAgent.definition()
+  end
+
   @spec format_error(term()) :: String.t()
   defdelegate format_error(reason), to: ImportedAgent
 

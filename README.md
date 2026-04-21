@@ -644,6 +644,23 @@ mix moto orchestrator --log-level trace -- "Use the writer_specialist specialist
 The example source modules live under `examples/`. `mix moto` is the canonical
 entrypoint for running them.
 
+## Inspection
+
+Moto exposes a small inspection surface for definitions and runs:
+
+```elixir
+{:ok, definition} = Moto.inspect_agent(MyApp.ChatAgent)
+{:ok, imported} = Moto.inspect_agent(imported_agent)
+{:ok, running} = Moto.inspect_agent(pid)
+
+{:ok, latest_request} = Moto.inspect_request(pid)
+{:ok, specific_request} = Moto.inspect_request(pid, "req-123")
+```
+
+Compiled Moto agents publish `__moto__/0` internally, and generated runtime
+modules publish `__moto_definition__/0`, but `Moto.inspect_agent/1` is the
+public entrypoint.
+
 ## Imported Agents
 
 Moto also supports a constrained runtime import path for the same minimal agent

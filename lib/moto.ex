@@ -164,6 +164,34 @@ defmodule Moto do
     end
   end
 
+  @doc """
+  Returns Moto's inspection view of an agent definition or running agent.
+
+  Accepted inputs:
+
+  - a compiled Moto agent module
+  - an imported Moto agent struct
+  - a dynamic-agent compatibility struct
+  - a running agent PID
+  - a running agent ID string
+  """
+  @spec inspect_agent(module() | struct() | pid() | String.t()) :: {:ok, map()} | {:error, term()}
+  def inspect_agent(target), do: Moto.Inspection.inspect_agent(target)
+
+  @doc """
+  Returns a summary for the latest request on a running Moto agent.
+  """
+  @spec inspect_request(pid() | String.t() | Jido.Agent.t()) ::
+          {:ok, Moto.Debug.summary()} | {:error, term()}
+  def inspect_request(target), do: Moto.Inspection.inspect_request(target)
+
+  @doc """
+  Returns a summary for a specific request on an agent.
+  """
+  @spec inspect_request(pid() | String.t() | Jido.Agent.t(), String.t()) ::
+          {:ok, Moto.Debug.summary()} | {:error, term()}
+  def inspect_request(target, request_id), do: Moto.Inspection.inspect_request(target, request_id)
+
   @doc false
   @spec chat_request(pid() | atom() | {:via, module(), term()}, String.t(), keyword()) ::
           {:ok, term()} | {:error, term()}

@@ -391,6 +391,31 @@ defmodule Moto.Agent.Build do
         request_transformer_module
       end
 
+    definition =
+      %{
+        kind: :agent_definition,
+        module: env.module,
+        runtime_module: runtime_module,
+        name: name,
+        system_prompt: configured_system_prompt,
+        request_transformer: effective_request_transformer,
+        configured_model: configured_model,
+        model: resolved_model,
+        context: configured_context,
+        memory: configured_memory,
+        tools: tool_modules,
+        tool_names: tool_names,
+        subagents: configured_subagents,
+        subagent_names: subagent_tool_names,
+        plugins: plugin_modules,
+        plugin_names: plugin_names,
+        hooks: configured_hooks,
+        guardrails: configured_guardrails,
+        ash_resources: ash_resource_info.resources,
+        ash_domain: ash_resource_info.domain,
+        requires_actor?: ash_resource_info.require_actor?
+      }
+
     request_transformer_definition =
       if is_nil(effective_request_transformer) do
         quote do
@@ -447,6 +472,14 @@ defmodule Moto.Agent.Build do
             configured_memory
           )
         )
+
+        @doc false
+        @spec __moto_owner_module__() :: module()
+        def __moto_owner_module__, do: unquote(env.module)
+
+        @doc false
+        @spec __moto_definition__() :: map()
+        def __moto_definition__, do: unquote(Macro.escape(definition))
       end
 
       @doc """
@@ -474,6 +507,12 @@ defmodule Moto.Agent.Build do
           |> Moto.Hooks.translate_chat_result()
         end
       end
+
+      @doc """
+      Returns Moto's compiled agent-definition metadata for inspection tooling.
+      """
+      @spec __moto__() :: map()
+      def __moto__, do: unquote(Macro.escape(definition))
 
       @doc """
       Returns the generated runtime module used internally by Moto.

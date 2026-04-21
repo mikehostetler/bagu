@@ -1,0 +1,116 @@
+defmodule Moto.Inspection do
+  @moduledoc false
+
+  alias Jido.AI.Request
+
+  @type agent_definition :: map()
+  @type running_agent_summary :: %{
+          kind: :running_agent,
+          id: term(),
+          name: String.t() | nil,
+          runtime_module: module(),
+          owner_module: module() | nil,
+          definition: map() | nil,
+          request_count: non_neg_integer(),
+          last_request_id: String.t() | nil,
+          last_request: Moto.Debug.summary() | nil
+        }
+
+  @spec inspect_agent(module() | struct() | pid() | String.t()) ::
+          {:ok, agent_definition() | running_agent_summary()} | {:error, term()}
+  def inspect_agent(%Moto.ImportedAgent{} = agent),
+    do: {:ok, Moto.ImportedAgent.definition(agent)}
+
+  def inspect_agent(%Moto.DynamicAgent{} = agent), do: {:ok, Moto.DynamicAgent.definition(agent)}
+
+  def inspect_agent(module) when is_atom(module) do
+    cond do
+      function_exported?(module, :__moto__, 0) ->
+        {:ok, module.__moto__()}
+
+      function_exported?(module, :__moto_definition__, 0) ->
+        {:ok, module.__moto_definition__()}
+
+      true ->
+        {:error, :not_moto_agent}
+    end
+  end
+
+  def inspect_agent(server_or_id) do
+    with {:ok, %{agent: agent, agent_module: runtime_module}} <-
+           Jido.AgentServer.state(server_or_id) do
+      definition = runtime_definition(runtime_module)
+      last_request_id = last_request_id(agent)
+
+      {:ok,
+       %{
+         kind: :running_agent,
+         id: Map.get(agent, :id),
+         name: Map.get(definition || %{}, :name, Map.get(agent, :name)),
+         runtime_module: runtime_module,
+         owner_module: runtime_owner_module(runtime_module),
+         definition: definition,
+         request_count: request_count(agent),
+         last_request_id: last_request_id,
+         last_request: request_summary(agent, last_request_id)
+       }}
+    end
+  end
+
+  @spec inspect_request(pid() | String.t() | Jido.Agent.t()) ::
+          {:ok, Moto.Debug.summary()} | {:error, term()}
+  def inspect_request(server_or_agent), do: Moto.Debug.request_summary(server_or_agent)
+
+  @spec inspect_request(pid() | String.t() | Jido.Agent.t(), String.t()) ::
+          {:ok, Moto.Debug.summary()} | {:error, term()}
+  def inspect_request(server_or_agent, request_id),
+    do: Moto.Debug.request_summary(server_or_agent, request_id)
+
+  defp request_count(%{state: %{requests: requests}}) when is_map(requests),
+    do: map_size(requests)
+
+  defp request_count(_agent), do: 0
+
+  defp last_request_id(%{state: %{last_request_id: request_id}}) when is_binary(request_id),
+    do: request_id
+
+  defp last_request_id(%{state: state}) when is_map(state) do
+    case Map.get(state, :last_request_id) do
+      request_id when is_binary(request_id) -> request_id
+      _ -> nil
+    end
+  end
+
+  defp last_request_id(_agent), do: nil
+
+  defp request_summary(_agent, nil), do: nil
+
+  defp request_summary(agent, request_id) when is_binary(request_id) do
+    case Request.get_request(agent, request_id) do
+      nil ->
+        nil
+
+      _request ->
+        case Moto.Debug.request_summary(agent, request_id) do
+          {:ok, summary} -> summary
+          _ -> nil
+        end
+    end
+  end
+
+  defp runtime_definition(runtime_module) when is_atom(runtime_module) do
+    if function_exported?(runtime_module, :__moto_definition__, 0) do
+      runtime_module.__moto_definition__()
+    else
+      nil
+    end
+  end
+
+  defp runtime_owner_module(runtime_module) when is_atom(runtime_module) do
+    if function_exported?(runtime_module, :__moto_owner_module__, 0) do
+      runtime_module.__moto_owner_module__()
+    else
+      nil
+    end
+  end
+end

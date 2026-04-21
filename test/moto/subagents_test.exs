@@ -171,4 +171,31 @@ defmodule MotoTest.SubagentsTest do
            ] =
              Moto.Subagent.request_calls(self(), "req-subagent-meta-live-1")
   end
+
+  test "returns recorded subagent calls in invocation order" do
+    context = %{
+      Moto.Subagent.server_key() => self(),
+      Moto.Subagent.request_id_key() => "req-subagent-order-1",
+      tenant: "ordered"
+    }
+
+    assert {:ok, "review:First delegated task"} =
+             Moto.Subagent.run_subagent(
+               Enum.at(OrchestratorAgent.subagents(), 1),
+               %{task: "First delegated task"},
+               context
+             )
+
+    assert {:ok, "research:Second delegated task:tenant=ordered:depth=1"} =
+             Moto.Subagent.run_subagent(
+               hd(OrchestratorAgent.subagents()),
+               %{task: "Second delegated task"},
+               context
+             )
+
+    assert [
+             %{name: "review_specialist"},
+             %{name: "research_agent"}
+           ] = Moto.Subagent.request_calls(self(), "req-subagent-order-1")
+  end
 end

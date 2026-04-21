@@ -78,6 +78,20 @@ defmodule Moto.ImportedAgent do
     Moto.Runtime.start_agent(runtime_module, opts)
   end
 
+  @spec definition(t()) :: map()
+  def definition(%__MODULE__{} = agent) do
+    definition_map(
+      agent.spec,
+      agent.runtime_module,
+      agent.tool_modules,
+      agent.subagents,
+      agent.plugin_modules,
+      agent.hook_modules,
+      agent.guardrail_modules,
+      request_transformer(agent.spec, agent.runtime_module)
+    )
+  end
+
   @spec encode(t(), keyword()) :: {:ok, binary()} | {:error, term()}
   def encode(%__MODULE__{spec: spec}, opts \\ []) do
     case Keyword.get(opts, :format, :json) do
@@ -253,6 +267,7 @@ defmodule Moto.ImportedAgent do
         spec,
         tool_modules,
         subagents,
+        plugin_modules,
         runtime_plugins,
         hook_modules,
         guardrail_modules
@@ -304,6 +319,7 @@ defmodule Moto.ImportedAgent do
          %Spec{} = spec,
          tool_modules,
          subagents,
+         plugin_modules,
          runtime_plugins,
          hook_modules,
          guardrail_modules
@@ -366,6 +382,30 @@ defmodule Moto.ImportedAgent do
             spec.memory
           )
         )
+
+        @doc false
+        @spec __moto_owner_module__() :: nil
+        def __moto_owner_module__, do: nil
+
+        @doc false
+        @spec __moto_definition__() :: map()
+
+        def __moto_definition__ do
+          unquote(
+            Macro.escape(
+              definition_map(
+                spec,
+                runtime_module,
+                tool_modules,
+                subagents,
+                plugin_modules,
+                hook_modules,
+                guardrail_modules,
+                effective_request_transformer
+              )
+            )
+          )
+        end
       end
 
     case Module.create(runtime_module, quoted, Macro.Env.location(__ENV__)) do
@@ -485,6 +525,66 @@ defmodule Moto.ImportedAgent do
 
   defp runtime_plugins(plugin_modules, memory_config) do
     [Moto.Plugins.RuntimeCompat | plugin_modules] ++ [Moto.Memory.runtime_plugin(memory_config)]
+  end
+
+  defp request_transformer(%Spec{} = spec, runtime_module) do
+    if Moto.Memory.requires_request_transformer?(spec.memory) do
+      Module.concat(runtime_module, RequestTransformer)
+    else
+      nil
+    end
+  end
+
+  defp definition_map(
+         %Spec{} = spec,
+         runtime_module,
+         tool_modules,
+         subagents,
+         plugin_modules,
+         hook_modules,
+         guardrail_modules,
+         request_transformer
+       ) do
+    {:ok, plugin_names} = Moto.Plugin.plugin_names(plugin_modules)
+
+    %{
+      kind: :imported_agent_definition,
+      module: nil,
+      runtime_module: runtime_module,
+      name: spec.name,
+      system_prompt: spec.system_prompt,
+      request_transformer: request_transformer,
+      configured_model: spec.model,
+      model: Moto.model(spec.model),
+      context: spec.context,
+      memory: spec.memory,
+      tools: tool_modules,
+      tool_names: definition_tool_names(tool_modules, subagents),
+      subagents: subagents,
+      subagent_names: Enum.map(subagents, & &1.name),
+      plugins: plugin_modules,
+      plugin_names: plugin_names,
+      hooks: hook_modules,
+      guardrails: guardrail_modules,
+      ash_resources: [],
+      ash_domain: nil,
+      requires_actor?: false
+    }
+  end
+
+  defp definition_tool_names(tool_modules, subagents) do
+    loaded_names =
+      tool_modules
+      |> Enum.reduce([], fn module, acc ->
+        if Code.ensure_loaded?(module) and function_exported?(module, :name, 0) do
+          [module.name() | acc]
+        else
+          acc
+        end
+      end)
+
+    (Enum.reverse(loaded_names) ++ Enum.map(subagents, & &1.name))
+    |> Enum.uniq()
   end
 
   defp with_registries(opts, fun) when is_list(opts) and is_function(fun, 1) do

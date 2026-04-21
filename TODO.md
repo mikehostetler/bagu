@@ -22,6 +22,8 @@ The bias here is:
 - [x] `memory`
 - [x] imported JSON/YAML agents
 - [x] `ash_resource` integration
+- [x] `subagents`
+- [x] `observability / inspection`
 
 The package now has a real first-pass shape:
 
@@ -29,24 +31,19 @@ The package now has a real first-pass shape:
 - reusable tools, plugins, hooks, and guardrails
 - runtime `context` as the public per-turn data plane
 - conversation-first memory on top of `jido_memory`
+- manager-pattern subagents as tool-like specialists
+- public inspection for agent definitions and request summaries
 - imported-agent parity for the main authoring features
-- a shared runtime with live demo scripts and a local consumer app
+- a shared runtime with `mix moto` demos and a local consumer app
 
 ## Next
-
-- [ ] `observability / inspection`
-  Add a clean way to inspect agents and runs without exposing raw Jido internals.
-  Likely targets:
-  - `spec/0` or `__moto__/0` style introspection
-  - lightweight request/run inspection
-  - clearer debugging for hooks / guardrails / context
 
 - [ ] runtime polish
   Tighten the package around the current feature set before broadening it again.
   Specifically:
-  - reduce or suppress noisy `Jido.Actions.Control.Noop` logs on interrupt/block paths
   - switch back from vendored `jido_ai` to an upstream release once the preflight callback patch lands
   - keep the boundaries sharp between plugins, hooks, and guardrails in docs and code
+  - continue hardening subagent and memory edge cases as they show up
 
 ## Revisit Later
 
@@ -69,8 +66,8 @@ The package now has a real first-pass shape:
 
 ## Later
 
-- [ ] subagents / handoffs
-  Treat these as second-layer features, not part of the beginner path.
+- [ ] handoffs
+  Keep handoffs separate from the current manager-pattern subagent model.
 
 - [ ] workflow
   Keep `workflow` separate from `agent`.
