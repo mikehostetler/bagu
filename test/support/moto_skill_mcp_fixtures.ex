@@ -52,6 +52,19 @@ defmodule MotoTest.MCPAgent do
   end
 end
 
+defmodule MotoTest.LocalFSMCPAgent do
+  use Moto.Agent
+
+  agent do
+    model(:fast)
+    system_prompt("You can use filesystem MCP tools.")
+  end
+
+  tools do
+    mcp_tools(endpoint: :local_fs, prefix: "fs_")
+  end
+end
+
 defmodule MotoTest.FakeMCPSync do
   def run(params, _context) do
     send(self(), {:mcp_sync_called, params})

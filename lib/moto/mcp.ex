@@ -152,7 +152,7 @@ defmodule Moto.MCP do
 
   defp sync_endpoint(entry) do
     sync_module =
-      Application.get_env(:moto, :mcp_sync_module, Jido.MCP.JidoAI.Actions.SyncToolsToAgent)
+      Application.get_env(:moto, :mcp_sync_module, Moto.MCP.SyncToolsToAgent)
 
     params =
       %{
