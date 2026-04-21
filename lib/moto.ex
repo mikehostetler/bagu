@@ -158,11 +158,39 @@ defmodule Moto do
           {:ok, term()} | {:error, term()} | {:interrupt, Moto.Interrupt.t()}
   def chat(server_or_id, message, opts \\ []) when is_binary(message) do
     with {:ok, server} <- resolve_server(server_or_id, opts),
-         {:ok, prepared_opts} <- Moto.Agent.prepare_chat_opts(opts, nil) do
+         {:ok, prepared_opts} <- Moto.Agent.prepare_chat_opts(opts, chat_config(server)) do
       chat_request(server, message, prepared_opts)
       |> Moto.Hooks.translate_chat_result()
     end
   end
+
+  defp chat_config(server) do
+    case Jido.AgentServer.state(server) do
+      {:ok, %{agent_module: runtime_module}} when is_atom(runtime_module) ->
+        if function_exported?(runtime_module, :__moto_definition__, 0) do
+          definition = runtime_module.__moto_definition__()
+
+          %{
+            context: Map.get(definition, :context, %{}),
+            context_schema: Map.get(definition, :context_schema),
+            ash: ash_config(definition)
+          }
+        else
+          nil
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  defp ash_config(%{ash_domain: nil}), do: nil
+
+  defp ash_config(%{ash_domain: domain, requires_actor?: require_actor?}) do
+    %{domain: domain, require_actor?: require_actor?}
+  end
+
+  defp ash_config(_definition), do: nil
 
   @doc """
   Returns Moto's inspection view of an agent definition or running agent.

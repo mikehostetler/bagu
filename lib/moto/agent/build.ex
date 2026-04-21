@@ -54,24 +54,46 @@ defmodule Moto.Agent.Build do
     end
   end
 
-  @spec resolve_context!(module(), list()) :: map()
-  def resolve_context!(owner_module, entries) when is_list(entries) do
-    context =
-      Enum.reduce(entries, %{}, fn %Moto.Agent.Dsl.ContextEntry{key: key, value: value}, acc ->
-        Map.put(acc, key, value)
-      end)
+  @spec resolve_context_schema!(module(), term()) :: Moto.Context.schema()
+  def resolve_context_schema!(_owner_module, nil), do: nil
 
-    case Moto.Context.validate_default(context) do
+  def resolve_context_schema!(owner_module, schema) do
+    case Moto.Context.validate_schema(schema) do
       :ok ->
-        context
+        schema
 
-      {:error, message} ->
+      {:error, reason} ->
         raise Spark.Error.DslError,
-          message: message,
-          path: [:context],
+          message: context_schema_error(reason),
+          path: [:agent, :schema],
           module: owner_module
     end
   end
+
+  @spec resolve_context_defaults!(module(), Moto.Context.schema()) :: map()
+  def resolve_context_defaults!(owner_module, schema) do
+    case Moto.Context.defaults(schema) do
+      {:ok, context} ->
+        context
+
+      {:error, reason} ->
+        raise Spark.Error.DslError,
+          message: context_schema_error(reason),
+          path: [:agent, :schema],
+          module: owner_module
+    end
+  end
+
+  defp context_schema_error({:invalid_context_schema, :expected_zoi_schema}),
+    do: "agent schema must be a Zoi map/object schema"
+
+  defp context_schema_error({:invalid_context_schema, :expected_zoi_map_schema}),
+    do: "agent schema must be a Zoi map/object schema"
+
+  defp context_schema_error({:invalid_context_schema, {:expected_map_result, other}}),
+    do: "agent schema must parse context to a map, got: #{inspect(other)}"
+
+  defp context_schema_error(reason), do: inspect(reason)
 
   @spec resolve_memory!(module(), list()) :: Moto.Memory.config() | nil
   def resolve_memory!(owner_module, entries) when is_list(entries) do
@@ -179,11 +201,6 @@ defmodule Moto.Agent.Build do
       |> Spark.Dsl.Extension.get_entities([:subagents])
       |> Enum.filter(&match?(%Moto.Agent.Dsl.Subagent{}, &1))
 
-    context_entities =
-      env.module
-      |> Spark.Dsl.Extension.get_entities([:context])
-      |> Enum.filter(&match?(%Moto.Agent.Dsl.ContextEntry{}, &1))
-
     memory_entities =
       env.module
       |> Spark.Dsl.Extension.get_entities([:memory])
@@ -270,7 +287,12 @@ defmodule Moto.Agent.Build do
       end)
       |> then(&resolve_guardrails!(env.module, &1))
 
-    configured_context = resolve_context!(env.module, context_entities)
+    configured_context_schema =
+      env.module
+      |> Spark.Dsl.Extension.get_opt([:agent], :schema)
+      |> then(&resolve_context_schema!(env.module, &1))
+
+    configured_context = resolve_context_defaults!(env.module, configured_context_schema)
 
     memory_section_anno =
       env.module
@@ -479,6 +501,7 @@ defmodule Moto.Agent.Build do
         request_transformer: effective_request_transformer,
         configured_model: configured_model,
         model: resolved_model,
+        context_schema: configured_context_schema,
         context: configured_context,
         memory: configured_memory,
         skills: configured_skills,
@@ -584,6 +607,7 @@ defmodule Moto.Agent.Build do
                  opts,
                  %{
                    context: unquote(Macro.escape(configured_context)),
+                   context_schema: unquote(Macro.escape(configured_context_schema)),
                    ash: unquote(Macro.escape(ash_tool_config))
                  }
                ) do
@@ -633,6 +657,12 @@ defmodule Moto.Agent.Build do
       """
       @spec model() :: term()
       def model, do: unquote(Macro.escape(resolved_model))
+
+      @doc """
+      Returns the configured Zoi runtime context schema, if any.
+      """
+      @spec context_schema() :: Moto.Context.schema()
+      def context_schema, do: unquote(Macro.escape(configured_context_schema))
 
       @doc """
       Returns the configured default runtime context for this agent.

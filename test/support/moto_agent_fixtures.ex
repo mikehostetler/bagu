@@ -13,11 +13,14 @@ defmodule MotoTest.ContextAgent do
   agent do
     model(:fast)
     system_prompt("You are a context-aware assistant.")
-  end
 
-  context do
-    put(:tenant, "demo")
-    put(:channel, "test")
+    schema(
+      Zoi.object(%{
+        tenant: Zoi.string() |> Zoi.default("demo"),
+        channel: Zoi.string() |> Zoi.default("test"),
+        session: Zoi.string() |> Zoi.optional()
+      })
+    )
   end
 end
 

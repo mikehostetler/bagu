@@ -52,12 +52,6 @@ defmodule Moto.Agent.Dsl do
     ]
   end
 
-  defmodule ContextEntry do
-    @moduledoc false
-
-    defstruct [:key, :value, :__spark_metadata__]
-  end
-
   defmodule MemoryMode do
     @moduledoc false
 
@@ -162,6 +156,15 @@ defmodule Moto.Agent.Dsl do
         - a static string
         - a module implementing `resolve_system_prompt/1`
         - an MFA tuple like `{MyApp.Prompts.Support, :build, ["prefix"]}`
+        """
+      ],
+      schema: [
+        type: :any,
+        required: false,
+        doc: """
+        Optional Zoi map/object schema for runtime context passed to `chat/3`.
+
+        Defaults declared in the schema become the agent's default context.
         """
       ]
     ]
@@ -351,35 +354,6 @@ defmodule Moto.Agent.Dsl do
     Register subagent specialists for this agent.
     """,
     entities: [@subagent_entity]
-  }
-
-  @context_entry %Spark.Dsl.Entity{
-    name: :put,
-    describe: """
-    Add a default runtime context entry for this agent.
-    """,
-    target: ContextEntry,
-    args: [:key, :value],
-    schema: [
-      key: [
-        type: :any,
-        required: true,
-        doc: "An atom or string key available in runtime agent context."
-      ],
-      value: [
-        type: :any,
-        required: true,
-        doc: "The default value for the runtime context key."
-      ]
-    ]
-  }
-
-  @context_section %Spark.Dsl.Section{
-    name: :context,
-    describe: """
-    Configure default runtime context values for this agent.
-    """,
-    entities: [@context_entry]
   }
 
   @memory_mode_entity %Spark.Dsl.Entity{
@@ -609,7 +583,6 @@ defmodule Moto.Agent.Dsl do
   use Spark.Dsl.Extension,
     sections: [
       @agent_section,
-      @context_section,
       @memory_section,
       @tools_section,
       @skills_section,
@@ -620,7 +593,6 @@ defmodule Moto.Agent.Dsl do
     ],
     verifiers: [
       Moto.Agent.Verifiers.VerifyModel,
-      Moto.Agent.Verifiers.VerifyContext,
       Moto.Agent.Verifiers.VerifyMemory,
       Moto.Agent.Verifiers.VerifyTools,
       Moto.Agent.Verifiers.VerifyAshResources,

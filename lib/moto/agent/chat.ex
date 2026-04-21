@@ -5,7 +5,7 @@ defmodule Moto.Agent.Chat do
           {:ok, keyword()} | {:error, term()}
   def prepare_chat_opts(opts, nil) when is_list(opts) do
     with :ok <- reject_tool_context(opts),
-         {:ok, context} <- normalize_request_context(opts, %{}),
+         {:ok, context} <- normalize_request_context(opts, %{}, nil),
          {:ok, context} <- attach_runtime_extensions(opts, context) do
       {:ok, finalize_chat_opts(opts, context)}
     end
@@ -13,10 +13,11 @@ defmodule Moto.Agent.Chat do
 
   def prepare_chat_opts(opts, config) when is_list(opts) do
     default_context = default_context(config)
+    context_schema = context_schema(config)
     ash_tool_config = ash_tool_config(config)
 
     with :ok <- reject_tool_context(opts),
-         {:ok, context} <- normalize_request_context(opts, default_context),
+         {:ok, context} <- normalize_request_context(opts, default_context, context_schema),
          {:ok, context} <- attach_runtime_extensions(opts, context),
          {:ok, context} <- maybe_prepare_ash_context(context, ash_tool_config) do
       {:ok, finalize_chat_opts(opts, context)}
@@ -31,10 +32,14 @@ defmodule Moto.Agent.Chat do
     end
   end
 
-  defp normalize_request_context(opts, default_context) do
+  defp normalize_request_context(opts, default_context, nil) do
     with {:ok, runtime_context} <- Moto.Context.normalize(Keyword.get(opts, :context, %{})) do
       {:ok, Moto.Context.merge(default_context, runtime_context)}
     end
+  end
+
+  defp normalize_request_context(opts, _default_context, context_schema) do
+    Moto.Context.normalize(Keyword.get(opts, :context, %{}), context_schema)
   end
 
   defp attach_runtime_extensions(opts, context) do
@@ -65,6 +70,9 @@ defmodule Moto.Agent.Chat do
 
   defp default_context(%{context: context}) when is_map(context), do: context
   defp default_context(_config), do: %{}
+
+  defp context_schema(%{context_schema: context_schema}), do: context_schema
+  defp context_schema(_config), do: nil
 
   defp ash_tool_config(%{ash: ash}) when is_map(ash), do: ash
   defp ash_tool_config(%{domain: _domain, require_actor?: _require_actor?} = ash), do: ash

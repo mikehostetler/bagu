@@ -654,6 +654,13 @@ defmodule Moto.Subagent do
         %{}
       end
 
+    context_schema =
+      if function_exported?(agent_module, :context_schema, 0) do
+        agent_module.context_schema()
+      else
+        nil
+      end
+
     ash =
       cond do
         function_exported?(agent_module, :ash_domain, 0) and
@@ -667,11 +674,12 @@ defmodule Moto.Subagent do
           nil
       end
 
-    case ash do
-      nil -> %{context: default_context}
-      value -> %{context: default_context, ash: value}
-    end
+    %{context: default_context, context_schema: context_schema}
+    |> maybe_put_ash(ash)
   end
+
+  defp maybe_put_ash(config, nil), do: config
+  defp maybe_put_ash(config, ash), do: Map.put(config, :ash, ash)
 
   defp moto_agent_module?(agent_module) do
     function_exported?(agent_module, :system_prompt, 0) and

@@ -639,6 +639,7 @@ defmodule Moto.ImportedAgent do
       request_transformer: request_transformer,
       configured_model: spec.model,
       model: Moto.model(spec.model),
+      context_schema: nil,
       context: spec.context,
       memory: spec.memory,
       skills: %{refs: skill_refs, load_paths: spec.skill_paths},

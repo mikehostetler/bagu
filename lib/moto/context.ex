@@ -13,12 +13,59 @@ defmodule Moto.Context do
   ]
 
   @type t :: map()
+  @type schema :: Zoi.schema() | nil
 
-  @spec normalize(term()) :: {:ok, t()} | {:error, {:invalid_context, :expected_map}}
-  def normalize(context) do
+  @spec normalize(term()) :: {:ok, t()} | {:error, term()}
+  @spec normalize(term(), schema()) :: {:ok, t()} | {:error, term()}
+  def normalize(context, schema \\ nil)
+
+  def normalize(context, nil) do
     case coerce_map(context) do
       {:ok, normalized} -> {:ok, normalized}
       :error -> {:error, {:invalid_context, :expected_map}}
+    end
+  end
+
+  def normalize(context, schema) do
+    with :ok <- validate_schema(schema),
+         {:ok, normalized} <- normalize(context, nil),
+         {:ok, parsed} <- parse_schema(schema, normalized),
+         :ok <- validate_default(parsed) do
+      {:ok, parsed}
+    end
+  end
+
+  @spec defaults(schema()) :: {:ok, t()} | {:error, term()}
+  def defaults(nil), do: {:ok, %{}}
+
+  def defaults(schema) do
+    with :ok <- validate_schema(schema) do
+      case Zoi.parse(schema, %{}) do
+        {:ok, defaults} when is_map(defaults) ->
+          {:ok, defaults}
+
+        {:ok, other} ->
+          {:error, {:invalid_context_schema, {:expected_map_result, other}}}
+
+        {:error, _errors} ->
+          {:ok, %{}}
+      end
+    end
+  end
+
+  @spec validate_schema(term()) :: :ok | {:error, term()}
+  def validate_schema(nil), do: :ok
+
+  def validate_schema(schema) do
+    cond do
+      not zoi_schema?(schema) ->
+        {:error, {:invalid_context_schema, :expected_zoi_schema}}
+
+      Zoi.Type.impl_for(schema) != Zoi.Type.Zoi.Types.Map ->
+        {:error, {:invalid_context_schema, :expected_zoi_map_schema}}
+
+      true ->
+        :ok
     end
   end
 
@@ -99,6 +146,23 @@ defmodule Moto.Context do
     do: {:error, "context key #{key} is reserved for Moto internals"}
 
   defp validate_reserved_key(_key), do: :ok
+
+  defp parse_schema(schema, context) do
+    case Zoi.parse(schema, context) do
+      {:ok, parsed} when is_map(parsed) ->
+        {:ok, parsed}
+
+      {:ok, other} ->
+        {:error, {:invalid_context, {:schema_result, :expected_map, other}}}
+
+      {:error, errors} ->
+        {:error, {:invalid_context, {:schema, Zoi.treefy_errors(errors)}}}
+    end
+  end
+
+  defp zoi_schema?(schema) do
+    is_struct(schema) and not is_nil(Zoi.Type.impl_for(schema))
+  end
 
   defp internal_key?(key) when is_atom(key) do
     internal_key?(Atom.to_string(key))

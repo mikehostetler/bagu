@@ -4,16 +4,17 @@ defmodule Moto.Examples.Chat.Agents.ChatAgent do
   agent do
     name "script_chat_agent"
     model :fast
+    schema Zoi.object(%{
+      tenant: Zoi.string() |> Zoi.default("demo"),
+      channel: Zoi.string() |> Zoi.default("cli"),
+      session: Zoi.string() |> Zoi.optional(),
+      notify_pid: Zoi.any() |> Zoi.optional()
+    })
 
     system_prompt """
     You are a concise assistant.
     Keep answers short and direct.
     """
-  end
-
-  context do
-    put :tenant, "demo"
-    put :channel, "cli"
   end
 
   memory do

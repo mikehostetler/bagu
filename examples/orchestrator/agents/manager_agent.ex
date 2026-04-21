@@ -4,6 +4,11 @@ defmodule Moto.Examples.Orchestrator.Agents.ManagerAgent do
   agent do
     name "script_manager_agent"
     model :fast
+    schema Zoi.object(%{
+      tenant: Zoi.string() |> Zoi.default("demo"),
+      channel: Zoi.string() |> Zoi.default("orchestrator_cli"),
+      session: Zoi.string() |> Zoi.optional()
+    })
 
     system_prompt """
     You are an orchestration manager.
@@ -13,11 +18,6 @@ defmodule Moto.Examples.Orchestrator.Agents.ManagerAgent do
     If a specialist returns metadata, use the result field as the answer and do not expose internal metadata unless asked.
     Do not claim that you personally performed the specialist work.
     """
-  end
-
-  context do
-    put :tenant, "demo"
-    put :channel, "orchestrator_cli"
   end
 
   subagents do

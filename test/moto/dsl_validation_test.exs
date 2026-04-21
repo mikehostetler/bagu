@@ -29,6 +29,21 @@ defmodule MotoTest.DslValidationTest do
     end
   end
 
+  test "rejects non-map agent schemas at compile time" do
+    assert_raise Spark.Error.DslError, ~r/agent schema must be a Zoi map\/object schema/, fn ->
+      Code.compile_string("""
+      defmodule MotoTest.InvalidContextSchemaAgent do
+        use Moto.Agent
+
+        agent do
+          system_prompt "This should fail."
+          schema Zoi.string()
+        end
+      end
+      """)
+    end
+  end
+
   test "rejects anonymous functions as system prompts at compile time" do
     assert_raise Spark.Error.DslError, ~r/does not support anonymous functions/, fn ->
       Code.compile_string("""

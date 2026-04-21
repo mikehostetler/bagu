@@ -26,7 +26,7 @@ defmodule MotoTest.ContextMemoryTest do
     assert {:ok, opts} =
              Moto.Agent.prepare_chat_opts(
                [context: %{session: "runtime"}],
-               %{context: ContextAgent.context()}
+               %{context: ContextAgent.context(), context_schema: ContextAgent.context_schema()}
              )
 
     assert Keyword.get(opts, :tool_context) == %{
@@ -34,6 +34,26 @@ defmodule MotoTest.ContextMemoryTest do
              channel: "test",
              session: "runtime"
            }
+  end
+
+  test "validates runtime context through the agent schema" do
+    assert {:error, {:invalid_context, {:schema, errors}}} =
+             Moto.Agent.prepare_chat_opts(
+               [context: %{tenant: 123}],
+               %{context: ContextAgent.context(), context_schema: ContextAgent.context_schema()}
+             )
+
+    assert inspect(errors) =~ "tenant"
+  end
+
+  test "Moto.chat validates context through the running agent schema" do
+    assert {:ok, pid} = ContextAgent.start_link(id: "context-schema-chat")
+
+    assert {:error, {:invalid_context, {:schema, errors}}} =
+             Moto.chat(pid, "hello", context: %{tenant: 123})
+
+    assert inspect(errors) =~ "tenant"
+    assert :ok = Moto.stop_agent(pid)
   end
 
   test "merges default agent context into runtime requests" do

@@ -11,6 +11,7 @@ defmodule Moto.Agent do
           name "chat_agent"
           model :fast
           system_prompt "You are a concise assistant."
+          schema Zoi.object(%{tenant: Zoi.string() |> Zoi.optional()})
         end
 
         tools do
@@ -24,7 +25,7 @@ defmodule Moto.Agent do
   - `name`
   - `model`
   - `system_prompt` as a string, module callback, or MFA tuple
-  - `context`
+  - `schema` as an optional Zoi map/object schema for runtime context
   - `memory`
   - `tools`
   - `subagents`

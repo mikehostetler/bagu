@@ -20,8 +20,8 @@ LLM agents on top of Jido and Jido.AI.
 Today, Moto can:
 
 - define agents with a small Spark DSL via `use Moto.Agent`
-- configure agent `name`, `model`, `system_prompt`, default `context`, `tools`,
-  `memory`, `skills`, `plugins`, `hooks`, and `guardrails`
+- configure agent `name`, `model`, `system_prompt`, runtime context `schema`,
+  `tools`, `memory`, `skills`, `plugins`, `hooks`, and `guardrails`
 - resolve models through Moto-owned aliases like `:fast`, direct model strings,
   inline maps, and `%LLMDB.Model{}`
 - support static or dynamic system prompts through strings, module callbacks,
@@ -70,7 +70,7 @@ By default, `:fast` maps to `anthropic:claude-haiku-4-5`.
 The generated runtime currently uses:
 
 - the DSL-configured `model` value, defaulting to `:fast`
-- the DSL-configured default `context`
+- the DSL-configured context `schema`
 - the DSL-configured `memory`
 - the DSL-configured `skills`
 - the DSL-configured `tools`
@@ -91,11 +91,11 @@ defmodule MyApp.ChatAgent do
   agent do
     model :fast
     system_prompt "You are a concise assistant."
-  end
 
-  context do
-    put :tenant, "demo"
-    put :channel, "web"
+    schema Zoi.object(%{
+      tenant: Zoi.string() |> Zoi.default("demo"),
+      channel: Zoi.string() |> Zoi.default("web")
+    })
   end
 end
 ```
@@ -105,7 +105,7 @@ The DSL currently supports:
 - `name`
 - `model`
 - `system_prompt`
-- `context`
+- `schema`
 - `memory`
 - `skills`
 - `tools`
@@ -188,7 +188,7 @@ transformer hook, using the current runtime context.
 
 ## Default Context
 
-Agents can also define default runtime context:
+Agents can define a runtime context schema directly in the `agent` block:
 
 ```elixir
 defmodule MyApp.ChatAgent do
@@ -197,17 +197,20 @@ defmodule MyApp.ChatAgent do
   agent do
     model :fast
     system_prompt "You are a concise assistant."
-  end
 
-  context do
-    put :tenant, "demo"
-    put :channel, "web"
+    schema Zoi.object(%{
+      tenant: Zoi.string() |> Zoi.default("demo"),
+      channel: Zoi.string() |> Zoi.default("web"),
+      actor: Zoi.any() |> Zoi.optional(),
+      order_id: Zoi.string() |> Zoi.optional()
+    })
   end
 end
 ```
 
-Those defaults are available through `MyApp.ChatAgent.context/0` and are merged
-with per-turn `context:` passed to `chat/3`.
+Schema defaults are available through `MyApp.ChatAgent.context/0`. Per-turn
+`context:` passed to `chat/3` is parsed through `MyApp.ChatAgent.context_schema/0`
+before hooks, tools, guardrails, memory, and subagents see it.
 
 ## Memory
 
@@ -632,8 +635,10 @@ Moto uses `context:` as the public name for request-scoped runtime data.
   )
 ```
 
-Per-turn `context:` is merged over any default context defined in the agent or
-imported spec.
+For compiled agents, per-turn `context:` is parsed through the agent `schema`
+when one is configured; schema defaults become the agent's default context.
+Imported agents keep a plain default `context` map and merge per-turn values
+over it.
 
 `context` is:
 
