@@ -13,6 +13,9 @@ defmodule Moto.Interrupt do
           data: map()
         }
 
+  @doc """
+  Builds a normalized Moto interrupt from a struct, map, or keyword list.
+  """
   @spec new(map() | keyword() | t()) :: t()
   def new(%__MODULE__{} = interrupt), do: interrupt
 

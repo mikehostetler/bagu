@@ -1,5 +1,7 @@
 import Config
 
+config :git_hooks, auto_install: false
+
 mcp_sandbox = Path.expand("../tmp/mcp-sandbox", __DIR__)
 
 # Live MCP integration tests use a real filesystem server pointed at this sandbox.

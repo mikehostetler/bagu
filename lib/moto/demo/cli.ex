@@ -19,8 +19,7 @@ defmodule Moto.Demo.CLI do
 
     cond do
       invalid != [] ->
-        {:error,
-         "invalid options: #{Enum.map_join(invalid, ", ", fn {key, _} -> "--#{key}" end)}"}
+        {:error, "invalid options: #{Enum.map_join(invalid, ", ", fn {key, _} -> "--#{key}" end)}"}
 
       opts[:help] ->
         {:ok, %{help?: true, log_level: :info, dry_run?: false, prompt: nil}}

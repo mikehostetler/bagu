@@ -40,6 +40,10 @@ defmodule Moto.Tool do
   """
   @type registry :: %{required(name()) => module()}
 
+  @doc """
+  Defines a Moto tool module backed by `Jido.Action`.
+  """
+  @spec __using__(keyword()) :: Macro.t()
   defmacro __using__(opts \\ []) do
     module_name =
       __CALLER__.module
@@ -82,8 +86,7 @@ defmodule Moto.Tool do
         {:error, "tool #{inspect(module)} could not be loaded"}
 
       missing = missing_functions(module) ->
-        {:error,
-         "tool #{inspect(module)} is not a valid action-backed tool; missing #{Enum.join(missing, ", ")}"}
+        {:error, "tool #{inspect(module)} is not a valid action-backed tool; missing #{Enum.join(missing, ", ")}"}
 
       true ->
         validate_tool_name(module)
@@ -240,7 +243,6 @@ defmodule Moto.Tool do
         {:cont, {:ok, Map.put(acc, trimmed, module)}}
       else
         {:error, reason} -> {:halt, {:error, reason}}
-        false -> {:halt, {:error, "tool registry keys must be non-empty strings"}}
       end
     end)
   end
@@ -284,8 +286,7 @@ defmodule Moto.Tool do
         end
 
       other ->
-        {:error,
-         "tool #{inspect(module)} must publish a string name via name/0, got: #{inspect(other)}"}
+        {:error, "tool #{inspect(module)} must publish a string name via name/0, got: #{inspect(other)}"}
     end
   rescue
     error ->
@@ -308,8 +309,7 @@ defmodule Moto.Tool do
     end
   rescue
     error ->
-      {:error,
-       "tool #{inspect(module)} failed while reading #{function_name}/0: #{Exception.message(error)}"}
+      {:error, "tool #{inspect(module)} failed while reading #{function_name}/0: #{Exception.message(error)}"}
   end
 
   defp zoi_schema?(schema) do

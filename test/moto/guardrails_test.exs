@@ -126,8 +126,7 @@ defmodule MotoTest.GuardrailsTest do
     tool_context = Map.fetch!(params, :tool_context)
     callback = Map.fetch!(tool_context, :__tool_guardrail_callback__)
 
-    assert {:interrupt,
-            %Moto.Interrupt{kind: :approval, message: "Large calculations require approval"}} =
+    assert {:interrupt, %Moto.Interrupt{kind: :approval, message: "Large calculations require approval"}} =
              callback.(%{
                tool_name: "add_numbers",
                tool_call_id: "tc-large",

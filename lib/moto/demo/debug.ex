@@ -88,8 +88,6 @@ defmodule Moto.Demo.Debug do
     case Moto.stop_agent(pid) do
       :ok -> :ok
       {:error, :not_found} -> :ok
-      {:error, {:not_found, _}} -> :ok
-      _other -> :ok
     end
   catch
     :exit, _reason -> :ok
@@ -206,12 +204,13 @@ defmodule Moto.Demo.Debug do
   end
 
   defp print_capability_summary(summary, level) do
-    tools = summary.tool_names || []
-    skills = summary.skills || []
-    mcp_tools = summary.mcp_tools || []
+    tools = list_value(summary, :tool_names)
+    skills = list_value(summary, :skills)
+    mcp_tools = list_value(summary, :mcp_tools)
+    mcp_errors = list_value(summary, :mcp_errors)
     mcp_count = count_mcp_proxy_tools(tools, mcp_tools)
 
-    if tools != [] or skills != [] or mcp_tools != [] or summary.mcp_errors != [] do
+    if tools != [] or skills != [] or mcp_tools != [] or mcp_errors != [] do
       section("Capabilities")
 
       if tools != [] do
@@ -231,13 +230,13 @@ defmodule Moto.Demo.Debug do
         row("mcp", Enum.join(mcp_tools, ", "))
       end
 
-      print_mcp_errors(summary, level)
+      print_mcp_errors(mcp_errors, level)
     end
   end
 
-  defp print_mcp_errors(%{mcp_errors: []}, _level), do: :ok
+  defp print_mcp_errors([], _level), do: :ok
 
-  defp print_mcp_errors(%{mcp_errors: errors}, level) when is_list(errors) do
+  defp print_mcp_errors(errors, level) when is_list(errors) do
     Enum.each(errors, fn error ->
       endpoint = error[:endpoint] || "unknown"
       prefix = if error[:prefix], do: ":#{error.prefix}", else: ""
@@ -247,7 +246,12 @@ defmodule Moto.Demo.Debug do
     end)
   end
 
-  defp print_mcp_errors(_summary, _level), do: :ok
+  defp list_value(map, key) when is_map(map) do
+    case Map.get(map, key, []) do
+      values when is_list(values) -> values
+      _other -> []
+    end
+  end
 
   defp print_memory_summary(%{error: reason}) do
     section("Memory")

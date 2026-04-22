@@ -19,8 +19,7 @@ defmodule Moto.Subagent.Definition do
         {:error, "subagent #{inspect(module)} could not be loaded"}
 
       missing = missing_functions(module) ->
-        {:error,
-         "subagent #{inspect(module)} is not a valid Moto subagent; missing #{Enum.join(missing, ", ")}"}
+        {:error, "subagent #{inspect(module)} is not a valid Moto subagent; missing #{Enum.join(missing, ", ")}"}
 
       true ->
         agent_name(module)
@@ -79,9 +78,7 @@ defmodule Moto.Subagent.Definition do
          {:ok, target} <- normalize_target(Keyword.get(opts, :target) || :ephemeral),
          {:ok, timeout} <- normalize_timeout(Keyword.get(opts, :timeout, @default_timeout)),
          {:ok, forward_context} <-
-           normalize_forward_context(
-             Keyword.get(opts, :forward_context, @default_forward_context)
-           ),
+           normalize_forward_context(Keyword.get(opts, :forward_context, @default_forward_context)),
          {:ok, result} <- normalize_result(Keyword.get(opts, :result, @default_result)) do
       {:ok,
        %Moto.Subagent{
@@ -125,7 +122,6 @@ defmodule Moto.Subagent.Definition do
         {:cont, {:ok, Map.put(acc, trimmed, module)}}
       else
         {:error, reason} -> {:halt, {:error, reason}}
-        false -> {:halt, {:error, "subagent registry keys must be non-empty strings"}}
       end
     end)
   end
@@ -166,17 +162,14 @@ defmodule Moto.Subagent.Definition do
   end
 
   def normalize_target(other) do
-    {:error,
-     "subagent target must be :ephemeral, {:peer, \"id\"}, or {:peer, {:context, key}}, got: #{inspect(other)}"}
+    {:error, "subagent target must be :ephemeral, {:peer, \"id\"}, or {:peer, {:context, key}}, got: #{inspect(other)}"}
   end
 
   @spec normalize_timeout(term()) :: {:ok, pos_integer()} | {:error, String.t()}
   def normalize_timeout(timeout) when is_integer(timeout) and timeout > 0, do: {:ok, timeout}
 
   def normalize_timeout(other),
-    do:
-      {:error,
-       "subagent timeout must be a positive integer in milliseconds, got: #{inspect(other)}"}
+    do: {:error, "subagent timeout must be a positive integer in milliseconds, got: #{inspect(other)}"}
 
   @spec normalize_forward_context(term()) ::
           {:ok, Moto.Subagent.forward_context()} | {:error, String.t()}
@@ -265,9 +258,7 @@ defmodule Moto.Subagent.Definition do
   defp normalize_forward_context_mode("except"), do: {:ok, :except}
 
   defp normalize_forward_context_mode(other),
-    do:
-      {:error,
-       "subagent forward_context mode must be public, none, only, or except, got: #{inspect(other)}"}
+    do: {:error, "subagent forward_context mode must be public, none, only, or except, got: #{inspect(other)}"}
 
   defp normalize_forward_context_keys(mode, keys) when is_list(keys) do
     keys
@@ -325,8 +316,7 @@ defmodule Moto.Subagent.Definition do
         {:error, "subagent #{inspect(module)} could not be loaded"}
 
       missing = missing_functions(module) ->
-        {:error,
-         "subagent #{inspect(module)} is not a valid Moto subagent; missing #{Enum.join(missing, ", ")}"}
+        {:error, "subagent #{inspect(module)} is not a valid Moto subagent; missing #{Enum.join(missing, ", ")}"}
 
       true ->
         :ok

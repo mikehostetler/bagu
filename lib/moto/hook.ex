@@ -18,6 +18,10 @@ defmodule Moto.Hook do
   @callback name() :: name()
   @callback call(term()) :: term()
 
+  @doc """
+  Defines a reusable Moto hook module.
+  """
+  @spec __using__(keyword()) :: Macro.t()
   defmacro __using__(opts \\ []) do
     module_name =
       __CALLER__.module
@@ -55,6 +59,9 @@ defmodule Moto.Hook do
     end
   end
 
+  @doc """
+  Validates that a module implements the Moto hook contract.
+  """
   @spec validate_hook_module(module()) :: :ok | {:error, String.t()}
   def validate_hook_module(module) when is_atom(module) do
     cond do
@@ -62,8 +69,7 @@ defmodule Moto.Hook do
         {:error, "hook #{inspect(module)} could not be loaded"}
 
       missing = missing_functions(module) ->
-        {:error,
-         "hook #{inspect(module)} is not a valid Moto hook; missing #{Enum.join(missing, ", ")}"}
+        {:error, "hook #{inspect(module)} is not a valid Moto hook; missing #{Enum.join(missing, ", ")}"}
 
       true ->
         hook_name(module)
@@ -77,6 +83,9 @@ defmodule Moto.Hook do
   def validate_hook_module(other),
     do: {:error, "hook entries must be modules, got: #{inspect(other)}"}
 
+  @doc """
+  Returns the published name for a validated hook module.
+  """
   @spec hook_name(module()) :: {:ok, name()} | {:error, String.t()}
   def hook_name(module) when is_atom(module) do
     with :ok <- ensure_compiled_hook(module),
@@ -96,6 +105,9 @@ defmodule Moto.Hook do
   def hook_name(other),
     do: {:error, "hook entries must be modules, got: #{inspect(other)}"}
 
+  @doc """
+  Returns the published names for a list of hook modules.
+  """
   @spec hook_names([module()]) :: {:ok, [name()]} | {:error, String.t()}
   def hook_names(modules) when is_list(modules) do
     modules
@@ -111,6 +123,9 @@ defmodule Moto.Hook do
     end
   end
 
+  @doc """
+  Normalizes an available-hooks registry for imported agent specs.
+  """
   @spec normalize_available_hooks([module()] | %{required(name()) => module()}) ::
           {:ok, registry()} | {:error, String.t()}
   def normalize_available_hooks(modules) when is_list(modules) do
@@ -140,16 +155,17 @@ defmodule Moto.Hook do
         {:cont, {:ok, Map.put(acc, trimmed, module)}}
       else
         {:error, reason} -> {:halt, {:error, reason}}
-        false -> {:halt, {:error, "hook registry keys must be non-empty strings"}}
       end
     end)
   end
 
   def normalize_available_hooks(other),
     do:
-      {:error,
-       "available_hooks must be a list of Moto hook modules or a map of name => module, got: #{inspect(other)}"}
+      {:error, "available_hooks must be a list of Moto hook modules or a map of name => module, got: #{inspect(other)}"}
 
+  @doc """
+  Resolves imported hook names through a normalized hook registry.
+  """
   @spec resolve_hook_names([name()], registry()) :: {:ok, [module()]} | {:error, String.t()}
   def resolve_hook_names(names, registry) when is_list(names) and is_map(registry) do
     names
@@ -170,8 +186,7 @@ defmodule Moto.Hook do
         {:error, "hook #{inspect(module)} could not be loaded"}
 
       missing = missing_functions(module) ->
-        {:error,
-         "hook #{inspect(module)} is not a valid Moto hook; missing #{Enum.join(missing, ", ")}"}
+        {:error, "hook #{inspect(module)} is not a valid Moto hook; missing #{Enum.join(missing, ", ")}"}
 
       true ->
         :ok

@@ -85,9 +85,7 @@ defmodule Moto.Skill do
   end
 
   def normalize_imported(refs, load_paths),
-    do:
-      {:error,
-       "skills must be a list and skill_paths must be a list, got: #{inspect({refs, load_paths})}"}
+    do: {:error, "skills must be a list and skill_paths must be a list, got: #{inspect({refs, load_paths})}"}
 
   @spec normalize_available_skills([module()] | %{required(name()) => module()}) ::
           {:ok, registry()} | {:error, String.t()}
@@ -118,7 +116,6 @@ defmodule Moto.Skill do
         {:cont, {:ok, Map.put(acc, trimmed, module)}}
       else
         {:error, reason} -> {:halt, {:error, reason}}
-        false -> {:halt, {:error, "skill registry keys must be non-empty strings"}}
       end
     end)
   end
@@ -190,8 +187,7 @@ defmodule Moto.Skill do
         {:error, "skill names must not be empty"}
 
       not Regex.match?(~r/^[a-z0-9]+(-[a-z0-9]+)*$/, trimmed) ->
-        {:error,
-         "invalid skill name #{inspect(name)}; expected lowercase alphanumeric with hyphens"}
+        {:error, "invalid skill name #{inspect(name)}; expected lowercase alphanumeric with hyphens"}
 
       true ->
         :ok
@@ -255,8 +251,7 @@ defmodule Moto.Skill do
          params <- apply_allowed_tools(params, runtime_skill_info.allowed_tools),
          context <- Map.put(context, @context_key, runtime_skill_info),
          :ok <- Moto.Debug.record_runtime_meta(context, %{skills: runtime_skill_info.names}) do
-      {:ok, put_loaded_state(agent, loaded_paths),
-       {:ai_react_start, Map.put(params, :tool_context, context)}}
+      {:ok, put_loaded_state(agent, loaded_paths), {:ai_react_start, Map.put(params, :tool_context, context)}}
     end
   end
 

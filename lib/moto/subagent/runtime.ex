@@ -178,8 +178,7 @@ defmodule Moto.Subagent.Runtime do
       {:error, reason} ->
         reason = {:start_failed, reason}
 
-        {:error, reason,
-         error_metadata(subagent, reason, child_context, task, started_at, child_id)}
+        {:error, reason, error_metadata(subagent, reason, child_context, task, started_at, child_id)}
     end
   end
 
@@ -200,8 +199,7 @@ defmodule Moto.Subagent.Runtime do
       {:error, reason} ->
         child_id = peer_ref |> peer_ref_preview(parent_context)
 
-        {:error, reason,
-         error_metadata(subagent, reason, child_context, task, started_at, child_id)}
+        {:error, reason, error_metadata(subagent, reason, child_context, task, started_at, child_id)}
     end
   end
 
@@ -254,8 +252,6 @@ defmodule Moto.Subagent.Runtime do
         maybe_cancel_child_request(agent_module, pid, request_id)
     end
   end
-
-  defp cancel_child_request(_agent_module, _pid, _request_id), do: :ok
 
   defp maybe_cancel_child_request(module, pid, request_id) when is_atom(module) do
     if function_exported?(module, :cancel, 2) do
@@ -682,8 +678,6 @@ defmodule Moto.Subagent.Runtime do
     |> Enum.uniq()
     |> Enum.sort()
   end
-
-  defp context_keys(_context), do: []
 
   defp request_call_identity(%{sequence: sequence}) when is_integer(sequence),
     do: {:sequence, sequence}

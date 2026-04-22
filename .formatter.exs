@@ -1,4 +1,8 @@
 # Used by "mix format"
 [
-  inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"]
+  inputs: [
+    "{mix,.formatter,.credo,.doctor}.exs",
+    "{config,examples,lib,test}/**/*.{ex,exs}"
+  ],
+  line_length: 120
 ]

@@ -139,8 +139,7 @@ defmodule MotoTest.AgentBasicsTest do
     assert messages == [
              %{
                role: :system,
-               content:
-                 "You have conversation memory.\n\nRelevant memory:\n- User: My favorite color is blue."
+               content: "You have conversation memory.\n\nRelevant memory:\n- User: My favorite color is blue."
              },
              %{role: :user, content: "hello"}
            ]

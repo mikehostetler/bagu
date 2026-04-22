@@ -13,8 +13,7 @@ defmodule Moto.Examples.Chat.Hooks.ReplyWithFinalAnswer do
 
     {:ok,
      %{
-       message:
-         "#{input.message}\n\nReply with only the final answer.#{tenant_instruction}",
+       message: "#{input.message}\n\nReply with only the final answer.#{tenant_instruction}",
        metadata: %{reply_style: :final_answer_only, tenant: tenant}
      }}
   end

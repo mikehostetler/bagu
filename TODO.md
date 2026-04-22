@@ -90,6 +90,11 @@ These are implemented, but should keep getting sharper before Moto broadens.
 
 ### 1. Runtime Polish
 
+- [ ] Raise coverage enforcement from the current spike baseline to the Jido
+  package target of 90%.
+  The quality tooling is wired, but the line coverage baseline is currently
+  enforced at 70% until the package stabilizes.
+
 - [ ] Make user-facing errors boring and actionable.
   Focus on context schema failures, missing MCP endpoint config, unavailable
   peer subagents, guardrail blocks, and failed tool sync.

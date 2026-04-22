@@ -436,8 +436,7 @@ defmodule Moto.ImportedAgent.Spec do
             {:ok, alias_name}
 
           :error ->
-            {:error,
-             "model must be a known alias string like \"fast\" or a direct provider:model string"}
+            {:error, "model must be a known alias string like \"fast\" or a direct provider:model string"}
         end
     end
   end
@@ -650,8 +649,6 @@ defmodule Moto.ImportedAgent.Spec do
         end)
     end
   end
-
-  defp format_model_error(reason) when is_binary(reason), do: reason
 
   defp format_model_error(%{message: message}) when is_binary(message),
     do: message

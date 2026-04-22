@@ -41,8 +41,7 @@ defmodule Mix.Tasks.Moto do
 
       [other | _rest] ->
         raise Mix.Error,
-          message:
-            "unknown demo #{inspect(other)}. Expected `chat`, `imported`, `orchestrator`, or `kitchen_sink`."
+          message: "unknown demo #{inspect(other)}. Expected `chat`, `imported`, `orchestrator`, or `kitchen_sink`."
     end
   end
 

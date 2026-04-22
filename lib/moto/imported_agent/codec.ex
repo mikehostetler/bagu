@@ -55,8 +55,7 @@ defmodule Moto.ImportedAgent.Codec do
         {:ok, :yaml}
 
       ext ->
-        {:error,
-         "unsupported agent spec extension #{inspect(ext)}; expected .json, .yaml, or .yml"}
+        {:error, "unsupported agent spec extension #{inspect(ext)}; expected .json, .yaml, or .yml"}
     end
   end
 

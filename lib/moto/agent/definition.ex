@@ -555,6 +555,4 @@ defmodule Moto.Agent.Definition do
 
   defp context_schema_error({:invalid_context_schema, {:expected_map_result, other}}),
     do: "agent schema must parse context to a map, got: #{inspect(other)}"
-
-  defp context_schema_error(reason), do: inspect(reason)
 end

@@ -95,7 +95,10 @@ defmodule Moto.Demo.KitchenSinkCLI do
 
   defp loop(pid, log_level) do
     case IO.gets("you> ") do
-      nil ->
+      :eof ->
+        :ok
+
+      {:error, _reason} ->
         :ok
 
       input ->

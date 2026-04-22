@@ -55,8 +55,7 @@ defmodule Moto.Agent do
       raise CompileError,
         file: __CALLER__.file,
         line: __CALLER__.line,
-        description:
-          "Moto.Agent now uses a Spark DSL. Use `use Moto.Agent` and configure it inside `agent do ... end`."
+        description: "Moto.Agent now uses a Spark DSL. Use `use Moto.Agent` and configure it inside `agent do ... end`."
     end
 
     quote location: :keep do

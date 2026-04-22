@@ -170,8 +170,7 @@ defmodule MotoTest.ContextMemoryTest do
     {:ok, first_agent, _action} =
       runtime.on_before_cmd(
         first_agent,
-        {:ai_react_start,
-         %{query: "Remember that the shared color is red.", request_id: "req-memory-shared-1"}}
+        {:ai_react_start, %{query: "Remember that the shared color is red.", request_id: "req-memory-shared-1"}}
       )
 
     first_agent = Jido.AI.Request.complete_request(first_agent, "req-memory-shared-1", "Stored.")
@@ -186,8 +185,7 @@ defmodule MotoTest.ContextMemoryTest do
     assert {:ok, _second_agent, {:ai_react_start, params}} =
              runtime.on_before_cmd(
                second_agent,
-               {:ai_react_start,
-                %{query: "What is the shared color?", request_id: "req-memory-shared-2"}}
+               {:ai_react_start, %{query: "What is the shared color?", request_id: "req-memory-shared-2"}}
              )
 
     assert params.tool_context[:memory].namespace == "shared:shared-demo"

@@ -162,8 +162,7 @@ defmodule Moto.Guardrails do
             |> maybe_attach_tool_guardrail_callback(guardrails.tool, agent, request_id)
           end)
 
-        {:ok, put_request_guardrail_meta(agent, request_id, guardrail_meta),
-         {:ai_react_start, params}}
+        {:ok, put_request_guardrail_meta(agent, request_id, guardrail_meta), {:ai_react_start, params}}
 
       {:error, label, reason} ->
         error = {:guardrail, :input, label, reason}
@@ -173,9 +172,7 @@ defmodule Moto.Guardrails do
           |> Request.fail_request(request_id, error)
           |> put_request_guardrail_meta(request_id, Map.put(guardrail_meta, :error, error))
 
-        {:ok, agent,
-         {:ai_react_request_error,
-          %{request_id: request_id, reason: :guardrail_blocked, message: query}}}
+        {:ok, agent, {:ai_react_request_error, %{request_id: request_id, reason: :guardrail_blocked, message: query}}}
 
       {:interrupt, label, %Interrupt{} = interrupt} ->
         agent =
@@ -190,8 +187,7 @@ defmodule Moto.Guardrails do
 
         Moto.Hooks.notify_interrupt(agent, request_id, interrupt)
 
-        {:ok, agent,
-         {:ai_react_request_error, %{request_id: request_id, reason: :interrupt, message: query}}}
+        {:ok, agent, {:ai_react_request_error, %{request_id: request_id, reason: :interrupt, message: query}}}
     end
   end
 

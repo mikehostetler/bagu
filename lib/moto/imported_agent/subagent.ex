@@ -1,5 +1,15 @@
 defmodule Moto.ImportedAgent.Subagent do
-  @moduledoc false
+  @moduledoc """
+  Embeds an imported JSON/YAML agent as a compiled subagent wrapper.
+
+  This is useful when an Elixir-defined manager agent wants to delegate to a
+  specialist authored as an imported spec file.
+  """
+
+  @doc """
+  Imports the configured spec file and exposes it as a Moto subagent module.
+  """
+  @spec __using__(keyword()) :: Macro.t()
 
   defmacro __using__(opts_ast) do
     opts =

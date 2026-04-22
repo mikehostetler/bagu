@@ -18,6 +18,10 @@ defmodule Moto.Guardrail do
   @callback name() :: name()
   @callback call(term()) :: term()
 
+  @doc """
+  Defines a reusable Moto guardrail module.
+  """
+  @spec __using__(keyword()) :: Macro.t()
   defmacro __using__(opts \\ []) do
     module_name =
       __CALLER__.module
@@ -55,6 +59,9 @@ defmodule Moto.Guardrail do
     end
   end
 
+  @doc """
+  Validates that a module implements the Moto guardrail contract.
+  """
   @spec validate_guardrail_module(module()) :: :ok | {:error, String.t()}
   def validate_guardrail_module(module) when is_atom(module) do
     cond do
@@ -62,8 +69,7 @@ defmodule Moto.Guardrail do
         {:error, "guardrail #{inspect(module)} could not be loaded"}
 
       missing = missing_functions(module) ->
-        {:error,
-         "guardrail #{inspect(module)} is not a valid Moto guardrail; missing #{Enum.join(missing, ", ")}"}
+        {:error, "guardrail #{inspect(module)} is not a valid Moto guardrail; missing #{Enum.join(missing, ", ")}"}
 
       true ->
         guardrail_name(module)
@@ -77,6 +83,9 @@ defmodule Moto.Guardrail do
   def validate_guardrail_module(other),
     do: {:error, "guardrail entries must be modules, got: #{inspect(other)}"}
 
+  @doc """
+  Returns the published name for a validated guardrail module.
+  """
   @spec guardrail_name(module()) :: {:ok, name()} | {:error, String.t()}
   def guardrail_name(module) when is_atom(module) do
     with :ok <- ensure_compiled_guardrail(module),
@@ -96,6 +105,9 @@ defmodule Moto.Guardrail do
   def guardrail_name(other),
     do: {:error, "guardrail entries must be modules, got: #{inspect(other)}"}
 
+  @doc """
+  Returns the published names for a list of guardrail modules.
+  """
   @spec guardrail_names([module()]) :: {:ok, [name()]} | {:error, String.t()}
   def guardrail_names(modules) when is_list(modules) do
     modules
@@ -111,6 +123,9 @@ defmodule Moto.Guardrail do
     end
   end
 
+  @doc """
+  Normalizes an available-guardrails registry for imported agent specs.
+  """
   @spec normalize_available_guardrails([module()] | %{required(name()) => module()}) ::
           {:ok, registry()} | {:error, String.t()}
   def normalize_available_guardrails(modules) when is_list(modules) do
@@ -140,7 +155,6 @@ defmodule Moto.Guardrail do
         {:cont, {:ok, Map.put(acc, trimmed, module)}}
       else
         {:error, reason} -> {:halt, {:error, reason}}
-        false -> {:halt, {:error, "guardrail registry keys must be non-empty strings"}}
       end
     end)
   end
@@ -150,6 +164,9 @@ defmodule Moto.Guardrail do
       {:error,
        "available_guardrails must be a list of Moto guardrail modules or a map of name => module, got: #{inspect(other)}"}
 
+  @doc """
+  Resolves imported guardrail names through a normalized guardrail registry.
+  """
   @spec resolve_guardrail_names([name()], registry()) :: {:ok, [module()]} | {:error, String.t()}
   def resolve_guardrail_names(names, registry) when is_list(names) and is_map(registry) do
     names
@@ -170,8 +187,7 @@ defmodule Moto.Guardrail do
         {:error, "guardrail #{inspect(module)} could not be loaded"}
 
       missing = missing_functions(module) ->
-        {:error,
-         "guardrail #{inspect(module)} is not a valid Moto guardrail; missing #{Enum.join(missing, ", ")}"}
+        {:error, "guardrail #{inspect(module)} is not a valid Moto guardrail; missing #{Enum.join(missing, ", ")}"}
 
       true ->
         :ok

@@ -197,14 +197,14 @@ defmodule Moto do
   Returns a summary for the latest request on a running Moto agent.
   """
   @spec inspect_request(pid() | String.t() | Jido.Agent.t()) ::
-          {:ok, Moto.Debug.summary()} | {:error, term()}
+          {:ok, map()} | {:error, term()}
   def inspect_request(target), do: Moto.Inspection.inspect_request(target)
 
   @doc """
   Returns a summary for a specific request on an agent.
   """
   @spec inspect_request(pid() | String.t() | Jido.Agent.t(), String.t()) ::
-          {:ok, Moto.Debug.summary()} | {:error, term()}
+          {:ok, map()} | {:error, term()}
   def inspect_request(target, request_id), do: Moto.Inspection.inspect_request(target, request_id)
 
   @doc false

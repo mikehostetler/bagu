@@ -72,9 +72,7 @@ defmodule Moto.Demo.OrchestratorCLI do
     IO.puts("Type `exit` or press Ctrl-D to quit.")
     IO.puts("Try: Use the research_agent specialist to explain vector databases.")
 
-    IO.puts(
-      "Try: Use the writer_specialist specialist to rewrite this copy: our setup is easier now."
-    )
+    IO.puts("Try: Use the writer_specialist specialist to rewrite this copy: our setup is easier now.")
 
     IO.puts("")
     loop(pid, log_level)
@@ -82,7 +80,10 @@ defmodule Moto.Demo.OrchestratorCLI do
 
   defp loop(pid, log_level) do
     case IO.gets("you> ") do
-      nil ->
+      :eof ->
+        :ok
+
+      {:error, _reason} ->
         :ok
 
       input ->

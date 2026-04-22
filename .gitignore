@@ -4,6 +4,11 @@
 # If you run "mix test --cover", coverage assets end up here.
 /cover/
 
+# Dialyzer PLT files.
+/priv/plts/
+*.plt
+*.plt.hash
+
 # The directory Mix downloads your dependencies sources to.
 /deps/
 dev/*/deps/
@@ -26,3 +31,11 @@ moto-*.tar
 
 # Local environment files.
 .env
+
+# Editor/IDE and OS files.
+.elixir_ls/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

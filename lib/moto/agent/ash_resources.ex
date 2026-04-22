@@ -27,8 +27,7 @@ defmodule Moto.Agent.AshResources do
     end
   rescue
     error ->
-      {:error,
-       "failed to validate Ash resource #{inspect(resource)}: #{Exception.message(error)}"}
+      {:error, "failed to validate Ash resource #{inspect(resource)}: #{Exception.message(error)}"}
   end
 
   def validate_resource(other),
@@ -76,8 +75,7 @@ defmodule Moto.Agent.AshResources do
   defp domain(resource) do
     case Ash.Resource.Info.domain(resource) do
       nil ->
-        {:error,
-         "Ash resource #{inspect(resource)} must declare a domain for Moto ash_resource tools"}
+        {:error, "Ash resource #{inspect(resource)} must declare a domain for Moto ash_resource tools"}
 
       domain ->
         {:ok, domain}

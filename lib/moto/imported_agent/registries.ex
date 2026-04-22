@@ -55,8 +55,7 @@ defmodule Moto.ImportedAgent.Registries do
           {:ok, Moto.Hooks.stage_map()} | {:error, String.t()}
   def resolve_hooks(hooks, hook_registry) do
     hooks
-    |> Enum.reduce_while({:ok, Moto.Hooks.default_stage_map()}, fn {stage, hook_names},
-                                                                   {:ok, acc} ->
+    |> Enum.reduce_while({:ok, Moto.Hooks.default_stage_map()}, fn {stage, hook_names}, {:ok, acc} ->
       case Moto.Hook.resolve_hook_names(hook_names, hook_registry) do
         {:ok, modules} -> {:cont, {:ok, Map.put(acc, stage, modules)}}
         {:error, reason} -> {:halt, {:error, reason}}
@@ -68,8 +67,7 @@ defmodule Moto.ImportedAgent.Registries do
           {:ok, Moto.Guardrails.stage_map()} | {:error, String.t()}
   def resolve_guardrails(guardrails, guardrail_registry) do
     guardrails
-    |> Enum.reduce_while({:ok, Moto.Guardrails.default_stage_map()}, fn {stage, guardrail_names},
-                                                                        {:ok, acc} ->
+    |> Enum.reduce_while({:ok, Moto.Guardrails.default_stage_map()}, fn {stage, guardrail_names}, {:ok, acc} ->
       case Moto.Guardrail.resolve_guardrail_names(guardrail_names, guardrail_registry) do
         {:ok, modules} -> {:cont, {:ok, Map.put(acc, stage, modules)}}
         {:error, reason} -> {:halt, {:error, reason}}

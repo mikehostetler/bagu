@@ -122,7 +122,10 @@ defmodule Moto.Demo.ImportedChatCLI do
 
   defp loop(pid, log_level) do
     case IO.gets("you> ") do
-      nil ->
+      :eof ->
+        :ok
+
+      {:error, _reason} ->
         :ok
 
       input ->
@@ -174,9 +177,7 @@ defmodule Moto.Demo.ImportedChatCLI do
         tenant = get_in(interrupt.data, [:tenant])
         tenant_suffix = if tenant, do: " tenant=#{tenant}", else: ""
 
-        IO.puts(
-          "hook> on_interrupt received #{interrupt.kind}#{tenant_suffix}: #{interrupt.message}"
-        )
+        IO.puts("hook> on_interrupt received #{interrupt.kind}#{tenant_suffix}: #{interrupt.message}")
 
         flush_interrupt_messages()
     after

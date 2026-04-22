@@ -145,15 +145,12 @@ defmodule Moto.Memory do
           |> put_request_memory_meta(request_id, %{error: reason})
 
         {:ok, failed_agent,
-         {:ai_react_request_error,
-          %{request_id: request_id, reason: :memory_failed, message: query}}}
+         {:ai_react_request_error, %{request_id: request_id, reason: :memory_failed, message: query}}}
 
       {:error, reason} ->
         Logger.warning("Moto memory retrieval failed: #{inspect(reason)}")
 
-        {:ok, agent,
-         {:ai_react_request_error,
-          %{request_id: request_id, reason: :memory_failed, message: query}}}
+        {:ok, agent, {:ai_react_request_error, %{request_id: request_id, reason: :memory_failed, message: query}}}
     end
   end
 
@@ -183,8 +180,7 @@ defmodule Moto.Memory do
   def on_after_cmd(agent, _action, directives, _config), do: {:ok, agent, directives}
 
   defp capture_conversation(agent, request_id, directives, %{capture: :off}, meta) do
-    {:ok, put_request_memory_meta(agent, request_id, Map.put(meta, :captured?, false)),
-     directives}
+    {:ok, put_request_memory_meta(agent, request_id, Map.put(meta, :captured?, false)), directives}
   end
 
   defp capture_conversation(
@@ -203,8 +199,7 @@ defmodule Moto.Memory do
                  meta.namespace,
                  assistant_record(agent, meta, request_id, result)
                ) do
-          {:ok, put_request_memory_meta(agent, request_id, Map.put(meta, :captured?, true)),
-           directives}
+          {:ok, put_request_memory_meta(agent, request_id, Map.put(meta, :captured?, true)), directives}
         else
           {:error, reason} ->
             Logger.warning("Moto memory capture failed: #{inspect(reason)}")
@@ -302,8 +297,7 @@ defmodule Moto.Memory do
   defp validate_namespace_entry({:context, key}) when is_atom(key) or is_binary(key), do: :ok
 
   defp validate_namespace_entry(other) do
-    {:error,
-     "memory namespace must be :per_agent, :shared, or {:context, key}, got: #{inspect(other)}"}
+    {:error, "memory namespace must be :per_agent, :shared, or {:context, key}, got: #{inspect(other)}"}
   end
 
   defp validate_namespace(:per_agent, _shared_namespace), do: {:ok, :per_agent}
@@ -341,8 +335,7 @@ defmodule Moto.Memory do
         :ok
 
       {:error, _reason} ->
-        {:error,
-         "memory namespace must be :per_agent, :shared with shared_namespace, or {:context, key}, got: :shared"}
+        {:error, "memory namespace must be :per_agent, :shared with shared_namespace, or {:context, key}, got: :shared"}
     end
   end
 
@@ -687,8 +680,6 @@ defmodule Moto.Memory do
   defp get_request_memory_meta(agent, request_id) when is_binary(request_id) do
     get_in(agent.state, [:requests, request_id, :meta, :moto_memory])
   end
-
-  defp get_request_memory_meta(_agent, _request_id), do: nil
 
   defp get_value(map, key, default \\ nil) when is_map(map) do
     Map.get(map, key, Map.get(map, normalize_lookup_key(key), default))

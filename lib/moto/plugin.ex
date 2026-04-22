@@ -29,6 +29,10 @@ defmodule Moto.Plugin do
   """
   @type registry :: %{required(name()) => module()}
 
+  @doc """
+  Defines a Moto plugin module backed by `Jido.Plugin`.
+  """
+  @spec __using__(keyword()) :: Macro.t()
   defmacro __using__(opts \\ []) do
     module_name =
       __CALLER__.module
@@ -92,8 +96,7 @@ defmodule Moto.Plugin do
         {:error, "plugin #{inspect(module)} could not be loaded"}
 
       missing = missing_functions(module) ->
-        {:error,
-         "plugin #{inspect(module)} is not a valid Moto plugin; missing #{Enum.join(missing, ", ")}"}
+        {:error, "plugin #{inspect(module)} is not a valid Moto plugin; missing #{Enum.join(missing, ", ")}"}
 
       true ->
         with {:ok, _name} <- plugin_name(module),
@@ -221,7 +224,6 @@ defmodule Moto.Plugin do
         {:cont, {:ok, Map.put(acc, trimmed, module)}}
       else
         {:error, reason} -> {:halt, {:error, reason}}
-        false -> {:halt, {:error, "plugin registry keys must be non-empty strings"}}
       end
     end)
   end
@@ -254,8 +256,7 @@ defmodule Moto.Plugin do
         {:error, "plugin #{inspect(module)} could not be loaded"}
 
       missing = missing_functions(module) ->
-        {:error,
-         "plugin #{inspect(module)} is not a valid Moto plugin; missing #{Enum.join(missing, ", ")}"}
+        {:error, "plugin #{inspect(module)} is not a valid Moto plugin; missing #{Enum.join(missing, ", ")}"}
 
       true ->
         :ok

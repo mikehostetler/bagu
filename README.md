@@ -12,6 +12,22 @@ if the spike does not hold up.
 
 This first implementation keeps the Spark DSL deliberately tiny.
 
+## Installation
+
+Moto is not published to Hex yet. For local spike work, use the repository
+directly:
+
+```elixir
+def deps do
+  [
+    {:moto, git: "https://github.com/mikehostetler/moto.git", branch: "main"}
+  ]
+end
+```
+
+When Moto is published, this section will be replaced with the Hex dependency
+and any Igniter installer instructions.
+
 ## Overview
 
 Moto currently gives you a narrow, developer-friendly way to build chat-style
@@ -66,6 +82,21 @@ runtime. Shell environment variables still win over `.env` values.
 
 `moto` owns its model aliases under `config :moto, :model_aliases`.
 By default, `:fast` maps to `anthropic:claude-haiku-4-5`.
+
+For package development:
+
+```bash
+mix setup
+mix test
+mix quality
+```
+
+`mix quality` follows the Jido package quality baseline: formatting, compiler
+warnings, Credo, Dialyzer, and documentation coverage.
+
+Coverage is enforced with ExCoveralls at the current spike baseline of 70%.
+The Jido package target is 90%; Moto should raise this before any stable
+release instead of pretending the spike is already there.
 
 The generated runtime currently uses:
 
@@ -926,7 +957,7 @@ The top-level helpers are:
 
 ## Notes
 
-- The shared runtime lives in `Moto.Runtime` and is started by `Moto.Application`.
+- The shared runtime lives in `Moto.Runtime` and is started by the application supervisor.
 - `Moto.Agent` uses a very small Spark DSL and generates a nested runtime module.
 - `Moto.Tool` is a thin wrapper over `Jido.Action`, but it restricts tool schemas to Zoi.
 - `Moto.Plugin` is a thin wrapper over `Jido.Plugin` and currently focuses on contributing tools.

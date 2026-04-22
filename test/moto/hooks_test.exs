@@ -97,8 +97,7 @@ defmodule MotoTest.HooksTest do
     assert {:ok, updated_agent, {:ai_react_start, params}} =
              runtime.on_before_cmd(
                agent,
-               {:ai_react_start,
-                %{query: "hello", request_id: "req-hook-1", tool_context: %{notify_pid: self()}}}
+               {:ai_react_start, %{query: "hello", request_id: "req-hook-1", tool_context: %{notify_pid: self()}}}
              )
 
     assert params.query == "hello for acme"
@@ -128,8 +127,7 @@ defmodule MotoTest.HooksTest do
     {:ok, agent, _action} =
       runtime.on_before_cmd(
         agent,
-        {:ai_react_start,
-         %{query: "hello", request_id: "req-hook-2", tool_context: %{notify_pid: self()}}}
+        {:ai_react_start, %{query: "hello", request_id: "req-hook-2", tool_context: %{notify_pid: self()}}}
       )
 
     agent = Jido.AI.Request.complete_request(agent, "req-hook-2", "done")
@@ -147,8 +145,7 @@ defmodule MotoTest.HooksTest do
     {:ok, agent, _action} =
       runtime.on_before_cmd(
         agent,
-        {:ai_react_start,
-         %{query: "hello", request_id: "req-hook-3", tool_context: %{notify_pid: self()}}}
+        {:ai_react_start, %{query: "hello", request_id: "req-hook-3", tool_context: %{notify_pid: self()}}}
       )
 
     agent = Jido.AI.Request.fail_request(agent, "req-hook-3", :boom)
@@ -167,15 +164,13 @@ defmodule MotoTest.HooksTest do
     {:ok, agent, _action} =
       runtime.on_before_cmd(
         agent,
-        {:ai_react_start,
-         %{query: "first", request_id: "req-hook-4", tool_context: %{notify_pid: self()}}}
+        {:ai_react_start, %{query: "first", request_id: "req-hook-4", tool_context: %{notify_pid: self()}}}
       )
 
     {:ok, agent, _action} =
       runtime.on_before_cmd(
         agent,
-        {:ai_react_start,
-         %{query: "second", request_id: "req-hook-5", tool_context: %{notify_pid: self()}}}
+        {:ai_react_start, %{query: "second", request_id: "req-hook-5", tool_context: %{notify_pid: self()}}}
       )
 
     assert get_in(agent.state, [:requests, "req-hook-4", :meta, :moto_hooks, :message]) ==

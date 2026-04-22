@@ -1,5 +1,11 @@
 defmodule Moto.ImportedAgent do
-  @moduledoc false
+  @moduledoc """
+  Runtime representation of a constrained JSON/YAML-authored Moto agent.
+
+  Most applications should call `Moto.import_agent/2` or
+  `Moto.import_agent_file/2` rather than this module directly. The struct is
+  still documented because public Moto APIs return it.
+  """
 
   alias Moto.ImportedAgent.{Codec, Registries, Spec}
 
@@ -27,18 +33,18 @@ defmodule Moto.ImportedAgent do
   ]
 
   @type t :: %__MODULE__{
-          spec: Spec.t(),
+          spec: struct(),
           runtime_module: module(),
           tool_modules: [module()],
-          skill_refs: [Moto.Skill.ref()],
-          mcp_tools: Moto.MCP.config(),
+          skill_refs: [term()],
+          mcp_tools: [map()],
           subagents: [Moto.Subagent.t()],
           plugin_modules: [module()],
-          hook_modules: Moto.Hooks.stage_map(),
-          guardrail_modules: Moto.Guardrails.stage_map()
+          hook_modules: map(),
+          guardrail_modules: map()
         }
 
-  @spec import(map() | binary() | Spec.t(), keyword()) :: {:ok, t()} | {:error, term()}
+  @spec import(map() | binary() | struct(), keyword()) :: {:ok, t()} | {:error, term()}
   def import(source, opts \\ [])
 
   def import(%Spec{} = spec, opts) do
@@ -105,8 +111,11 @@ defmodule Moto.ImportedAgent do
   @spec encode(t(), keyword()) :: {:ok, binary()} | {:error, term()}
   def encode(%__MODULE__{spec: spec}, opts \\ []), do: Codec.encode(spec, opts)
 
+  @doc """
+  Formats an imported-agent error for human-readable messages.
+  """
   @spec format_error(term()) :: String.t()
-  defdelegate format_error(reason), to: Codec
+  def format_error(reason), do: Codec.format_error(reason)
 
   defp build(
          %Spec{} = spec,
@@ -126,9 +135,7 @@ defmodule Moto.ImportedAgent do
          skill_tool_modules =
            Moto.Skill.action_modules(%{refs: skill_refs, load_paths: spec.skill_paths}),
          {:ok, direct_tool_names} <-
-           Moto.Tool.action_names(
-             direct_tool_modules ++ skill_tool_modules ++ plugin_tool_modules
-           ),
+           Moto.Tool.action_names(direct_tool_modules ++ skill_tool_modules ++ plugin_tool_modules),
          subagent_tool_modules <-
            resolved_subagents
            |> Enum.with_index()
@@ -377,13 +384,10 @@ defmodule Moto.ImportedAgent do
         end
       end
 
-    case Module.create(runtime_module, quoted, Macro.Env.location(__ENV__)) do
-      {:module, ^runtime_module, _binary, _term} ->
-        {:ok, runtime_module}
+    {:module, ^runtime_module, _binary, _term} =
+      Module.create(runtime_module, quoted, Macro.Env.location(__ENV__))
 
-      {:error, reason} ->
-        {:error, reason}
-    end
+    {:ok, runtime_module}
   rescue
     error in [ArgumentError] ->
       if Code.ensure_loaded?(runtime_module) do

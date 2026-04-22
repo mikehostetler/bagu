@@ -219,8 +219,7 @@ defmodule Moto.Hooks do
           interrupt_input(agent, request_id, hook_meta, interrupt)
         )
 
-        {:ok, agent,
-         {:ai_react_request_error, %{request_id: request_id, reason: :interrupt, message: query}}}
+        {:ok, agent, {:ai_react_request_error, %{request_id: request_id, reason: :interrupt, message: query}}}
 
       {:error, reason} ->
         agent =
@@ -236,9 +235,7 @@ defmodule Moto.Hooks do
             llm_opts: input.llm_opts
           })
 
-        {:ok, agent,
-         {:ai_react_request_error,
-          %{request_id: request_id, reason: :hook_failed, message: query}}}
+        {:ok, agent, {:ai_react_request_error, %{request_id: request_id, reason: :hook_failed, message: query}}}
     end
   end
 
@@ -275,8 +272,7 @@ defmodule Moto.Hooks do
       invalid_spec: :invalid_hook_spec,
       invalid_ref: :invalid_hook,
       module_validator: &Moto.Hook.validate_hook_module/1,
-      dsl_function_error:
-        "DSL hooks do not support anonymous functions; use a Moto.Hook module or MFA instead",
+      dsl_function_error: "DSL hooks do not support anonymous functions; use a Moto.Hook module or MFA instead",
       invalid_ref_message: fn other ->
         "hook refs must be a Moto.Hook module, MFA tuple, or runtime function, got: #{inspect(other)}"
       end
@@ -432,9 +428,7 @@ defmodule Moto.Hooks do
   end
 
   defp apply_before_turn_overrides(_input, other),
-    do:
-      {:error,
-       "before_turn hook must return {:ok, map_or_keyword_overrides}, got: #{inspect(other)}"}
+    do: {:error, "before_turn hook must return {:ok, map_or_keyword_overrides}, got: #{inspect(other)}"}
 
   defp normalize_override_message(message) when is_binary(message), do: {:ok, message}
   defp normalize_override_message(nil), do: {:ok, nil}
@@ -451,15 +445,12 @@ defmodule Moto.Hooks do
         {:ok, normalized}
 
       :error ->
-        {:error,
-         "before_turn context override must be a map or keyword list, got: #{inspect(value)}"}
+        {:error, "before_turn context override must be a map or keyword list, got: #{inspect(value)}"}
     end
   end
 
   defp normalize_override_context(other),
-    do:
-      {:error,
-       "before_turn context override must be a map or keyword list, got: #{inspect(other)}"}
+    do: {:error, "before_turn context override must be a map or keyword list, got: #{inspect(other)}"}
 
   defp normalize_override_allowed_tools(nil), do: {:ok, nil}
   defp normalize_override_allowed_tools(value) when is_list(value), do: {:ok, value}
@@ -472,9 +463,7 @@ defmodule Moto.Hooks do
   defp normalize_override_llm_opts(value) when is_map(value), do: {:ok, value}
 
   defp normalize_override_llm_opts(other),
-    do:
-      {:error,
-       "before_turn llm_opts override must be a map or keyword list, got: #{inspect(other)}"}
+    do: {:error, "before_turn llm_opts override must be a map or keyword list, got: #{inspect(other)}"}
 
   defp normalize_override_metadata(nil), do: {:ok, %{}}
   defp normalize_override_metadata(value) when is_map(value), do: {:ok, value}
@@ -485,15 +474,12 @@ defmodule Moto.Hooks do
         {:ok, normalized}
 
       :error ->
-        {:error,
-         "before_turn metadata override must be a map or keyword list, got: #{inspect(value)}"}
+        {:error, "before_turn metadata override must be a map or keyword list, got: #{inspect(value)}"}
     end
   end
 
   defp normalize_override_metadata(other),
-    do:
-      {:error,
-       "before_turn metadata override must be a map or keyword list, got: #{inspect(other)}"}
+    do: {:error, "before_turn metadata override must be a map or keyword list, got: #{inspect(other)}"}
 
   defp normalize_override_map(overrides) when is_map(overrides), do: {:ok, overrides}
 
@@ -503,8 +489,7 @@ defmodule Moto.Hooks do
         {:ok, normalized}
 
       :error ->
-        {:error,
-         "before_turn hook must return {:ok, map_or_keyword_overrides}, got: #{inspect(overrides)}"}
+        {:error, "before_turn hook must return {:ok, map_or_keyword_overrides}, got: #{inspect(overrides)}"}
     end
   end
 

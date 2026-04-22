@@ -175,8 +175,7 @@ defmodule MotoTest.SubagentsTest do
 
       assert {:error,
               {:subagent_failed, "research_agent",
-               {:peer_mismatch, MotoTest.ResearchSpecialist.Runtime,
-                MotoTest.ReviewSpecialist.Runtime}}} =
+               {:peer_mismatch, MotoTest.ResearchSpecialist.Runtime, MotoTest.ReviewSpecialist.Runtime}}} =
                research_tool.run(%{task: "Validate peer"}, %{})
     after
       :ok = Moto.stop_agent(pid)
@@ -225,9 +224,7 @@ defmodule MotoTest.SubagentsTest do
   test "invalid child interrupts are treated as invalid child results" do
     interrupt_tool = find_tool(InvalidInterruptOrchestratorAgent, "invalid_interrupt_agent")
 
-    assert {:error,
-            {:subagent_failed, "invalid_interrupt_agent",
-             {:invalid_result, {:interrupt, :not_an_interrupt}}}} =
+    assert {:error, {:subagent_failed, "invalid_interrupt_agent", {:invalid_result, {:interrupt, :not_an_interrupt}}}} =
              interrupt_tool.run(%{task: "Invalid interrupt"}, %{})
   end
 

@@ -35,13 +35,11 @@ defmodule Moto.Agent.SystemPrompt do
         if function_exported?(module, function, arity) do
           {:ok, {:dynamic, spec}}
         else
-          {:error,
-           "system_prompt MFA #{inspect(spec)} must export #{function}/#{arity} on #{inspect(module)}"}
+          {:error, "system_prompt MFA #{inspect(spec)} must export #{function}/#{arity} on #{inspect(module)}"}
         end
 
       {:error, reason} ->
-        {:error,
-         "system_prompt module #{inspect(module)} could not be loaded: #{inspect(reason)}"}
+        {:error, "system_prompt module #{inspect(module)} could not be loaded: #{inspect(reason)}"}
     end
   end
 
@@ -51,19 +49,16 @@ defmodule Moto.Agent.SystemPrompt do
         if function_exported?(module, :resolve_system_prompt, 1) do
           {:ok, {:dynamic, module}}
         else
-          {:error,
-           "system_prompt module #{inspect(module)} must implement resolve_system_prompt/1"}
+          {:error, "system_prompt module #{inspect(module)} must implement resolve_system_prompt/1"}
         end
 
       {:error, reason} ->
-        {:error,
-         "system_prompt module #{inspect(module)} could not be loaded: #{inspect(reason)}"}
+        {:error, "system_prompt module #{inspect(module)} could not be loaded: #{inspect(reason)}"}
     end
   end
 
   def normalize(_owner_module, system_prompt) when is_function(system_prompt) do
-    {:error,
-     "system_prompt does not support anonymous functions; use a module callback or MFA instead"}
+    {:error, "system_prompt does not support anonymous functions; use a module callback or MFA instead"}
   end
 
   def normalize(_owner_module, other) do

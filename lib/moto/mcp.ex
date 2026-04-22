@@ -33,7 +33,6 @@ defmodule Moto.MCP do
         {:cont, {:ok, acc ++ [normalized]}}
       else
         {:error, reason} -> {:halt, {:error, reason}}
-        false -> {:halt, {:error, "mcp_tools entries must be maps"}}
       end
     end)
   end

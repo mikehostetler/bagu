@@ -59,8 +59,7 @@ defmodule Moto.StageRefs do
   defp normalize_stage_map(refs, mode, opts) do
     stages = Keyword.fetch!(opts, :stages)
 
-    Enum.reduce_while(Map.to_list(refs), {:ok, default_stage_map(stages)}, fn {key, value},
-                                                                              {:ok, acc} ->
+    Enum.reduce_while(Map.to_list(refs), {:ok, default_stage_map(stages)}, fn {key, value}, {:ok, acc} ->
       with {:ok, stage} <- normalize_stage_key(key, opts),
            {:ok, normalized} <- normalize_stage_list(value, stage, mode, opts) do
         {:cont, {:ok, Map.put(acc, stage, normalized)}}
@@ -141,8 +140,7 @@ defmodule Moto.StageRefs do
         if function_exported?(module, function, arity) do
           {:ok, ref}
         else
-          {:error,
-           "#{label} MFA #{inspect(ref)} must export #{function}/#{arity} on #{inspect(module)}"}
+          {:error, "#{label} MFA #{inspect(ref)} must export #{function}/#{arity} on #{inspect(module)}"}
         end
 
       {:error, reason} ->
