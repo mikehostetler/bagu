@@ -24,16 +24,16 @@ defmodule MotoTest.ToolAgent do
   use Moto.Agent
 
   agent do
-    id(:tool_agent)
+    id :tool_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can use math tools.")
+    model :fast
+    instructions "You can use math tools."
   end
 
   capabilities do
-    tool(MotoTest.AddNumbers)
+    tool MotoTest.AddNumbers
   end
 end
 
@@ -47,16 +47,16 @@ defmodule MotoTest.PluginAgent do
   use Moto.Agent
 
   agent do
-    id(:plugin_agent)
+    id :plugin_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can use plugin-provided tools.")
+    model :fast
+    instructions "You can use plugin-provided tools."
   end
 
   capabilities do
-    plugin(MotoTest.MathPlugin)
+    plugin MotoTest.MathPlugin
   end
 end
 
@@ -102,21 +102,20 @@ defmodule MotoTest.OrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:orchestrator_agent)
+    id :orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can delegate to subagents.")
+    model :fast
+    instructions "You can delegate to subagents."
   end
 
   capabilities do
-    subagent(MotoTest.ResearchSpecialist)
+    subagent MotoTest.ResearchSpecialist
 
-    subagent(MotoTest.ReviewSpecialist,
+    subagent MotoTest.ReviewSpecialist,
       as: "review_specialist",
       description: "Ask the review specialist"
-    )
   end
 end
 
@@ -124,16 +123,16 @@ defmodule MotoTest.PeerOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:peer_orchestrator_agent)
+    id :peer_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can delegate to a peer specialist.")
+    model :fast
+    instructions "You can delegate to a peer specialist."
   end
 
   capabilities do
-    subagent(MotoTest.ResearchSpecialist, target: {:peer, "research-peer-test"})
+    subagent MotoTest.ResearchSpecialist, target: {:peer, "research-peer-test"}
   end
 end
 
@@ -141,16 +140,16 @@ defmodule MotoTest.ContextPeerOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:context_peer_orchestrator_agent)
+    id :context_peer_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can delegate to a context-derived peer specialist.")
+    model :fast
+    instructions "You can delegate to a context-derived peer specialist."
   end
 
   capabilities do
-    subagent(MotoTest.ResearchSpecialist, target: {:peer, {:context, :research_peer_id}})
+    subagent MotoTest.ResearchSpecialist, target: {:peer, {:context, :research_peer_id}}
   end
 end
 
@@ -158,19 +157,18 @@ defmodule MotoTest.ContextPeerNoForwardOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:context_peer_no_forward_orchestrator_agent)
+    id :context_peer_no_forward_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can delegate to a context-derived peer without forwarding context.")
+    model :fast
+    instructions "You can delegate to a context-derived peer without forwarding context."
   end
 
   capabilities do
-    subagent(MotoTest.ResearchSpecialist,
+    subagent MotoTest.ResearchSpecialist,
       target: {:peer, {:context, :research_peer_id}},
       forward_context: :none
-    )
   end
 end
 
@@ -178,16 +176,16 @@ defmodule MotoTest.WrongPeerOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:wrong_peer_orchestrator_agent)
+    id :wrong_peer_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You expect a research specialist peer.")
+    model :fast
+    instructions "You expect a research specialist peer."
   end
 
   capabilities do
-    subagent(MotoTest.ResearchSpecialist, target: {:peer, "wrong-peer-test"})
+    subagent MotoTest.ResearchSpecialist, target: {:peer, "wrong-peer-test"}
   end
 end
 
@@ -195,16 +193,16 @@ defmodule MotoTest.ForwardNoneOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:forward_none_orchestrator_agent)
+    id :forward_none_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can delegate without public context.")
+    model :fast
+    instructions "You can delegate without public context."
   end
 
   capabilities do
-    subagent(MotoTest.ResearchSpecialist, forward_context: :none)
+    subagent MotoTest.ResearchSpecialist, forward_context: :none
   end
 end
 
@@ -212,16 +210,16 @@ defmodule MotoTest.ForwardOnlyOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:forward_only_orchestrator_agent)
+    id :forward_only_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can delegate with selected context.")
+    model :fast
+    instructions "You can delegate with selected context."
   end
 
   capabilities do
-    subagent(MotoTest.ResearchSpecialist, forward_context: {:only, [:tenant, "notify_pid"]})
+    subagent MotoTest.ResearchSpecialist, forward_context: {:only, [:tenant, "notify_pid"]}
   end
 end
 
@@ -229,16 +227,16 @@ defmodule MotoTest.ForwardExceptOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:forward_except_orchestrator_agent)
+    id :forward_except_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can delegate with excluded context.")
+    model :fast
+    instructions "You can delegate with excluded context."
   end
 
   capabilities do
-    subagent(MotoTest.ResearchSpecialist, forward_context: {:except, ["secret"]})
+    subagent MotoTest.ResearchSpecialist, forward_context: {:except, ["secret"]}
   end
 end
 
@@ -246,16 +244,16 @@ defmodule MotoTest.StructuredOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:structured_orchestrator_agent)
+    id :structured_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can delegate with structured metadata.")
+    model :fast
+    instructions "You can delegate with structured metadata."
   end
 
   capabilities do
-    subagent(MotoTest.ResearchSpecialist, result: :structured)
+    subagent MotoTest.ResearchSpecialist, result: :structured
   end
 end
 
@@ -263,16 +261,16 @@ defmodule MotoTest.MissingPeerOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:missing_peer_orchestrator_agent)
+    id :missing_peer_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You expect an existing peer.")
+    model :fast
+    instructions "You expect an existing peer."
   end
 
   capabilities do
-    subagent(MotoTest.ResearchSpecialist, target: {:peer, "missing-peer-test"})
+    subagent MotoTest.ResearchSpecialist, target: {:peer, "missing-peer-test"}
   end
 end
 
@@ -297,16 +295,16 @@ defmodule MotoTest.TimeoutOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:timeout_orchestrator_agent)
+    id :timeout_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can delegate to a slow specialist.")
+    model :fast
+    instructions "You can delegate to a slow specialist."
   end
 
   capabilities do
-    subagent(MotoTest.SlowSpecialist, timeout: 20)
+    subagent MotoTest.SlowSpecialist, timeout: 20
   end
 end
 
@@ -327,16 +325,16 @@ defmodule MotoTest.InvalidResultOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:invalid_result_orchestrator_agent)
+    id :invalid_result_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can delegate to an invalid specialist.")
+    model :fast
+    instructions "You can delegate to an invalid specialist."
   end
 
   capabilities do
-    subagent(MotoTest.InvalidResultSpecialist)
+    subagent MotoTest.InvalidResultSpecialist
   end
 end
 
@@ -360,16 +358,16 @@ defmodule MotoTest.InterruptOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:interrupt_orchestrator_agent)
+    id :interrupt_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can delegate to an interrupting specialist.")
+    model :fast
+    instructions "You can delegate to an interrupting specialist."
   end
 
   capabilities do
-    subagent(MotoTest.InterruptSpecialist)
+    subagent MotoTest.InterruptSpecialist
   end
 end
 
@@ -390,16 +388,16 @@ defmodule MotoTest.InvalidInterruptOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:invalid_interrupt_orchestrator_agent)
+    id :invalid_interrupt_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can delegate to an invalid interrupt specialist.")
+    model :fast
+    instructions "You can delegate to an invalid interrupt specialist."
   end
 
   capabilities do
-    subagent(MotoTest.InvalidInterruptSpecialist)
+    subagent MotoTest.InvalidInterruptSpecialist
   end
 end
 
@@ -420,16 +418,16 @@ defmodule MotoTest.StartFailureOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:start_failure_orchestrator_agent)
+    id :start_failure_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can delegate to a failing specialist.")
+    model :fast
+    instructions "You can delegate to a failing specialist."
   end
 
   capabilities do
-    subagent(MotoTest.StartFailureSpecialist)
+    subagent MotoTest.StartFailureSpecialist
   end
 end
 
@@ -450,16 +448,16 @@ defmodule MotoTest.StartIgnoreOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:start_ignore_orchestrator_agent)
+    id :start_ignore_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can delegate to an ignored specialist.")
+    model :fast
+    instructions "You can delegate to an ignored specialist."
   end
 
   capabilities do
-    subagent(MotoTest.StartIgnoreSpecialist)
+    subagent MotoTest.StartIgnoreSpecialist
   end
 end
 
@@ -486,15 +484,15 @@ defmodule MotoTest.StartTripleOrchestratorAgent do
   use Moto.Agent
 
   agent do
-    id(:start_triple_orchestrator_agent)
+    id :start_triple_orchestrator_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can delegate to a triple-start specialist.")
+    model :fast
+    instructions "You can delegate to a triple-start specialist."
   end
 
   capabilities do
-    subagent(MotoTest.StartTripleSpecialist)
+    subagent MotoTest.StartTripleSpecialist
   end
 end

@@ -16,16 +16,16 @@ defmodule MotoTest.SkillAgent do
   use Moto.Agent
 
   agent do
-    id(:skill_agent)
+    id :skill_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can use skills.")
+    model :fast
+    instructions "You can use skills."
   end
 
   capabilities do
-    skill(MotoTest.ModuleMathSkill)
+    skill MotoTest.ModuleMathSkill
   end
 end
 
@@ -33,17 +33,17 @@ defmodule MotoTest.RuntimeSkillAgent do
   use Moto.Agent
 
   agent do
-    id(:runtime_skill_agent)
+    id :runtime_skill_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can use runtime skills.")
+    model :fast
+    instructions "You can use runtime skills."
   end
 
   capabilities do
-    skill("math-discipline")
-    load_path("../fixtures/skills")
+    skill "math-discipline"
+    load_path "../fixtures/skills"
   end
 end
 
@@ -51,16 +51,16 @@ defmodule MotoTest.MCPAgent do
   use Moto.Agent
 
   agent do
-    id(:mcp_agent)
+    id :mcp_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can use MCP-synced tools.")
+    model :fast
+    instructions "You can use MCP-synced tools."
   end
 
   capabilities do
-    mcp_tools(endpoint: :github, prefix: "github_")
+    mcp_tools endpoint: :github, prefix: "github_"
   end
 end
 
@@ -68,16 +68,16 @@ defmodule MotoTest.LocalFSMCPAgent do
   use Moto.Agent
 
   agent do
-    id(:local_fsmcp_agent)
+    id :local_fsmcp_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can use filesystem MCP tools.")
+    model :fast
+    instructions "You can use filesystem MCP tools."
   end
 
   capabilities do
-    mcp_tools(endpoint: :local_fs, prefix: "fs_")
+    mcp_tools endpoint: :local_fs, prefix: "fs_"
   end
 end
 
@@ -85,22 +85,20 @@ defmodule MotoTest.InlineMCPAgent do
   use Moto.Agent
 
   agent do
-    id(:inline_mcp_agent)
+    id :inline_mcp_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You can use an inline MCP endpoint.")
+    model :fast
+    instructions "You can use an inline MCP endpoint."
   end
 
   capabilities do
-    mcp_tools(
-      endpoint: :inline_fs,
-      prefix: "inline_",
-      transport: {:stdio, command: "echo"},
-      client_info: %{name: "moto-test", version: "0.1.0"},
-      timeouts: %{request_ms: 15_000}
-    )
+    mcp_tools endpoint: :inline_fs,
+              prefix: "inline_",
+              transport: {:stdio, command: "echo"},
+              client_info: %{name: "moto-test", version: "0.1.0"},
+              timeouts: %{request_ms: 15_000}
   end
 end
 

@@ -183,21 +183,21 @@ defmodule MotoTest.HookedAgent do
   use Moto.Agent
 
   agent do
-    id(:hooked_agent)
+    id :hooked_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You have hooks.")
+    model :fast
+    instructions "You have hooks."
   end
 
   lifecycle do
-    before_turn(MotoTest.InjectTenantHook)
-    before_turn({MotoTest.HookCallbacks, :before_turn, ["dsl_mfa"]})
-    after_turn(MotoTest.NormalizeReplyHook)
-    after_turn({MotoTest.HookCallbacks, :after_turn, ["!"]})
-    on_interrupt(MotoTest.NotifyOpsHook)
-    on_interrupt({MotoTest.HookCallbacks, :notify_interrupt, ["dsl_mfa"]})
+    before_turn MotoTest.InjectTenantHook
+    before_turn {MotoTest.HookCallbacks, :before_turn, ["dsl_mfa"]}
+    after_turn MotoTest.NormalizeReplyHook
+    after_turn {MotoTest.HookCallbacks, :after_turn, ["!"]}
+    on_interrupt MotoTest.NotifyOpsHook
+    on_interrupt {MotoTest.HookCallbacks, :notify_interrupt, ["dsl_mfa"]}
   end
 end
 
@@ -205,24 +205,24 @@ defmodule MotoTest.GuardrailedAgent do
   use Moto.Agent
 
   agent do
-    id(:guardrailed_agent)
+    id :guardrailed_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You enforce guardrails.")
+    model :fast
+    instructions "You enforce guardrails."
   end
 
   capabilities do
-    tool(MotoTest.AddNumbers)
+    tool MotoTest.AddNumbers
   end
 
   lifecycle do
-    on_interrupt(MotoTest.NotifyOpsHook)
+    on_interrupt MotoTest.NotifyOpsHook
 
-    input_guardrail(MotoTest.SafePromptGuardrail)
-    output_guardrail(MotoTest.SafeReplyGuardrail)
-    tool_guardrail(MotoTest.ApproveLargeMathToolGuardrail)
+    input_guardrail MotoTest.SafePromptGuardrail
+    output_guardrail MotoTest.SafeReplyGuardrail
+    tool_guardrail MotoTest.ApproveLargeMathToolGuardrail
   end
 end
 
@@ -230,16 +230,16 @@ defmodule MotoTest.InterruptingAgent do
   use Moto.Agent
 
   agent do
-    id(:interrupting_agent)
+    id :interrupting_agent
   end
 
   defaults do
-    model(:fast)
-    instructions("You may interrupt.")
+    model :fast
+    instructions "You may interrupt."
   end
 
   lifecycle do
-    before_turn(MotoTest.InterruptBeforeHook)
-    on_interrupt(MotoTest.NotifyOpsHook)
+    before_turn MotoTest.InterruptBeforeHook
+    on_interrupt MotoTest.NotifyOpsHook
   end
 end
