@@ -102,7 +102,7 @@ defmodule Moto.Hooks do
 
   @spec default_stage_map() :: stage_map()
   def default_stage_map do
-    %{before_turn: [], after_turn: [], on_interrupt: []}
+    Moto.StageRefs.default_stage_map(@stages)
   end
 
   @spec translate_chat_result({:ok, term()} | {:error, term()} | {:interrupt, Interrupt.t()}) ::
@@ -135,39 +135,16 @@ defmodule Moto.Hooks do
 
   @spec normalize_dsl_hooks(stage_map()) :: {:ok, stage_map()} | {:error, String.t()}
   def normalize_dsl_hooks(hooks) when is_map(hooks) do
-    Enum.reduce_while(@stages, {:ok, default_stage_map()}, fn stage, {:ok, acc} ->
-      case normalize_stage_list(Map.get(hooks, stage, []), stage, :dsl) do
-        {:ok, normalized} -> {:cont, {:ok, Map.put(acc, stage, normalized)}}
-        {:error, reason} -> {:halt, {:error, reason}}
-      end
-    end)
+    Moto.StageRefs.normalize_dsl(hooks, stage_ref_opts())
   end
 
   @spec normalize_request_hooks(term()) :: {:ok, stage_map()} | {:error, term()}
-  def normalize_request_hooks(nil), do: {:ok, default_stage_map()}
-
-  def normalize_request_hooks(hooks) when is_list(hooks) or is_map(hooks) do
-    case Moto.Context.coerce_map(hooks) do
-      {:ok, normalized} ->
-        normalize_stage_map(normalized, :runtime)
-
-      :error ->
-        {:error,
-         {:invalid_hook_spec, "hooks must be a keyword list or map, got: #{inspect(hooks)}"}}
-    end
-  end
-
-  def normalize_request_hooks(other),
-    do:
-      {:error,
-       {:invalid_hook_spec, "hooks must be a keyword list or map, got: #{inspect(other)}"}}
+  def normalize_request_hooks(hooks),
+    do: Moto.StageRefs.normalize_request(hooks, stage_ref_opts())
 
   @spec validate_dsl_hook_ref(stage(), term()) :: :ok | {:error, String.t()}
   def validate_dsl_hook_ref(stage, ref) when stage in @stages do
-    case normalize_stage_ref(ref, stage, :dsl) do
-      {:ok, _} -> :ok
-      {:error, reason} -> {:error, reason}
-    end
+    Moto.StageRefs.validate_dsl_ref(stage, ref, stage_ref_opts())
   end
 
   @spec attach_request_hooks(map(), stage_map()) :: map()
@@ -286,102 +263,25 @@ defmodule Moto.Hooks do
 
   @spec combine(stage_map(), stage_map()) :: stage_map()
   def combine(defaults, request_hooks) do
-    %{
-      before_turn:
-        Map.get(defaults, :before_turn, []) ++ Map.get(request_hooks, :before_turn, []),
-      after_turn: Map.get(defaults, :after_turn, []) ++ Map.get(request_hooks, :after_turn, []),
-      on_interrupt:
-        Map.get(defaults, :on_interrupt, []) ++ Map.get(request_hooks, :on_interrupt, [])
-    }
+    Moto.StageRefs.combine(@stages, defaults, request_hooks)
   end
 
-  defp normalize_stage_map(hooks, mode) do
-    Enum.reduce_while(Map.to_list(hooks), {:ok, default_stage_map()}, fn {key, value},
-                                                                         {:ok, acc} ->
-      with {:ok, stage} <- normalize_stage_key(key),
-           {:ok, normalized} <- normalize_stage_list(value, stage, mode) do
-        {:cont, {:ok, Map.put(acc, stage, normalized)}}
-      else
-        {:error, reason} -> {:halt, {:error, reason}}
+  defp stage_ref_opts do
+    [
+      stages: @stages,
+      spec_label: "hooks",
+      ref_label: "hook",
+      invalid_stage: :invalid_hook_stage,
+      invalid_spec: :invalid_hook_spec,
+      invalid_ref: :invalid_hook,
+      module_validator: &Moto.Hook.validate_hook_module/1,
+      dsl_function_error:
+        "DSL hooks do not support anonymous functions; use a Moto.Hook module or MFA instead",
+      invalid_ref_message: fn other ->
+        "hook refs must be a Moto.Hook module, MFA tuple, or runtime function, got: #{inspect(other)}"
       end
-    end)
+    ]
   end
-
-  defp normalize_stage_key(stage) when stage in @stages, do: {:ok, stage}
-
-  defp normalize_stage_key(stage) when is_binary(stage) do
-    try do
-      case String.to_existing_atom(stage) do
-        stage_atom when stage_atom in @stages -> {:ok, stage_atom}
-        other -> {:error, {:invalid_hook_stage, other}}
-      end
-    rescue
-      ArgumentError -> {:error, {:invalid_hook_stage, stage}}
-    end
-  end
-
-  defp normalize_stage_key(stage), do: {:error, {:invalid_hook_stage, stage}}
-
-  defp normalize_stage_list(value, stage, mode) do
-    refs =
-      cond do
-        value == [] -> []
-        is_list(value) and not Keyword.keyword?(value) -> value
-        value == nil -> []
-        true -> [value]
-      end
-
-    Enum.reduce_while(refs, {:ok, []}, fn ref, {:ok, acc} ->
-      case normalize_stage_ref(ref, stage, mode) do
-        {:ok, normalized} -> {:cont, {:ok, [normalized | acc]}}
-        {:error, reason} -> {:halt, {:error, wrap_invalid_ref(stage, reason)}}
-      end
-    end)
-    |> case do
-      {:ok, normalized} -> {:ok, Enum.reverse(normalized)}
-      error -> error
-    end
-  end
-
-  defp normalize_stage_ref(module, _stage, _mode) when is_atom(module) do
-    case Moto.Hook.validate_hook_module(module) do
-      :ok -> {:ok, module}
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  defp normalize_stage_ref({module, function, args} = ref, _stage, _mode)
-       when is_atom(module) and is_atom(function) and is_list(args) do
-    case Code.ensure_compiled(module) do
-      {:module, ^module} ->
-        arity = length(args) + 1
-
-        if function_exported?(module, function, arity) do
-          {:ok, ref}
-        else
-          {:error,
-           "hook MFA #{inspect(ref)} must export #{function}/#{arity} on #{inspect(module)}"}
-        end
-
-      {:error, reason} ->
-        {:error, "hook module #{inspect(module)} could not be loaded: #{inspect(reason)}"}
-    end
-  end
-
-  defp normalize_stage_ref(fun, _stage, :runtime) when is_function(fun, 1), do: {:ok, fun}
-
-  defp normalize_stage_ref(fun, _stage, :dsl) when is_function(fun) do
-    {:error,
-     "DSL hooks do not support anonymous functions; use a Moto.Hook module or MFA instead"}
-  end
-
-  defp normalize_stage_ref(other, _stage, _mode),
-    do:
-      {:error,
-       "hook refs must be a Moto.Hook module, MFA tuple, or runtime function, got: #{inspect(other)}"}
-
-  defp wrap_invalid_ref(stage, reason) when is_binary(reason), do: {:invalid_hook, stage, reason}
-  defp wrap_invalid_ref(stage, reason), do: {:invalid_hook, stage, inspect(reason)}
 
   defp maybe_attach_request_hooks(context, hooks) do
     if hooks == default_stage_map() do

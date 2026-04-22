@@ -1,7 +1,7 @@
 defmodule Moto.Demo.ImportedChatCLI do
   @moduledoc false
 
-  alias Moto.Demo.{Debug, Inventory, Markdown}
+  alias Moto.Demo.{CLI, Debug, Inventory, Markdown}
 
   alias Moto.Examples.Chat.Guardrails.{
     ApproveLargeMathTool,
@@ -13,14 +13,11 @@ defmodule Moto.Demo.ImportedChatCLI do
   alias Moto.Examples.Chat.Tools.AddNumbers
   require Logger
 
-  @switches [log_level: :string, dry_run: :boolean, help: :boolean]
-  @aliases [l: :log_level]
-
   @spec main([String.t()]) :: :ok | no_return()
   def main(argv) do
     Moto.Demo.Loader.load!(:chat)
 
-    case parse(argv) do
+    case CLI.parse(argv) do
       {:ok, %{help?: true}} ->
         usage()
 
@@ -35,37 +32,9 @@ defmodule Moto.Demo.ImportedChatCLI do
   end
 
   @spec usage() :: :ok
-  def usage do
-    IO.puts("mix moto imported [--log-level info|debug|trace] [--dry-run] [prompt]")
-    :ok
-  end
-
-  defp parse(argv) do
-    {opts, args, invalid} = OptionParser.parse(argv, strict: @switches, aliases: @aliases)
-
-    cond do
-      invalid != [] ->
-        {:error,
-         "invalid options: #{Enum.map_join(invalid, ", ", fn {key, _} -> "--#{key}" end)}"}
-
-      opts[:help] ->
-        {:ok, %{help?: true}}
-
-      true ->
-        with {:ok, log_level} <- Debug.parse_log_level(opts) do
-          {:ok,
-           %{
-             help?: false,
-             log_level: log_level,
-             dry_run?: Keyword.get(opts, :dry_run, false),
-             prompt: join_prompt(normalize_argv(args))
-           }}
-        end
-    end
-  end
+  def usage, do: CLI.usage("imported")
 
   defp run(options, log_level) do
-    anthropic_api_key = Application.get_env(:req_llm, :anthropic_api_key)
     spec_path = sample_spec_path()
     available_tools = [AddNumbers]
     available_hooks = [ReplyWithFinalAnswer]
@@ -101,43 +70,20 @@ defmodule Moto.Demo.ImportedChatCLI do
       ]
     )
 
-    Debug.print_status(log_level)
-    Debug.print_trace_status(log_level)
+    CLI.print_log_status(log_level)
 
-    if options.dry_run? do
-      IO.puts("Dry run: no agent started.")
-      :ok
-    else
-      if is_nil(anthropic_api_key) or anthropic_api_key == "" do
-        IO.puts("ANTHROPIC_API_KEY is not configured.")
-        IO.puts("Add it to .env or export it in your shell.")
-        System.halt(1)
-      end
-
-      {:ok, pid} = Moto.start_agent(agent, id: "imported-script-chat-agent")
-      Debug.maybe_enable_agent_debug(pid, log_level)
-
-      try do
-        if options.prompt == nil do
-          interactive_loop(pid, log_level)
-        else
-          one_shot(pid, options.prompt, log_level)
-        end
-      after
-        Debug.safe_stop_agent(pid)
-      end
-    end
+    CLI.with_started_agent(
+      options,
+      log_level,
+      fn -> Moto.start_agent(agent, id: "imported-script-chat-agent") end,
+      &interactive_loop/2,
+      &one_shot/3
+    )
   end
 
   defp sample_spec_path do
     Path.expand("../../../examples/chat/imported/sample_math_agent.json", __DIR__)
   end
-
-  defp normalize_argv(["--" | rest]), do: rest
-  defp normalize_argv(argv), do: argv
-
-  defp join_prompt([]), do: nil
-  defp join_prompt(args), do: Enum.join(args, " ")
 
   defp one_shot(pid, prompt, log_level) do
     one_shot(pid, prompt, log_level, session: "imported-cli")

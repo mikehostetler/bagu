@@ -1,16 +1,13 @@
 defmodule Moto.Demo.OrchestratorCLI do
   @moduledoc false
 
-  alias Moto.Demo.{Debug, Inventory, Loader, Markdown}
-
-  @switches [log_level: :string, dry_run: :boolean, help: :boolean]
-  @aliases [l: :log_level]
+  alias Moto.Demo.{CLI, Debug, Inventory, Loader, Markdown}
 
   @spec main([String.t()]) :: :ok
   def main(argv) do
     Loader.load!(:orchestrator)
 
-    case parse(argv) do
+    case CLI.parse(argv) do
       {:ok, %{help?: true}} ->
         usage()
 
@@ -25,58 +22,19 @@ defmodule Moto.Demo.OrchestratorCLI do
   end
 
   @spec usage() :: :ok
-  def usage do
-    IO.puts("mix moto orchestrator [--log-level info|debug|trace] [--dry-run] [prompt]")
-    :ok
-  end
-
-  defp parse(argv) do
-    {opts, args, invalid} = OptionParser.parse(argv, strict: @switches, aliases: @aliases)
-
-    cond do
-      invalid != [] ->
-        {:error,
-         "invalid options: #{Enum.map_join(invalid, ", ", fn {key, _} -> "--#{key}" end)}"}
-
-      opts[:help] ->
-        {:ok, %{help?: true}}
-
-      true ->
-        with {:ok, log_level} <- Debug.parse_log_level(opts) do
-          {:ok,
-           %{
-             help?: false,
-             log_level: log_level,
-             dry_run?: Keyword.get(opts, :dry_run, false),
-             prompt: join_prompt(args)
-           }}
-        end
-    end
-  end
+  def usage, do: CLI.usage("orchestrator")
 
   defp run(options, log_level) do
     print_header(log_level)
-    Debug.print_status(log_level)
-    Debug.print_trace_status(log_level)
+    CLI.print_log_status(log_level)
 
-    if options.dry_run? do
-      IO.puts("Dry run: no agent started.")
-      :ok
-    else
-      ensure_api_key!()
-      {:ok, pid} = agent_module().start_link(id: "script-orchestrator-agent")
-      Debug.maybe_enable_agent_debug(pid, log_level)
-
-      try do
-        if options.prompt == nil do
-          interactive_loop(pid, log_level)
-        else
-          one_shot(pid, options.prompt, log_level)
-        end
-      after
-        Debug.safe_stop_agent(pid)
-      end
-    end
+    CLI.with_started_agent(
+      options,
+      log_level,
+      fn -> agent_module().start_link(id: "script-orchestrator-agent") end,
+      &interactive_loop/2,
+      &one_shot/3
+    )
   end
 
   defp print_header(log_level) do
@@ -86,16 +44,6 @@ defmodule Moto.Demo.OrchestratorCLI do
         ~s(mix moto orchestrator -- "Use the writer_specialist specialist to rewrite this copy: our setup is easier now.")
       ]
     )
-  end
-
-  defp ensure_api_key! do
-    anthropic_api_key = Application.get_env(:req_llm, :anthropic_api_key)
-
-    if is_nil(anthropic_api_key) or anthropic_api_key == "" do
-      IO.puts("ANTHROPIC_API_KEY is not configured.")
-      IO.puts("Add it to .env or export it in your shell.")
-      System.halt(1)
-    end
   end
 
   defp one_shot(pid, prompt, log_level) do
@@ -186,9 +134,6 @@ defmodule Moto.Demo.OrchestratorCLI do
   defp subagent_status(%{outcome: {:interrupt, _interrupt}}), do: "interrupt"
   defp subagent_status(%{outcome: {:error, reason}}), do: "error:#{inspect(reason)}"
   defp subagent_status(entry), do: get_in(entry, [:child_result_meta, :status]) || "unknown"
-
-  defp join_prompt([]), do: nil
-  defp join_prompt(args), do: Enum.join(args, " ")
 
   defp agent_module do
     Module.concat([Moto, Examples, Orchestrator, Agents, ManagerAgent])

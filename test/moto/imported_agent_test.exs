@@ -1,9 +1,6 @@
 defmodule MotoTest.ImportedAgentTest do
   use MotoTest.Support.Case, async: false
 
-  alias Moto.DynamicAgent
-  alias Moto.DynamicAgent.Spec, as: DynamicSpec
-
   alias MotoTest.{
     AddNumbers,
     ApproveLargeMathToolGuardrail,
@@ -145,11 +142,11 @@ defmodule MotoTest.ImportedAgentTest do
     assert agent.spec.skill_paths == [Path.expand("../skills", spec_dir)]
   end
 
-  test "keeps dynamic-agent compatibility wrappers working" do
-    assert {:ok, %DynamicSpec{} = spec} =
-             DynamicSpec.new(
+  test "imports from a normalized imported-agent spec" do
+    assert {:ok, %ImportedAgent{spec: %Moto.ImportedAgent.Spec{} = spec}} =
+             Moto.import_agent(
                %{
-                 "name" => "compat_agent",
+                 "name" => "spec_agent",
                  "model" => "fast",
                  "system_prompt" => "You are concise.",
                  "tools" => ["add_numbers"]
@@ -157,14 +154,14 @@ defmodule MotoTest.ImportedAgentTest do
                available_tools: [AddNumbers]
              )
 
-    assert {:ok, %DynamicAgent{} = agent} =
-             DynamicAgent.import(spec, available_tools: [AddNumbers])
+    assert {:ok, %ImportedAgent{} = agent} =
+             Moto.import_agent(spec, available_tools: [AddNumbers])
 
     assert {:ok, encoded} = Moto.encode_agent(agent, format: :json)
-    assert encoded =~ "\"name\": \"compat_agent\""
+    assert encoded =~ "\"name\": \"spec_agent\""
 
-    assert {:ok, pid} = Moto.start_agent(agent, id: "dynamic-agent-compat")
-    assert Moto.whereis("dynamic-agent-compat") == pid
+    assert {:ok, pid} = Moto.start_agent(agent, id: "imported-spec-agent")
+    assert Moto.whereis("imported-spec-agent") == pid
     assert :ok = Moto.stop_agent(pid)
   end
 

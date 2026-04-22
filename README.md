@@ -705,7 +705,7 @@ The runnable orchestrator example shows:
 
 - a compiled manager agent
 - a compiled `research_agent` subagent using `timeout`, `forward_context`, and `result: :structured`
-- an imported JSON `writer_specialist` subagent using `Moto.ImportedSubagent`
+- an imported JSON `writer_specialist` subagent using `Moto.ImportedAgent.Subagent`
 
 The imported manager reference spec at
 `examples/orchestrator/imported/sample_manager_agent.json` shows the equivalent

@@ -101,46 +101,21 @@ defmodule Moto.Guardrails do
 
   @spec default_stage_map() :: stage_map()
   def default_stage_map do
-    %{input: [], output: [], tool: []}
+    Moto.StageRefs.default_stage_map(@stages)
   end
 
   @spec normalize_dsl_guardrails(stage_map()) :: {:ok, stage_map()} | {:error, String.t()}
   def normalize_dsl_guardrails(guardrails) when is_map(guardrails) do
-    Enum.reduce_while(@stages, {:ok, default_stage_map()}, fn stage, {:ok, acc} ->
-      case normalize_stage_list(Map.get(guardrails, stage, []), stage, :dsl) do
-        {:ok, normalized} -> {:cont, {:ok, Map.put(acc, stage, normalized)}}
-        {:error, reason} -> {:halt, {:error, reason}}
-      end
-    end)
+    Moto.StageRefs.normalize_dsl(guardrails, stage_ref_opts())
   end
 
   @spec normalize_request_guardrails(term()) :: {:ok, stage_map()} | {:error, term()}
-  def normalize_request_guardrails(nil), do: {:ok, default_stage_map()}
-
-  def normalize_request_guardrails(guardrails) when is_list(guardrails) or is_map(guardrails) do
-    case Moto.Context.coerce_map(guardrails) do
-      {:ok, normalized} ->
-        normalize_stage_map(normalized, :runtime)
-
-      :error ->
-        {:error,
-         {:invalid_guardrail_spec,
-          "guardrails must be a keyword list or map, got: #{inspect(guardrails)}"}}
-    end
-  end
-
-  def normalize_request_guardrails(other),
-    do:
-      {:error,
-       {:invalid_guardrail_spec,
-        "guardrails must be a keyword list or map, got: #{inspect(other)}"}}
+  def normalize_request_guardrails(guardrails),
+    do: Moto.StageRefs.normalize_request(guardrails, stage_ref_opts())
 
   @spec validate_dsl_guardrail_ref(stage(), term()) :: :ok | {:error, String.t()}
   def validate_dsl_guardrail_ref(stage, ref) when stage in @stages do
-    case normalize_stage_ref(ref, stage, :dsl) do
-      {:ok, _} -> :ok
-      {:error, reason} -> {:error, reason}
-    end
+    Moto.StageRefs.validate_dsl_ref(stage, ref, stage_ref_opts())
   end
 
   @spec attach_request_guardrails(map(), stage_map()) :: map()
@@ -234,102 +209,25 @@ defmodule Moto.Guardrails do
 
   @spec combine(stage_map(), stage_map()) :: stage_map()
   def combine(defaults, request_guardrails) do
-    %{
-      input: Map.get(defaults, :input, []) ++ Map.get(request_guardrails, :input, []),
-      output: Map.get(defaults, :output, []) ++ Map.get(request_guardrails, :output, []),
-      tool: Map.get(defaults, :tool, []) ++ Map.get(request_guardrails, :tool, [])
-    }
+    Moto.StageRefs.combine(@stages, defaults, request_guardrails)
   end
 
-  defp normalize_stage_map(guardrails, mode) do
-    Enum.reduce_while(Map.to_list(guardrails), {:ok, default_stage_map()}, fn {key, value},
-                                                                              {:ok, acc} ->
-      with {:ok, stage} <- normalize_stage_key(key),
-           {:ok, normalized} <- normalize_stage_list(value, stage, mode) do
-        {:cont, {:ok, Map.put(acc, stage, normalized)}}
-      else
-        {:error, reason} -> {:halt, {:error, reason}}
+  defp stage_ref_opts do
+    [
+      stages: @stages,
+      spec_label: "guardrails",
+      ref_label: "guardrail",
+      invalid_stage: :invalid_guardrail_stage,
+      invalid_spec: :invalid_guardrail_spec,
+      invalid_ref: :invalid_guardrail,
+      module_validator: &Moto.Guardrail.validate_guardrail_module/1,
+      dsl_function_error:
+        "DSL guardrails do not support anonymous functions; use a Moto.Guardrail module or MFA instead",
+      invalid_ref_message: fn other ->
+        "guardrail refs must be a Moto.Guardrail module, MFA tuple, or runtime function, got: #{inspect(other)}"
       end
-    end)
+    ]
   end
-
-  defp normalize_stage_key(stage) when stage in @stages, do: {:ok, stage}
-
-  defp normalize_stage_key(stage) when is_binary(stage) do
-    try do
-      case String.to_existing_atom(stage) do
-        stage_atom when stage_atom in @stages -> {:ok, stage_atom}
-        other -> {:error, {:invalid_guardrail_stage, other}}
-      end
-    rescue
-      ArgumentError -> {:error, {:invalid_guardrail_stage, stage}}
-    end
-  end
-
-  defp normalize_stage_key(stage), do: {:error, {:invalid_guardrail_stage, stage}}
-
-  defp normalize_stage_list(value, stage, mode) do
-    refs =
-      cond do
-        value == [] -> []
-        is_list(value) and not Keyword.keyword?(value) -> value
-        value == nil -> []
-        true -> [value]
-      end
-
-    Enum.reduce_while(refs, {:ok, []}, fn ref, {:ok, acc} ->
-      case normalize_stage_ref(ref, stage, mode) do
-        {:ok, normalized} -> {:cont, {:ok, [normalized | acc]}}
-        {:error, reason} -> {:halt, {:error, wrap_invalid_ref(stage, reason)}}
-      end
-    end)
-    |> case do
-      {:ok, normalized} -> {:ok, Enum.reverse(normalized)}
-      error -> error
-    end
-  end
-
-  defp normalize_stage_ref(module, _stage, _mode) when is_atom(module) do
-    case Moto.Guardrail.validate_guardrail_module(module) do
-      :ok -> {:ok, module}
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  defp normalize_stage_ref({module, function, args} = ref, _stage, _mode)
-       when is_atom(module) and is_atom(function) and is_list(args) do
-    case Code.ensure_compiled(module) do
-      {:module, ^module} ->
-        arity = length(args) + 1
-
-        if function_exported?(module, function, arity) do
-          {:ok, ref}
-        else
-          {:error,
-           "guardrail MFA #{inspect(ref)} must export #{function}/#{arity} on #{inspect(module)}"}
-        end
-
-      {:error, reason} ->
-        {:error, "guardrail module #{inspect(module)} could not be loaded: #{inspect(reason)}"}
-    end
-  end
-
-  defp normalize_stage_ref(fun, _stage, :runtime) when is_function(fun, 1), do: {:ok, fun}
-
-  defp normalize_stage_ref(fun, _stage, :dsl) when is_function(fun) do
-    {:error,
-     "DSL guardrails do not support anonymous functions; use a Moto.Guardrail module or MFA instead"}
-  end
-
-  defp normalize_stage_ref(other, _stage, _mode),
-    do:
-      {:error,
-       "guardrail refs must be a Moto.Guardrail module, MFA tuple, or runtime function, got: #{inspect(other)}"}
-
-  defp wrap_invalid_ref(stage, reason) when is_binary(reason),
-    do: {:invalid_guardrail, stage, reason}
-
-  defp wrap_invalid_ref(stage, reason), do: {:invalid_guardrail, stage, inspect(reason)}
 
   defp maybe_attach_request_guardrails(context, guardrails) do
     if guardrails == default_stage_map() do

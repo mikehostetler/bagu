@@ -49,10 +49,6 @@ defmodule Moto do
   @spec start_agent(ImportedAgent.t(), keyword()) :: DynamicSupervisor.on_start_child()
   def start_agent(%ImportedAgent{} = agent, opts), do: ImportedAgent.start_link(agent, opts)
 
-  @spec start_agent(Moto.DynamicAgent.t(), keyword()) :: DynamicSupervisor.on_start_child()
-  def start_agent(%Moto.DynamicAgent{} = agent, opts),
-    do: Moto.DynamicAgent.start_link(agent, opts)
-
   @spec start_agent(module() | struct(), keyword()) :: DynamicSupervisor.on_start_child()
   def start_agent(agent, opts), do: Moto.Runtime.start_agent(agent, opts)
 
@@ -123,26 +119,17 @@ defmodule Moto do
   @doc """
   Encodes an imported Moto agent as JSON or YAML.
   """
-  @spec encode_agent(ImportedAgent.t() | Moto.DynamicAgent.t(), keyword()) ::
-          {:ok, binary()} | {:error, term()}
+  @spec encode_agent(ImportedAgent.t(), keyword()) :: {:ok, binary()} | {:error, term()}
   def encode_agent(agent, opts \\ [])
   def encode_agent(%ImportedAgent{} = agent, opts), do: ImportedAgent.encode(agent, opts)
-  def encode_agent(%Moto.DynamicAgent{} = agent, opts), do: Moto.DynamicAgent.encode(agent, opts)
 
   @doc """
   Encodes an imported Moto agent as JSON or YAML and raises on failure.
   """
-  @spec encode_agent!(ImportedAgent.t() | Moto.DynamicAgent.t(), keyword()) :: binary()
+  @spec encode_agent!(ImportedAgent.t(), keyword()) :: binary()
   def encode_agent!(agent, opts \\ [])
 
   def encode_agent!(%ImportedAgent{} = agent, opts) do
-    case encode_agent(agent, opts) do
-      {:ok, encoded} -> encoded
-      {:error, reason} -> raise ArgumentError, message: ImportedAgent.format_error(reason)
-    end
-  end
-
-  def encode_agent!(%Moto.DynamicAgent{} = agent, opts) do
     case encode_agent(agent, opts) do
       {:ok, encoded} -> encoded
       {:error, reason} -> raise ArgumentError, message: ImportedAgent.format_error(reason)

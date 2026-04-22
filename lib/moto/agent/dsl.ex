@@ -1,128 +1,27 @@
 defmodule Moto.Agent.Dsl do
   @moduledoc false
 
-  defmodule Tool do
-    @moduledoc false
-
-    defstruct [:module, :__spark_metadata__]
-  end
-
-  defmodule AshResource do
-    @moduledoc false
-
-    defstruct [:resource, :__spark_metadata__]
-  end
-
-  defmodule MCPTools do
-    @moduledoc false
-
-    defstruct [:endpoint, :prefix, :__spark_metadata__]
-  end
-
-  defmodule Plugin do
-    @moduledoc false
-
-    defstruct [:module, :__spark_metadata__]
-  end
-
-  defmodule SkillRef do
-    @moduledoc false
-
-    defstruct [:skill, :__spark_metadata__]
-  end
-
-  defmodule SkillPath do
-    @moduledoc false
-
-    defstruct [:path, :__spark_metadata__]
-  end
-
-  defmodule Subagent do
-    @moduledoc false
-
-    defstruct [
-      :agent,
-      :as,
-      :description,
-      :target,
-      :timeout,
-      :forward_context,
-      :result,
-      :__spark_metadata__
-    ]
-  end
-
-  defmodule MemoryMode do
-    @moduledoc false
-
-    defstruct [:value, :__spark_metadata__]
-  end
-
-  defmodule MemoryNamespace do
-    @moduledoc false
-
-    defstruct [:value, :__spark_metadata__]
-  end
-
-  defmodule MemorySharedNamespace do
-    @moduledoc false
-
-    defstruct [:value, :__spark_metadata__]
-  end
-
-  defmodule MemoryCapture do
-    @moduledoc false
-
-    defstruct [:value, :__spark_metadata__]
-  end
-
-  defmodule MemoryInject do
-    @moduledoc false
-
-    defstruct [:value, :__spark_metadata__]
-  end
-
-  defmodule MemoryRetrieve do
-    @moduledoc false
-
-    defstruct [:limit, :__spark_metadata__]
-  end
-
-  defmodule BeforeTurnHook do
-    @moduledoc false
-
-    defstruct [:hook, :__spark_metadata__]
-  end
-
-  defmodule AfterTurnHook do
-    @moduledoc false
-
-    defstruct [:hook, :__spark_metadata__]
-  end
-
-  defmodule InterruptHook do
-    @moduledoc false
-
-    defstruct [:hook, :__spark_metadata__]
-  end
-
-  defmodule InputGuardrail do
-    @moduledoc false
-
-    defstruct [:guardrail, :__spark_metadata__]
-  end
-
-  defmodule OutputGuardrail do
-    @moduledoc false
-
-    defstruct [:guardrail, :__spark_metadata__]
-  end
-
-  defmodule ToolGuardrail do
-    @moduledoc false
-
-    defstruct [:guardrail, :__spark_metadata__]
-  end
+  alias Moto.Agent.Dsl.{
+    AfterTurnHook,
+    AshResource,
+    BeforeTurnHook,
+    InputGuardrail,
+    InterruptHook,
+    MCPTools,
+    MemoryCapture,
+    MemoryInject,
+    MemoryMode,
+    MemoryNamespace,
+    MemoryRetrieve,
+    MemorySharedNamespace,
+    OutputGuardrail,
+    Plugin,
+    SkillPath,
+    SkillRef,
+    Subagent,
+    Tool,
+    ToolGuardrail
+  }
 
   @agent_section %Spark.Dsl.Section{
     name: :agent,
