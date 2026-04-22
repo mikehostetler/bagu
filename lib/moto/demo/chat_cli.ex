@@ -1,7 +1,7 @@
 defmodule Moto.Demo.ChatCLI do
   @moduledoc false
 
-  alias Moto.Demo.{Debug, Inventory, Loader}
+  alias Moto.Demo.{Debug, Inventory, Loader, Markdown}
 
   @switches [log_level: :string, dry_run: :boolean, help: :boolean]
   @aliases [l: :log_level]
@@ -115,7 +115,7 @@ defmodule Moto.Demo.ChatCLI do
       {:ok, reply} ->
         flush_interrupt_messages()
         Debug.print_recent_events(pid, log_level)
-        IO.puts("agent> #{reply}")
+        Markdown.print_reply("agent", reply)
 
       {:interrupt, interrupt} ->
         flush_interrupt_messages()
@@ -163,7 +163,7 @@ defmodule Moto.Demo.ChatCLI do
                 flush_interrupt_messages()
                 IO.puts("")
                 Debug.print_recent_events(pid, log_level)
-                IO.puts("agent> #{reply}")
+                Markdown.print_reply("agent", reply)
                 IO.puts("")
                 loop(pid, log_level)
 

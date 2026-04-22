@@ -31,6 +31,7 @@ defmodule Moto.MixProject do
       {:jido_ai, "~> 2.1", override: true},
       {:jido_mcp, git: "https://github.com/agentjido/jido_mcp.git", branch: "main"},
       {:jido_memory, git: "https://github.com/agentjido/jido_memory.git", branch: "main"},
+      {:mdex, "~> 0.12.1"},
       {:plug, "~> 1.18"},
       {:spark, "~> 2.6"},
       {:yaml_elixir, "~> 2.12"},

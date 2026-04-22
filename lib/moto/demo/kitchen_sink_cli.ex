@@ -1,7 +1,7 @@
 defmodule Moto.Demo.KitchenSinkCLI do
   @moduledoc false
 
-  alias Moto.Demo.{Debug, Inventory, Loader}
+  alias Moto.Demo.{Debug, Inventory, Loader, Markdown}
 
   @switches [log_level: :string, dry_run: :boolean, help: :boolean]
   @aliases [l: :log_level]
@@ -117,7 +117,7 @@ defmodule Moto.Demo.KitchenSinkCLI do
         flush_interrupt_messages()
         print_last_subagent_calls(pid, log_level)
         Debug.print_recent_events(pid, log_level)
-        IO.puts("agent> #{reply}")
+        Markdown.print_reply("agent", reply)
 
       {:interrupt, interrupt} ->
         flush_interrupt_messages()

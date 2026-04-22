@@ -1,7 +1,7 @@
 defmodule Moto.Demo.ImportedChatCLI do
   @moduledoc false
 
-  alias Moto.Demo.{Debug, Inventory}
+  alias Moto.Demo.{Debug, Inventory, Markdown}
 
   alias Moto.Examples.Chat.Guardrails.{
     ApproveLargeMathTool,
@@ -153,7 +153,7 @@ defmodule Moto.Demo.ImportedChatCLI do
       {:ok, reply} ->
         flush_interrupt_messages()
         Debug.print_recent_events(pid, log_level)
-        IO.puts("agent> #{reply}")
+        Markdown.print_reply("agent", reply)
 
       {:interrupt, interrupt} ->
         flush_interrupt_messages()
@@ -198,7 +198,7 @@ defmodule Moto.Demo.ImportedChatCLI do
                 flush_interrupt_messages()
                 IO.puts("")
                 Debug.print_recent_events(pid, log_level)
-                IO.puts("claude> #{reply}")
+                Markdown.print_reply("claude", reply)
                 IO.puts("")
                 loop(pid, log_level)
 
