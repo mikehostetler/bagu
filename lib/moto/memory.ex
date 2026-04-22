@@ -103,11 +103,11 @@ defmodule Moto.Memory do
   def validate_dsl_entry(%Moto.Agent.Dsl.MemoryRetrieve{limit: limit}),
     do: validate_limit(limit)
 
-  @spec runtime_plugin(config() | nil) :: nil | {module(), map()}
-  def runtime_plugin(nil), do: nil
+  @spec default_plugins(config() | nil) :: map()
+  def default_plugins(nil), do: %{__memory__: false}
 
-  def runtime_plugin(%{} = config) do
-    {Moto.Plugins.Memory, plugin_config(config)}
+  def default_plugins(%{} = config) do
+    %{__memory__: {Jido.Memory.BasicPlugin, plugin_config(config)}}
   end
 
   @spec on_before_cmd(Jido.Agent.t(), term(), config() | nil, map()) ::
@@ -640,24 +640,9 @@ defmodule Moto.Memory do
   defp kind_sort_rank("assistant_turn"), do: 1
   defp kind_sort_rank(_other), do: 2
 
-  defp plugin_state_key, do: Moto.Plugins.Memory.state_key()
+  defp plugin_state_key, do: Jido.Memory.Runtime.plugin_state_key()
 
-  defp memory_runtime_opts(agent, namespace) do
-    plugin_state = Map.get(agent.state, plugin_state_key(), %{})
-
-    []
-    |> Keyword.put(:namespace, namespace)
-    |> maybe_put_runtime_store(Map.get(plugin_state, :store))
-  end
-
-  defp maybe_put_runtime_store(opts, {store_mod, store_opts})
-       when is_atom(store_mod) and is_list(store_opts) do
-    opts
-    |> Keyword.put(:store, store_mod)
-    |> Keyword.put(:store_opts, store_opts)
-  end
-
-  defp maybe_put_runtime_store(opts, _store), do: opts
+  defp memory_runtime_opts(_agent, namespace), do: [namespace: namespace]
 
   defp put_request_memory_meta(agent, request_id, memory_meta) when is_binary(request_id) do
     update_in(agent.state, [:requests, request_id], fn

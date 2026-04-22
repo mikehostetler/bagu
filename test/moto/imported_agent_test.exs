@@ -467,8 +467,15 @@ defmodule MotoTest.ImportedAgentTest do
              })
 
     runtime = agent.runtime_module
+    instances = runtime.plugin_instances()
+    modules = Enum.map(instances, & &1.module)
+    memory_instance = Enum.find(instances, &(&1.module == Jido.Memory.BasicPlugin))
     runtime_agent = new_runtime_agent(runtime)
     session = "imported-memory-#{System.unique_integer([:positive])}"
+
+    assert Jido.Memory.BasicPlugin in modules
+    refute Jido.Memory.Plugin in modules
+    assert memory_instance.state_key == :__memory__
 
     {:ok, runtime_agent, _action} =
       runtime.on_before_cmd(
