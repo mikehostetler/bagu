@@ -17,7 +17,7 @@ defmodule Moto.Agent.Codegen do
           model: unquote(Macro.escape(definition.model)),
           tools: unquote(Macro.escape(definition.tools)),
           plugins: unquote(Macro.escape(definition.runtime_plugins)),
-          default_plugins: %{__memory__: false},
+          default_plugins: unquote(Macro.escape(Moto.Memory.default_plugins(definition.memory))),
           request_transformer: unquote(definition.effective_request_transformer)
 
         unquote(

@@ -343,7 +343,7 @@ defmodule Moto.ImportedAgent do
           model: unquote(Macro.escape(spec.model)),
           tools: unquote(Macro.escape(tool_modules)),
           plugins: unquote(Macro.escape(runtime_plugins)),
-          default_plugins: %{__memory__: false},
+          default_plugins: unquote(Macro.escape(Moto.Memory.default_plugins(spec.memory))),
           request_transformer: unquote(Macro.escape(effective_request_transformer))
 
         unquote(
@@ -417,11 +417,7 @@ defmodule Moto.ImportedAgent do
     %{"target" => "peer", "peer_id_context_key" => to_string(key)}
   end
 
-  defp runtime_plugins(plugin_modules, nil), do: [Moto.Plugins.RuntimeCompat | plugin_modules]
-
-  defp runtime_plugins(plugin_modules, memory_config) do
-    [Moto.Plugins.RuntimeCompat | plugin_modules] ++ [Moto.Memory.runtime_plugin(memory_config)]
-  end
+  defp runtime_plugins(plugin_modules, _memory_config), do: [Moto.Plugins.RuntimeCompat | plugin_modules]
 
   defp request_transformer(%Spec{} = spec, runtime_module) do
     if Moto.Memory.requires_request_transformer?(spec.memory) or

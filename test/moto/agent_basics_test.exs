@@ -53,6 +53,25 @@ defmodule MotoTest.AgentBasicsTest do
     assert ChatAgent.memory() == nil
   end
 
+  test "memory agents replace the default Jido memory plugin with jido_memory" do
+    instances = MemoryAgent.runtime_module().plugin_instances()
+    modules = Enum.map(instances, & &1.module)
+    memory_instance = Enum.find(instances, &(&1.module == Jido.Memory.BasicPlugin))
+    runtime_agent = MemoryAgent.runtime_module().new(id: "memory-default-slot")
+
+    assert Jido.Memory.BasicPlugin in modules
+    refute Jido.Memory.Plugin in modules
+    assert memory_instance.state_key == :__memory__
+    assert runtime_agent.state[:__memory__].namespace == "agent:memory-default-slot"
+  end
+
+  test "agents without Moto memory disable the default Jido memory plugin" do
+    modules = ChatAgent.runtime_module().plugins()
+
+    refute Jido.Memory.Plugin in modules
+    refute Jido.Memory.BasicPlugin in modules
+  end
+
   test "exposes configured skills and mcp settings" do
     assert SkillAgent.skills() == %{refs: [MotoTest.ModuleMathSkill], load_paths: []}
     assert SkillAgent.skill_names() == ["module-math-skill"]

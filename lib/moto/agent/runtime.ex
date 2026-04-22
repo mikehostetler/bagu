@@ -70,9 +70,5 @@ defmodule Moto.Agent.Runtime do
   end
 
   @spec runtime_plugins([module()], Moto.Memory.config() | nil) :: [module() | {module(), map()}]
-  def runtime_plugins(plugin_modules, nil), do: [Moto.Plugins.RuntimeCompat | plugin_modules]
-
-  def runtime_plugins(plugin_modules, memory_config) do
-    [Moto.Plugins.RuntimeCompat | plugin_modules] ++ [Moto.Memory.runtime_plugin(memory_config)]
-  end
+  def runtime_plugins(plugin_modules, _memory_config), do: [Moto.Plugins.RuntimeCompat | plugin_modules]
 end
