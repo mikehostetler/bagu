@@ -36,7 +36,13 @@ defmodule Moto.Demo.Loader do
     "kitchen_sink/agents/kitchen_sink_agent.ex"
   ]
 
-  @spec load!(:chat | :orchestrator | :kitchen_sink) :: :ok
+  @workflow_files [
+    "workflow/tools/add_amount.ex",
+    "workflow/tools/double_value.ex",
+    "workflow/workflows/math_pipeline.ex"
+  ]
+
+  @spec load!(:chat | :orchestrator | :kitchen_sink | :workflow) :: :ok
   def load!(:chat) do
     require_demo_files(@chat_files)
   end
@@ -47,6 +53,10 @@ defmodule Moto.Demo.Loader do
 
   def load!(:kitchen_sink) do
     require_demo_files(@kitchen_sink_files)
+  end
+
+  def load!(:workflow) do
+    require_demo_files(@workflow_files)
   end
 
   defp require_demo_files(paths) do

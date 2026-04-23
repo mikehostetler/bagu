@@ -60,6 +60,20 @@ defmodule MotoTest.MixTaskTest do
     assert Moto.Runtime.debug() == :off
   end
 
+  test "workflow demo mix task prints workflow details in dry-run mode" do
+    output =
+      capture_io(fn ->
+        Mix.Tasks.Moto.run(["workflow", "--log-level", "trace", "--dry-run"])
+      end)
+
+    assert output =~ "Moto workflow demo"
+    assert output =~ "Workflow: math_pipeline"
+    assert output =~ "Steps: add, double"
+    assert output =~ "Dependencies:"
+    assert output =~ "Dry run: workflow not executed."
+    assert Moto.Runtime.debug() == :off
+  end
+
   test "kitchen sink demo mix task prints showcase trace details in dry-run mode" do
     output =
       capture_io(fn ->

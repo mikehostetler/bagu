@@ -57,6 +57,9 @@ defmodule Moto.Inspection do
     end
   end
 
+  @spec inspect_workflow(module()) :: {:ok, map()} | {:error, term()}
+  def inspect_workflow(module) when is_atom(module), do: Moto.Workflow.inspect_workflow(module)
+
   @spec inspect_request(pid() | String.t() | Jido.Agent.t()) ::
           {:ok, Moto.Debug.summary()} | {:error, term()}
   def inspect_request(server_or_agent), do: Moto.Debug.request_summary(server_or_agent)

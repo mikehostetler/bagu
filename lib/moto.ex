@@ -198,6 +198,12 @@ defmodule Moto do
   def inspect_agent(target), do: Moto.Inspection.inspect_agent(target)
 
   @doc """
+  Returns Moto's inspection view of a compiled workflow definition.
+  """
+  @spec inspect_workflow(module()) :: {:ok, map()} | {:error, term()}
+  def inspect_workflow(workflow_module), do: Moto.Inspection.inspect_workflow(workflow_module)
+
+  @doc """
   Returns a summary for the latest request on a running Moto agent.
   """
   @spec inspect_request(pid() | String.t() | Jido.Agent.t()) ::

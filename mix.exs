@@ -138,6 +138,9 @@ defmodule Moto.MixProject do
           Moto.ImportedAgent,
           Moto.ImportedAgent.Subagent
         ],
+        Workflows: [
+          Moto.Workflow
+        ],
         Runtime: [
           Moto,
           Moto.Runtime,

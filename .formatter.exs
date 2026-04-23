@@ -2,11 +2,15 @@
 [
   locals_without_parens: [
     after_turn: 1,
+    agent: 2,
+    agent: 3,
     ash_resource: 1,
     before_turn: 1,
     capture: 1,
+    description: 1,
     id: 1,
     inject: 1,
+    input: 1,
     input_guardrail: 1,
     instructions: 1,
     load_path: 1,
@@ -21,10 +25,18 @@
     schema: 1,
     shared_namespace: 1,
     skill: 1,
+    steps: 1,
     subagent: 1,
     subagent: 2,
+    function: 2,
+    function: 3,
     tool: 1,
-    tool_guardrail: 1
+    tool: 2,
+    tool: 3,
+    tool_guardrail: 1,
+    value: 1,
+    workflow: 1,
+    output: 1
   ],
   inputs: [
     "{mix,.formatter,.credo,.doctor}.exs",

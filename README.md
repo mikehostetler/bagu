@@ -60,6 +60,8 @@ Today, Moto can:
   auto-capture on top of `jido_memory`
 - start many runtime instances from the same agent module under the shared
   `Moto.Runtime`
+- define explicit deterministic workflows with `use Moto.Workflow`, backed by
+  `jido_runic`, for multi-step tool/function/agent pipelines
 - import constrained agents from JSON or YAML at runtime with explicit
   allowlists for tools, plugins, hooks, and guardrails, including default
   imported context and memory settings
@@ -225,6 +227,64 @@ end
 
 Dynamic instructions resolve once per turn through Jido.AI's request
 transformer hook, using the current runtime context.
+
+## Define A Workflow
+
+Use a workflow when the application owns a deterministic multi-step process and
+the data dependencies should be explicit. Agent turns are still the right default
+for open-ended chat/tool reasoning; subagents are capabilities inside an agent
+turn; workflows coordinate app-owned steps.
+
+```elixir
+defmodule MyApp.Workflows.MathPipeline do
+  use Moto.Workflow
+
+  workflow do
+    id :math_pipeline
+    description "Adds one to a value and doubles the result."
+    input Zoi.object(%{value: Zoi.integer()})
+  end
+
+  steps do
+    tool :add, MyApp.Tools.AddAmount,
+      input: %{
+        value: input(:value),
+        amount: value(1)
+      }
+
+    function :normalize, {MyApp.WorkflowFns, :normalize, 2},
+      input: %{value: from(:add, :value)}
+
+    agent :review, {:imported, :reviewer},
+      prompt: from(:normalize, :prompt),
+      context: %{value: input(:value)}
+  end
+
+  output from(:review)
+end
+```
+
+Run a workflow through either API:
+
+```elixir
+{:ok, output} = MyApp.Workflows.MathPipeline.run(%{value: 5})
+
+{:ok, debug} =
+  Moto.Workflow.run(MyApp.Workflows.MathPipeline, %{value: 5},
+    agents: %{reviewer: reviewer_agent},
+    return: :debug
+  )
+```
+
+Workflow refs are explicit:
+
+- `input(:key)` reads the parsed workflow input.
+- `from(:step)` and `from(:step, :field)` read prior step output.
+- `context(:key)` reads runtime side-band context from `opts[:context]`.
+- `value(term)` marks a static value.
+
+`Moto.inspect_workflow/1` returns a stable definition map with step
+dependencies and the internal `jido_runic` graph data.
 
 ## Default Context
 

@@ -1,0 +1,193 @@
+defmodule MotoTest.WorkflowValidationTest do
+  use MotoTest.Support.Case, async: false
+
+  test "requires workflow id" do
+    assert_workflow_dsl_error(~r/workflow.id.*required/s, """
+    workflow do
+      input Zoi.object(%{topic: Zoi.string()})
+    end
+
+    steps do
+      function :normalize, {MotoTest.Workflow.Fns, :normalize, 2}, input: %{topic: input(:topic)}
+    end
+
+    output from(:normalize)
+    """)
+  end
+
+  test "requires lower snake case workflow id" do
+    assert_workflow_dsl_error(~r/workflow.id.*lower snake case/s, """
+    workflow do
+      id "Bad-ID"
+      input Zoi.object(%{topic: Zoi.string()})
+    end
+
+    steps do
+      function :normalize, {MotoTest.Workflow.Fns, :normalize, 2}, input: %{topic: input(:topic)}
+    end
+
+    output from(:normalize)
+    """)
+  end
+
+  test "requires a Zoi map input schema" do
+    assert_workflow_dsl_error(~r/workflow.input.*required/s, """
+    workflow do
+      id :missing_input_workflow
+    end
+
+    steps do
+      function :normalize, {MotoTest.Workflow.Fns, :normalize, 2}, input: %{}
+    end
+
+    output from(:normalize)
+    """)
+
+    assert_workflow_dsl_error(~r/workflow.input.*Zoi map\/object schema/s, """
+    workflow do
+      id :bad_input_workflow
+      input Zoi.string()
+    end
+
+    steps do
+      function :normalize, {MotoTest.Workflow.Fns, :normalize, 2}, input: %{}
+    end
+
+    output from(:normalize)
+    """)
+  end
+
+  test "rejects duplicate step names" do
+    assert_workflow_dsl_error(~r/step `same` is declared more than once/s, """
+    workflow do
+      id :duplicate_step_workflow
+      input Zoi.object(%{value: Zoi.integer()})
+    end
+
+    steps do
+      tool :same, MotoTest.Workflow.AddAmount, input: %{value: input(:value)}
+      tool :same, MotoTest.Workflow.DoubleValue, input: from(:same)
+    end
+
+    output from(:same)
+    """)
+  end
+
+  test "rejects missing step refs" do
+    assert_workflow_dsl_error(~r/references missing step `missing`/s, """
+    workflow do
+      id :missing_step_ref_workflow
+      input Zoi.object(%{value: Zoi.integer()})
+    end
+
+    steps do
+      tool :double, MotoTest.Workflow.DoubleValue, input: from(:missing)
+    end
+
+    output from(:double)
+    """)
+  end
+
+  test "rejects cyclic dependencies" do
+    assert_workflow_dsl_error(~r/dependencies contain a cycle/s, """
+    workflow do
+      id :cyclic_workflow
+      input Zoi.object(%{value: Zoi.integer()})
+    end
+
+    steps do
+      tool :first, MotoTest.Workflow.AddAmount, input: from(:second)
+      tool :second, MotoTest.Workflow.DoubleValue, input: from(:first)
+    end
+
+    output from(:second)
+    """)
+  end
+
+  test "rejects invalid output refs" do
+    assert_workflow_dsl_error(~r/references missing step `missing`/s, """
+    workflow do
+      id :bad_output_workflow
+      input Zoi.object(%{value: Zoi.integer()})
+    end
+
+    steps do
+      tool :add, MotoTest.Workflow.AddAmount, input: %{value: input(:value)}
+    end
+
+    output from(:missing)
+    """)
+  end
+
+  test "rejects invalid static targets" do
+    assert_workflow_dsl_error(~r/not a valid action-backed tool/s, """
+    workflow do
+      id :bad_tool_workflow
+      input Zoi.object(%{value: Zoi.integer()})
+    end
+
+    steps do
+      tool :bad, String, input: %{value: input(:value)}
+    end
+
+    output from(:bad)
+    """)
+
+    assert_workflow_dsl_error(~r/function step target is not exported/s, """
+    workflow do
+      id :bad_function_workflow
+      input Zoi.object(%{topic: Zoi.string()})
+    end
+
+    steps do
+      function :bad, {MotoTest.Workflow.Fns, :missing, 2}, input: %{topic: input(:topic)}
+    end
+
+    output from(:bad)
+    """)
+
+    assert_workflow_dsl_error(~r/not a Moto-compatible agent/s, """
+    workflow do
+      id :bad_agent_workflow
+      input Zoi.object(%{topic: Zoi.string()})
+    end
+
+    steps do
+      agent :bad, String, prompt: input(:topic)
+    end
+
+    output from(:bad)
+    """)
+  end
+
+  test "rejects input refs that are not declared in the input schema" do
+    assert_workflow_dsl_error(~r/input reference `missing` is not declared/s, """
+    workflow do
+      id :missing_input_ref_workflow
+      input Zoi.object(%{topic: Zoi.string()})
+    end
+
+    steps do
+      function :normalize, {MotoTest.Workflow.Fns, :normalize, 2}, input: %{topic: input(:missing)}
+    end
+
+    output from(:normalize)
+    """)
+  end
+
+  defp assert_workflow_dsl_error(pattern, body) do
+    module = Module.concat(MotoTest.DynamicWorkflowDsl, "Workflow#{System.unique_integer([:positive])}")
+
+    source = """
+    defmodule #{inspect(module)} do
+      use Moto.Workflow
+
+      #{body}
+    end
+    """
+
+    assert_raise Spark.Error.DslError, pattern, fn ->
+      Code.compile_string(source)
+    end
+  end
+end
