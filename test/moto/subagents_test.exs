@@ -173,10 +173,15 @@ defmodule MotoTest.SubagentsTest do
     try do
       research_tool = find_tool(WrongPeerOrchestratorAgent, "research_agent")
 
-      assert {:error,
-              {:subagent_failed, "research_agent",
-               {:peer_mismatch, MotoTest.ResearchSpecialist.Runtime, MotoTest.ReviewSpecialist.Runtime}}} =
+      assert {:error, %Moto.Error.ExecutionError{} = error} =
                research_tool.run(%{task: "Validate peer"}, %{})
+
+      assert error.message == "Subagent peer runtime did not match the configured agent."
+      assert error.details.reason == :peer_mismatch
+      assert error.details.agent_id == "research_agent"
+
+      assert error.details.cause ==
+               {:peer_mismatch, MotoTest.ResearchSpecialist.Runtime, MotoTest.ReviewSpecialist.Runtime}
     after
       :ok = Moto.stop_agent(pid)
     end
@@ -185,19 +190,30 @@ defmodule MotoTest.SubagentsTest do
   test "missing persistent peers fail clearly" do
     research_tool = find_tool(MissingPeerOrchestratorAgent, "research_agent")
 
-    assert {:error, {:subagent_failed, "research_agent", {:peer_not_found, "missing-peer-test"}}} =
+    assert {:error, %Moto.Error.ExecutionError{} = error} =
              research_tool.run(%{task: "Find peer"}, %{})
+
+    assert error.message == "Subagent peer could not be found."
+    assert error.details.reason == :peer_not_found
+    assert error.details.agent_id == "research_agent"
+    assert error.details.cause == {:peer_not_found, "missing-peer-test"}
   end
 
   test "normalizes timeout failures and stops ephemeral children" do
     slow_tool = find_tool(TimeoutOrchestratorAgent, "slow_agent")
     request_id = "req-subagent-timeout-1"
 
-    assert {:error, {:subagent_failed, "slow_agent", {:timeout, 20}}} =
+    assert {:error, %Moto.Error.ExecutionError{} = error} =
              slow_tool.run(%{task: "Too slow"}, %{
                Moto.Subagent.server_key() => self(),
                Moto.Subagent.request_id_key() => request_id
              })
+
+    assert error.message == "Subagent timed out."
+    assert error.details.reason == :timeout
+    assert error.details.timeout == 20
+    assert error.details.request_id == request_id
+    assert error.details.cause == {:timeout, 20}
 
     assert [%{child_id: child_id, outcome: {:error, {:timeout, 20}}}] =
              Moto.Subagent.request_calls(self(), request_id)
@@ -208,38 +224,57 @@ defmodule MotoTest.SubagentsTest do
   test "normalizes invalid child result failures" do
     invalid_tool = find_tool(InvalidResultOrchestratorAgent, "invalid_result_agent")
 
-    assert {:error, {:subagent_failed, "invalid_result_agent", {:invalid_result, %{not: "text"}}}} =
+    assert {:error, %Moto.Error.ExecutionError{} = error} =
              invalid_tool.run(%{task: "Invalid"}, %{})
+
+    assert error.message == "Subagent returned an invalid result."
+    assert error.details.reason == :invalid_result
+    assert error.details.agent_id == "invalid_result_agent"
+    assert error.details.cause == %{not: "text"}
   end
 
   test "normalizes child interrupts" do
     interrupt_tool = find_tool(InterruptOrchestratorAgent, "interrupt_agent")
 
-    assert {:error,
-            {:subagent_failed, "interrupt_agent",
-             {:child_interrupt, %Moto.Interrupt{kind: :approval, message: "Need approval"}}}} =
+    assert {:error, %Moto.Error.ExecutionError{} = error} =
              interrupt_tool.run(%{task: "Interrupt"}, %{})
+
+    assert error.message == "Subagent interrupted the delegation."
+    assert error.details.reason == :child_interrupt
+    assert %Moto.Interrupt{kind: :approval, message: "Need approval"} = error.details.cause
   end
 
   test "invalid child interrupts are treated as invalid child results" do
     interrupt_tool = find_tool(InvalidInterruptOrchestratorAgent, "invalid_interrupt_agent")
 
-    assert {:error, {:subagent_failed, "invalid_interrupt_agent", {:invalid_result, {:interrupt, :not_an_interrupt}}}} =
+    assert {:error, %Moto.Error.ExecutionError{} = error} =
              interrupt_tool.run(%{task: "Invalid interrupt"}, %{})
+
+    assert error.message == "Subagent returned an invalid result."
+    assert error.details.reason == :invalid_result
+    assert error.details.cause == {:interrupt, :not_an_interrupt}
   end
 
   test "normalizes ephemeral start failures" do
     start_failure_tool = find_tool(StartFailureOrchestratorAgent, "start_failure_agent")
 
-    assert {:error, {:subagent_failed, "start_failure_agent", {:start_failed, :boom}}} =
+    assert {:error, %Moto.Error.ExecutionError{} = error} =
              start_failure_tool.run(%{task: "Start"}, %{})
+
+    assert error.message == "Subagent could not be started."
+    assert error.details.reason == :start_failed
+    assert error.details.cause == {:start_failed, :boom}
   end
 
   test "normalizes ignored ephemeral starts" do
     start_ignore_tool = find_tool(StartIgnoreOrchestratorAgent, "start_ignore_agent")
 
-    assert {:error, {:subagent_failed, "start_ignore_agent", {:start_failed, :ignore}}} =
+    assert {:error, %Moto.Error.ExecutionError{} = error} =
              start_ignore_tool.run(%{task: "Start"}, %{})
+
+    assert error.message == "Subagent could not be started."
+    assert error.details.reason == :start_failed
+    assert error.details.cause == {:start_failed, :ignore}
   end
 
   test "accepts supervisor-style triple start returns" do
@@ -257,12 +292,16 @@ defmodule MotoTest.SubagentsTest do
   end
 
   test "enforces the one-hop subagent delegation limit" do
-    assert {:error, {:subagent_failed, "research_agent", {:recursion_limit, 1}}} =
+    assert {:error, %Moto.Error.ValidationError{} = error} =
              Moto.Subagent.run_subagent(
                hd(OrchestratorAgent.subagents()),
                %{task: "Nested delegation"},
                %{Moto.Subagent.depth_key() => 1}
              )
+
+    assert error.message == "Subagent delegation is limited to 1 nested level."
+    assert error.details.reason == :recursion_limit
+    assert error.details.cause == {:recursion_limit, 1}
   end
 
   test "retains subagent call metadata on the parent request" do

@@ -133,7 +133,7 @@ defmodule Moto.Demo.OrchestratorCLI do
 
   defp subagent_status(%{outcome: :ok}), do: "ok"
   defp subagent_status(%{outcome: {:interrupt, _interrupt}}), do: "interrupt"
-  defp subagent_status(%{outcome: {:error, reason}}), do: "error:#{inspect(reason)}"
+  defp subagent_status(%{outcome: {:error, reason}}), do: "error:#{Moto.format_error(reason)}"
   defp subagent_status(entry), do: get_in(entry, [:child_result_meta, :status]) || "unknown"
 
   defp agent_module do

@@ -57,14 +57,16 @@ defmodule Moto.Debug do
   def request_summary(%Jido.Agent{} = agent, request_id) when is_binary(request_id) do
     case Request.get_request(agent, request_id) do
       nil ->
-        {:error, :request_not_found}
+        {:error, Moto.Error.Normalize.debug_error(:request_not_found, request_id: request_id)}
 
       request ->
         {:ok, build_summary(agent, request_id, request, %{}, stored_subagent_calls(agent, request_id))}
     end
   end
 
-  def request_summary(_server_or_agent, _request_id), do: {:error, :request_not_found}
+  def request_summary(_server_or_agent, request_id) do
+    {:error, Moto.Error.Normalize.debug_error(:request_not_found, request_id: request_id)}
+  end
 
   defp latest_request_snapshot(server_or_id) do
     case Jido.AgentServer.state(server_or_id) do
@@ -73,7 +75,7 @@ defmodule Moto.Debug do
 
         case Request.get_request(agent, request_id) do
           nil ->
-            {:error, :request_not_found}
+            {:error, Moto.Error.Normalize.debug_error(:request_not_found, request_id: request_id)}
 
           request ->
             pending_meta = pending_runtime_meta(server_or_id, request_id)
@@ -81,8 +83,8 @@ defmodule Moto.Debug do
             {:ok, agent, request_id, request, pending_meta, subagent_calls}
         end
 
-      other ->
-        other
+      {:error, reason} ->
+        {:error, Moto.Error.Normalize.debug_error(reason)}
     end
   end
 
@@ -206,8 +208,12 @@ defmodule Moto.Debug do
       namespace: memory_meta[:namespace],
       retrieved: length(Map.get(memory_meta, :records, [])),
       inject: get_in(memory_meta, [:config, :inject]),
-      captured: memory_meta[:captured?]
+      captured: memory_meta[:captured?],
+      capture_error: memory_meta[:capture_error],
+      capture_warning: memory_meta[:capture_warning]
     }
+    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+    |> Map.new()
   end
 
   defp memory_summary(_), do: nil
@@ -243,10 +249,13 @@ defmodule Moto.Debug do
   defp normalize_mcp_errors(errors) when is_list(errors) do
     Enum.map(errors, fn
       %{endpoint: endpoint, prefix: prefix, reason: reason} ->
-        %{endpoint: endpoint, prefix: prefix, reason: reason}
+        %{endpoint: endpoint, prefix: prefix, reason: reason, message: Moto.format_error(reason)}
+
+      %{endpoint: endpoint, prefix: prefix, message: message} ->
+        %{endpoint: endpoint, prefix: prefix, reason: message, message: message}
 
       other ->
-        %{endpoint: :unknown, prefix: nil, reason: other}
+        %{endpoint: :unknown, prefix: nil, reason: other, message: Moto.format_error(other)}
     end)
   end
 

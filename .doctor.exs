@@ -7,6 +7,7 @@
     ~r/^Moto\.Agent\.Verifiers\./,
     Moto.Context,
     Moto.Debug,
+    Moto.Error.Normalize,
     Moto.Workflow.Build,
     Moto.Workflow.Codegen,
     Moto.Workflow.Definition,
@@ -27,6 +28,7 @@
   ignore_paths: [
     "nofile",
     ~r"^lib/mix/tasks/",
+    ~r"^lib/moto/error/normalize\.ex$",
     ~r"^lib/moto/agent/",
     ~r"^lib/moto/demo/",
     ~r"^lib/moto/workflow/(build|codegen|definition|spark_dsl)\.ex$",

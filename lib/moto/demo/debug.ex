@@ -115,7 +115,7 @@ defmodule Moto.Demo.Debug do
 
       {:error, reason} ->
         section(debug_title(level))
-        row("events", "failed: #{inspect(reason)}")
+        row("events", "failed: #{Moto.format_error(reason)}")
     end
 
     IO.puts("")
@@ -240,7 +240,7 @@ defmodule Moto.Demo.Debug do
     Enum.each(errors, fn error ->
       endpoint = error[:endpoint] || "unknown"
       prefix = if error[:prefix], do: ":#{error.prefix}", else: ""
-      reason = error[:reason] |> inspect() |> preview(level)
+      reason = (error[:message] || Moto.format_error(error[:reason])) |> preview(level)
 
       row("mcp error", "#{endpoint}#{prefix} #{reason}")
     end)
@@ -255,7 +255,7 @@ defmodule Moto.Demo.Debug do
 
   defp print_memory_summary(%{error: reason}) do
     section("Memory")
-    row("error", inspect(reason))
+    row("error", Moto.format_error(reason))
   end
 
   defp print_memory_summary(%{} = memory) do
@@ -267,6 +267,7 @@ defmodule Moto.Demo.Debug do
       row("retrieved", to_string(memory.retrieved || 0))
       row("inject", to_string(inject))
       row("captured", to_string(captured))
+      maybe_row("capture warning", memory[:capture_warning] || format_optional_error(memory[:capture_error]))
     else
       :ok
     end
@@ -332,7 +333,7 @@ defmodule Moto.Demo.Debug do
     section("Guardrail")
     row("stage", to_string(stage))
     row("name", to_string(label))
-    row("reason", inspect(reason))
+    row("reason", Moto.format_error(reason))
   end
 
   defp print_error_summary(%{error: nil}), do: :ok
@@ -342,7 +343,7 @@ defmodule Moto.Demo.Debug do
       :ok
     else
       section("Error")
-      row("reason", inspect(other))
+      row("reason", Moto.format_error(other))
     end
   end
 
@@ -403,7 +404,7 @@ defmodule Moto.Demo.Debug do
 
   defp subagent_status(%{outcome: :ok}), do: "ok"
   defp subagent_status(%{outcome: {:interrupt, _interrupt}}), do: "interrupt"
-  defp subagent_status(%{outcome: {:error, reason}}), do: "error:#{inspect(reason)}"
+  defp subagent_status(%{outcome: {:error, reason}}), do: "error:#{Moto.format_error(reason)}"
   defp subagent_status(call), do: get_in(call, [:child_result_meta, :status]) || "unknown"
 
   defp invalid_log_level(level) do
@@ -465,6 +466,9 @@ defmodule Moto.Demo.Debug do
 
   defp format_optional_term(nil), do: nil
   defp format_optional_term(term), do: inspect(term)
+
+  defp format_optional_error(nil), do: nil
+  defp format_optional_error(error), do: Moto.format_error(error)
 
   defp section(title) do
     IO.puts("")

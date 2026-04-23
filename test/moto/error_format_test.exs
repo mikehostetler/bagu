@@ -47,4 +47,15 @@ defmodule MotoTest.ErrorFormatTest do
   test "falls back to inspect for unknown errors" do
     assert Moto.format_error({:unhandled, :shape}) == "{:unhandled, :shape}"
   end
+
+  test "formats Splode error classes in stable order" do
+    error =
+      Moto.Error.to_class([
+        Moto.Error.execution_error("Workflow step failed."),
+        Moto.Error.validation_error("Input is invalid.")
+      ])
+
+    assert Moto.format_error(error) ==
+             "Multiple Moto errors:\n- Input is invalid.\n- Workflow step failed."
+  end
 end

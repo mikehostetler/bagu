@@ -51,7 +51,7 @@ defmodule Moto.Agent.Chat do
        |> Moto.Hooks.attach_request_hooks(hooks)
        |> Moto.Guardrails.attach_request_guardrails(guardrails)}
     else
-      {:error, reason} -> {:error, normalize_request_validation_error(reason)}
+      {:error, reason} -> {:error, Moto.Error.Normalize.chat_option_error(reason)}
     end
   end
 
@@ -99,52 +99,4 @@ defmodule Moto.Agent.Chat do
         {:error, Moto.Error.invalid_context({:domain_mismatch, domain, other}, value: context)}
     end
   end
-
-  defp normalize_request_validation_error({:invalid_hook_spec, message}) when is_binary(message) do
-    Moto.Error.validation_error(message,
-      field: :hooks,
-      details: %{reason: :invalid_hook_spec}
-    )
-  end
-
-  defp normalize_request_validation_error({:invalid_guardrail_spec, message}) when is_binary(message) do
-    Moto.Error.validation_error(message,
-      field: :guardrails,
-      details: %{reason: :invalid_guardrail_spec}
-    )
-  end
-
-  defp normalize_request_validation_error({:invalid_hook_stage, stage}) do
-    Moto.Error.validation_error("Invalid hook stage #{inspect(stage)}.",
-      field: :hooks,
-      value: stage,
-      details: %{reason: :invalid_hook_stage, stage: stage}
-    )
-  end
-
-  defp normalize_request_validation_error({:invalid_guardrail_stage, stage}) do
-    Moto.Error.validation_error("Invalid guardrail stage #{inspect(stage)}.",
-      field: :guardrails,
-      value: stage,
-      details: %{reason: :invalid_guardrail_stage, stage: stage}
-    )
-  end
-
-  defp normalize_request_validation_error({:invalid_hook, stage, message}) when is_binary(message) do
-    Moto.Error.validation_error(message,
-      field: :hooks,
-      value: stage,
-      details: %{reason: :invalid_hook, stage: stage}
-    )
-  end
-
-  defp normalize_request_validation_error({:invalid_guardrail, stage, message}) when is_binary(message) do
-    Moto.Error.validation_error(message,
-      field: :guardrails,
-      value: stage,
-      details: %{reason: :invalid_guardrail, stage: stage}
-    )
-  end
-
-  defp normalize_request_validation_error(reason), do: reason
 end

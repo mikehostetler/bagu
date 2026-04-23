@@ -149,7 +149,7 @@ defmodule Moto.Demo.KitchenSinkCLI do
 
   defp subagent_status(%{outcome: :ok}), do: "ok"
   defp subagent_status(%{outcome: {:interrupt, _interrupt}}), do: "interrupt"
-  defp subagent_status(%{outcome: {:error, reason}}), do: "error:#{inspect(reason)}"
+  defp subagent_status(%{outcome: {:error, reason}}), do: "error:#{Moto.format_error(reason)}"
   defp subagent_status(_entry), do: "unknown"
 
   defp agent_module do

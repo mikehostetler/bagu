@@ -61,11 +61,20 @@ defmodule Moto.Workflow.Runtime do
   @doc false
   @spec run(definition(), map() | keyword(), keyword()) :: {:ok, term()} | {:error, term()}
   def run(%{kind: :workflow_definition} = definition, input, opts) when is_list(opts) do
-    with {:ok, runtime_opts} <- normalize_opts(opts),
-         {:ok, parsed_input} <- parse_input(definition, input),
-         :ok <- validate_runtime_refs(definition, runtime_opts) do
-      state = initial_state(definition, parsed_input, runtime_opts)
-      run_strategy(definition, state, runtime_opts)
+    result =
+      with {:ok, runtime_opts} <- normalize_opts(opts),
+           {:ok, parsed_input} <- parse_input(definition, input),
+           :ok <- validate_runtime_refs(definition, runtime_opts) do
+        state = initial_state(definition, parsed_input, runtime_opts)
+        run_strategy(definition, state, runtime_opts)
+      end
+
+    case result do
+      {:error, reason} ->
+        {:error, Moto.Error.Normalize.workflow_error(reason, workflow_id: definition.id)}
+
+      other ->
+        other
     end
   end
 
@@ -274,7 +283,7 @@ defmodule Moto.Workflow.Runtime do
     {agent, directives} = feed(agent, %{@state_key => state})
     deadline = System.monotonic_time(:millisecond) + runtime_opts.timeout
 
-    with {:ok, agent, emitted} <- drain_strategy(agent, directives, deadline) do
+    with {:ok, agent, emitted} <- drain_strategy(definition, agent, directives, deadline) do
       strategy_state = StratState.get(agent)
       finish_run(definition, strategy_state, emitted, runtime_opts)
     end
@@ -290,16 +299,17 @@ defmodule Moto.Workflow.Runtime do
     Strategy.cmd(agent, [instruction], %{agent_module: Moto.Workflow.StepAction, strategy_opts: []})
   end
 
-  defp drain_strategy(agent, directives, deadline), do: drain_strategy(agent, directives, deadline, [])
+  defp drain_strategy(definition, agent, directives, deadline),
+    do: drain_strategy(definition, agent, directives, deadline, [])
 
-  defp drain_strategy(agent, [], _deadline, emitted), do: {:ok, agent, Enum.reverse(emitted)}
+  defp drain_strategy(_definition, agent, [], _deadline, emitted), do: {:ok, agent, Enum.reverse(emitted)}
 
-  defp drain_strategy(agent, [%ExecuteRunnable{} = directive | rest], deadline, emitted) do
+  defp drain_strategy(definition, agent, [%ExecuteRunnable{} = directive | rest], deadline, emitted) do
     if System.monotonic_time(:millisecond) > deadline do
       {:error,
        Moto.Error.execution_error("Workflow execution timed out.",
          phase: :workflow,
-         details: %{reason: :timeout}
+         details: %{workflow_id: definition.id, reason: :timeout, cause: {:timeout, :deadline}}
        )}
     else
       runnable = Invokable.execute(directive.runnable.node, directive.runnable)
@@ -307,7 +317,7 @@ defmodule Moto.Workflow.Runtime do
       case runnable.status do
         :completed ->
           {agent, next_directives} = apply_result(agent, runnable)
-          drain_strategy(agent, rest ++ next_directives, deadline, emitted)
+          drain_strategy(definition, agent, rest ++ next_directives, deadline, emitted)
 
         :failed ->
           {:error, runnable.error}
@@ -316,21 +326,21 @@ defmodule Moto.Workflow.Runtime do
           {:error,
            Moto.Error.execution_error("Workflow runnable did not complete.",
              phase: :workflow,
-             details: %{status: other, runnable_id: runnable.id}
+             details: %{workflow_id: definition.id, status: other, runnable_id: runnable.id, cause: other}
            )}
       end
     end
   end
 
-  defp drain_strategy(agent, [directive | rest], deadline, emitted) do
+  defp drain_strategy(definition, agent, [directive | rest], deadline, emitted) do
     if System.monotonic_time(:millisecond) > deadline do
       {:error,
        Moto.Error.execution_error("Workflow execution timed out.",
          phase: :workflow,
-         details: %{reason: :timeout}
+         details: %{workflow_id: definition.id, reason: :timeout, cause: {:timeout, :deadline}}
        )}
     else
-      drain_strategy(agent, rest, deadline, [directive | emitted])
+      drain_strategy(definition, agent, rest, deadline, [directive | emitted])
     end
   end
 
@@ -365,7 +375,7 @@ defmodule Moto.Workflow.Runtime do
         {:error,
          Moto.Error.execution_error("Workflow execution did not produce output.",
            phase: :workflow,
-           details: %{workflow_id: definition.id, status: status}
+           details: %{workflow_id: definition.id, status: status, cause: status}
          )}
     end
   end
@@ -640,7 +650,8 @@ defmodule Moto.Workflow.Runtime do
         step: step.name,
         kind: step.kind,
         target: step.target,
-        reason: reason
+        reason: reason,
+        cause: reason
       }
     )
   end

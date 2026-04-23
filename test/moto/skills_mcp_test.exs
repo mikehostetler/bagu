@@ -116,10 +116,20 @@ defmodule MotoTest.SkillsMCPTest do
       assert {:ok, endpoint} = Moto.MCP.register_endpoint(:runtime_fs, attrs)
       assert endpoint.id == :runtime_fs
       assert :runtime_fs in Moto.MCP.endpoint_ids()
-      assert {:error, :not_started} = Moto.MCP.endpoint_status(:runtime_fs)
 
-      assert {:error, {:endpoint_already_registered, :runtime_fs}} =
+      assert {:error, %Moto.Error.ExecutionError{} = status_error} =
+               Moto.MCP.endpoint_status(:runtime_fs)
+
+      assert status_error.message == "MCP endpoint is not started."
+      assert status_error.details.reason == :not_started
+      assert status_error.details.cause == :not_started
+
+      assert {:error, %Moto.Error.ConfigError{} = duplicate_error} =
                Moto.MCP.register_endpoint(:runtime_fs, attrs)
+
+      assert duplicate_error.message == "MCP endpoint :runtime_fs is already registered."
+      assert duplicate_error.details.reason == :endpoint_already_registered
+      assert duplicate_error.details.cause == {:endpoint_already_registered, :runtime_fs}
     end)
   end
 
@@ -130,11 +140,15 @@ defmodule MotoTest.SkillsMCPTest do
       assert {:ok, endpoint} = Moto.MCP.ensure_endpoint(:runtime_fs, attrs)
       assert {:ok, ^endpoint} = Moto.MCP.ensure_endpoint(:runtime_fs, attrs)
 
-      assert {:error, {:endpoint_conflict, :runtime_fs, _existing, _incoming}} =
+      assert {:error, %Moto.Error.ConfigError{} = error} =
                Moto.MCP.ensure_endpoint(
                  :runtime_fs,
                  Keyword.put(attrs, :client_info, %{name: "different-test"})
                )
+
+      assert error.message == "MCP endpoint :runtime_fs is already registered with a different definition."
+      assert error.details.reason == :endpoint_conflict
+      assert {:endpoint_conflict, :runtime_fs, _existing, _incoming} = error.details.cause
     end)
   end
 
@@ -220,9 +234,13 @@ defmodule MotoTest.SkillsMCPTest do
              %{
                endpoint: :github,
                prefix: "github_",
-               reason: {:mcp_sync_failed, :github, :server_capabilities_not_set}
+               reason: %Moto.Error.ExecutionError{} = error,
+               message: "MCP operation failed."
              }
            ] = get_in(updated_agent.state, [:__moto_mcp__, :last_errors])
+
+    assert error.details.cause == :server_capabilities_not_set
+    assert error.details.target == :github
 
     assert context == %{}
   end

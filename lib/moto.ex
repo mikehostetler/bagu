@@ -148,11 +148,14 @@ defmodule Moto do
   @spec chat(pid() | atom() | {:via, module(), term()} | String.t(), String.t(), keyword()) ::
           {:ok, term()} | {:error, term()} | {:interrupt, Moto.Interrupt.t()}
   def chat(server_or_id, message, opts \\ []) when is_binary(message) do
-    with {:ok, server} <- resolve_server(server_or_id, opts),
-         {:ok, prepared_opts} <- Moto.Agent.prepare_chat_opts(opts, chat_config(server)) do
-      chat_request(server, message, prepared_opts)
-      |> Moto.Hooks.translate_chat_result()
-    end
+    result =
+      with {:ok, server} <- resolve_server(server_or_id, opts),
+           {:ok, prepared_opts} <- Moto.Agent.prepare_chat_opts(opts, chat_config(server)) do
+        chat_request(server, message, prepared_opts)
+        |> Moto.Hooks.translate_chat_result()
+      end
+
+    normalize_chat_result(result, server_or_id, opts)
   end
 
   defp chat_config(server) do
@@ -239,6 +242,16 @@ defmodule Moto do
   end
 
   defp resolve_server(server, _opts), do: {:ok, server}
+
+  defp normalize_chat_result({:error, reason}, target, opts) do
+    {:error,
+     Moto.Error.Normalize.chat_error(reason,
+       target: target,
+       timeout: Keyword.get(opts, :timeout, 30_000)
+     )}
+  end
+
+  defp normalize_chat_result(result, _target, _opts), do: result
 
   @doc false
   @spec finalize_chat_request(pid() | atom() | {:via, module(), term()}, String.t(), term()) ::

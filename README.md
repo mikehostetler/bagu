@@ -353,6 +353,32 @@ Moto.format_error(reason)
   )
 ```
 
+## Runtime Errors
+
+Moto runtime APIs return structured Moto/Splode errors:
+
+```elixir
+case Moto.chat("missing-agent", "Hello") do
+  {:ok, reply} ->
+    reply
+
+  {:interrupt, interrupt} ->
+    interrupt
+
+  {:error, reason} ->
+    Moto.format_error(reason)
+end
+```
+
+Common runtime failures use one of:
+
+- `%Moto.Error.ValidationError{}` for invalid inputs or missing runtime data
+- `%Moto.Error.ConfigError{}` for invalid runtime configuration
+- `%Moto.Error.ExecutionError{}` for failed tools, workflows, memory, MCP,
+  hooks, guardrails, or subagents
+
+Original low-level causes are preserved in `reason.details.cause` for debugging.
+
 ## Memory
 
 Moto memory is conversation-first and opt-in. It is implemented on top of
@@ -824,7 +850,9 @@ end
 that turn. When a guardrail blocks, Moto returns:
 
 ```elixir
-{:error, {:guardrail, :input, "safe_prompt", :unsafe_prompt}}
+{:error, %Moto.Error.ExecutionError{} = reason}
+Moto.format_error(reason)
+#=> "Guardrail safe_prompt blocked input."
 ```
 
 When a guardrail interrupts, Moto returns:

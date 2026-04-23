@@ -83,10 +83,12 @@ defmodule MotoTest.HooksTest do
     bad_hook = fn _input -> {:ok, [1, 2]} end
 
     try do
-      assert {:error, {:hook, :before_turn, reason}} =
+      assert {:error, %Moto.Error.ExecutionError{} = error} =
                Moto.chat(pid, "hello", hooks: [before_turn: bad_hook])
 
-      assert reason =~ "before_turn hook must return {:ok, map_or_keyword_overrides}"
+      assert error.message == "Hook before_turn failed."
+      assert error.details.stage == :before_turn
+      assert error.details.cause =~ "before_turn hook must return {:ok, map_or_keyword_overrides}"
     after
       :ok = Moto.stop_agent(pid)
     end

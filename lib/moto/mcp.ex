@@ -23,7 +23,10 @@ defmodule Moto.MCP do
   Builds a validated MCP endpoint definition.
   """
   @spec endpoint(atom(), map() | keyword()) :: {:ok, Endpoint.t()} | {:error, term()}
-  def endpoint(id, attrs), do: Endpoint.new(id, attrs)
+  def endpoint(id, attrs) do
+    Endpoint.new(id, attrs)
+    |> normalize_mcp_result(operation: :endpoint, endpoint: id, field: :endpoint, value: attrs)
+  end
 
   @doc """
   Registers a runtime MCP endpoint with `jido_mcp`.
@@ -36,6 +39,7 @@ defmodule Moto.MCP do
     with {:ok, endpoint} <- endpoint(id, attrs) do
       Jido.MCP.register_endpoint(endpoint)
     end
+    |> normalize_mcp_result(operation: :register_endpoint, endpoint: id, field: :endpoint, value: attrs)
   end
 
   @doc """
@@ -50,6 +54,7 @@ defmodule Moto.MCP do
     with {:ok, endpoint} <- endpoint(id, attrs) do
       ensure_endpoint(endpoint)
     end
+    |> normalize_mcp_result(operation: :ensure_endpoint, endpoint: id, field: :endpoint, value: attrs)
   end
 
   @doc """
@@ -66,6 +71,7 @@ defmodule Moto.MCP do
     with {:ok, endpoint_id} <- ClientPool.resolve_endpoint_id(endpoint) do
       Jido.MCP.endpoint_status(endpoint_id)
     end
+    |> normalize_mcp_result(operation: :endpoint_status, endpoint: endpoint, field: :endpoint, value: endpoint)
   end
 
   @doc """
@@ -93,6 +99,7 @@ defmodule Moto.MCP do
 
       sync_module().run(params, %{})
     end
+    |> normalize_mcp_result(operation: :sync_tools, target: agent_server, value: opts)
   end
 
   @doc false
@@ -354,11 +361,30 @@ defmodule Moto.MCP do
   defp format_entry(%{endpoint: endpoint, prefix: prefix}), do: "#{endpoint}:#{prefix}"
 
   defp format_error(entry, reason) do
+    error =
+      Moto.Error.Normalize.mcp_error(reason,
+        operation: :sync_tools,
+        endpoint: entry.endpoint,
+        target: entry.endpoint,
+        value: entry
+      )
+
     %{
       endpoint: entry.endpoint,
       prefix: entry.prefix,
-      reason: {:mcp_sync_failed, entry.endpoint, reason}
+      reason: error,
+      message: Moto.format_error(error)
     }
+  end
+
+  defp normalize_mcp_result({:ok, _value} = ok, _context), do: ok
+
+  defp normalize_mcp_result({:error, reason}, context) do
+    {:error, Moto.Error.Normalize.mcp_error(reason, context)}
+  end
+
+  defp normalize_mcp_result(other, context) do
+    {:error, Moto.Error.Normalize.mcp_error({:invalid_result, other}, context)}
   end
 
   defp drop_empty_errors(%{mcp_errors: []} = meta), do: Map.delete(meta, :mcp_errors)

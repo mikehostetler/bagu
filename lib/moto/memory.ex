@@ -137,18 +137,20 @@ defmodule Moto.Memory do
       {:ok, agent, {:ai_react_start, params}}
     else
       {:error, reason} when is_binary(request_id) ->
-        Logger.warning("Moto memory retrieval failed: #{inspect(reason)}")
+        error = memory_error(:retrieve, reason, agent, request_id, config)
+        Logger.warning("Moto memory retrieval failed: #{Moto.format_error(error)}")
 
         failed_agent =
           agent
-          |> Request.fail_request(request_id, {:memory, reason})
-          |> put_request_memory_meta(request_id, %{error: reason})
+          |> Request.fail_request(request_id, error)
+          |> put_request_memory_meta(request_id, %{error: error, warning: Moto.format_error(error)})
 
         {:ok, failed_agent,
          {:ai_react_request_error, %{request_id: request_id, reason: :memory_failed, message: query}}}
 
       {:error, reason} ->
-        Logger.warning("Moto memory retrieval failed: #{inspect(reason)}")
+        error = memory_error(:retrieve, reason, agent, request_id, config)
+        Logger.warning("Moto memory retrieval failed: #{Moto.format_error(error)}")
 
         {:ok, agent, {:ai_react_request_error, %{request_id: request_id, reason: :memory_failed, message: query}}}
     end
@@ -187,7 +189,7 @@ defmodule Moto.Memory do
          agent,
          request_id,
          directives,
-         %{capture: :conversation} = _config,
+         %{capture: :conversation} = config,
          meta
        ) do
     case Request.get_result(agent, request_id) do
@@ -202,7 +204,8 @@ defmodule Moto.Memory do
           {:ok, put_request_memory_meta(agent, request_id, Map.put(meta, :captured?, true)), directives}
         else
           {:error, reason} ->
-            Logger.warning("Moto memory capture failed: #{inspect(reason)}")
+            error = memory_error(:capture, reason, agent, request_id, config)
+            Logger.warning("Moto memory capture failed: #{Moto.format_error(error)}")
 
             {:ok,
              put_request_memory_meta(
@@ -210,7 +213,8 @@ defmodule Moto.Memory do
                request_id,
                meta
                |> Map.put(:captured?, false)
-               |> Map.put(:capture_error, reason)
+               |> Map.put(:capture_error, error)
+               |> Map.put(:capture_warning, Moto.format_error(error))
              ), directives}
         end
 
@@ -468,6 +472,14 @@ defmodule Moto.Memory do
            namespace_agent_key(agent) <>
            ":context:" <> namespace_key(key) <> ":" <> namespace_value(value)}
     end
+  end
+
+  defp memory_error(phase, reason, agent, request_id, config) do
+    Moto.Error.Normalize.memory_error(phase, reason,
+      agent_id: Map.get(agent, :id),
+      request_id: request_id,
+      target: config[:namespace]
+    )
   end
 
   defp retrieve_records(agent, namespace, %{retrieve: %{limit: limit}}) do

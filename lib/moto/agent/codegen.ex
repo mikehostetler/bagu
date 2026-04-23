@@ -97,17 +97,31 @@ defmodule Moto.Agent.Codegen do
       """
       @spec chat(pid(), String.t(), keyword()) :: {:ok, term()} | {:error, term()}
       def chat(pid, message, opts \\ []) when is_pid(pid) and is_binary(message) do
-        with {:ok, prepared_opts} <-
-               Moto.Agent.prepare_chat_opts(
-                 opts,
-                 %{
-                   context: unquote(Macro.escape(definition.context)),
-                   context_schema: unquote(Macro.escape(definition.context_schema)),
-                   ash: unquote(Macro.escape(definition.ash_tool_config))
-                 }
-               ) do
-          Moto.chat_request(pid, message, prepared_opts)
-          |> Moto.Hooks.translate_chat_result()
+        result =
+          with {:ok, prepared_opts} <-
+                 Moto.Agent.prepare_chat_opts(
+                   opts,
+                   %{
+                     context: unquote(Macro.escape(definition.context)),
+                     context_schema: unquote(Macro.escape(definition.context_schema)),
+                     ash: unquote(Macro.escape(definition.ash_tool_config))
+                   }
+                 ) do
+            Moto.chat_request(pid, message, prepared_opts)
+            |> Moto.Hooks.translate_chat_result()
+          end
+
+        case result do
+          {:error, reason} ->
+            {:error,
+             Moto.Error.Normalize.chat_error(reason,
+               target: pid,
+               agent_id: unquote(definition.name),
+               timeout: Keyword.get(opts, :timeout, 30_000)
+             )}
+
+          other ->
+            other
         end
       end
 

@@ -195,6 +195,11 @@ defmodule MotoTest.AgentBasicsTest do
   end
 
   test "Moto.chat returns not_found for missing ids" do
-    assert {:error, :not_found} = Moto.chat("missing-agent-id", "hello")
+    assert {:error, %Moto.Error.ValidationError{} = error} =
+             Moto.chat("missing-agent-id", "hello")
+
+    assert error.message == "Moto agent could not be found."
+    assert error.details.reason == :not_found
+    assert error.details.cause == :not_found
   end
 end

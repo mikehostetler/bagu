@@ -165,7 +165,7 @@ defmodule Moto.Guardrails do
         {:ok, put_request_guardrail_meta(agent, request_id, guardrail_meta), {:ai_react_start, params}}
 
       {:error, label, reason} ->
-        error = {:guardrail, :input, label, reason}
+        error = normalize_guardrail_error(:input, label, reason, agent, request_id)
 
         agent =
           agent
@@ -266,7 +266,7 @@ defmodule Moto.Guardrails do
           :ok
 
         {:error, label, reason} ->
-          {:error, {:guardrail, :tool, label, reason}}
+          {:error, normalize_guardrail_error(:tool, label, reason, agent, request_id)}
 
         {:interrupt, _label, %Interrupt{} = interrupt} ->
           Moto.Hooks.notify_interrupt(agent, request_id, interrupt)
@@ -394,7 +394,7 @@ defmodule Moto.Guardrails do
                ), directives}
 
             {:error, label, reason} ->
-              error = {:guardrail, :output, label, reason}
+              error = normalize_guardrail_error(:output, label, reason, agent, request_id)
 
               agent =
                 agent
@@ -459,4 +459,11 @@ defmodule Moto.Guardrails do
 
   defp normalize_interrupt(%Interrupt{} = interrupt), do: interrupt
   defp normalize_interrupt(interrupt), do: Interrupt.new(interrupt)
+
+  defp normalize_guardrail_error(stage, label, reason, agent, request_id) do
+    Moto.Error.Normalize.guardrail_error(stage, label, reason,
+      agent_id: Map.get(agent, :id),
+      request_id: request_id
+    )
+  end
 end

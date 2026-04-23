@@ -32,7 +32,12 @@ defmodule Moto.Inspection do
         {:ok, module.__moto_definition__()}
 
       true ->
-        {:error, :not_moto_agent}
+        {:error,
+         Moto.Error.config_error("Module is not a Moto agent.",
+           field: :agent,
+           value: module,
+           details: %{operation: :inspect_agent, reason: :not_moto_agent, cause: :not_moto_agent}
+         )}
     end
   end
 

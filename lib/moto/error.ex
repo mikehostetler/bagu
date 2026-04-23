@@ -237,9 +237,47 @@ defmodule Moto.Error do
   Formats Moto error terms for humans.
   """
   @spec format(term()) :: String.t()
+  def format(%struct{errors: errors} = error) when is_list(errors) do
+    if function_exported?(struct, :error_class?, 0) and struct.error_class?() do
+      format_error_class(errors)
+    else
+      inspect(error)
+    end
+  end
+
   def format(%{message: message}) when is_binary(message), do: message
   def format(message) when is_binary(message), do: message
   def format(other), do: inspect(other)
+
+  defp format_error_class(errors) do
+    errors
+    |> flatten_class_errors()
+    |> Enum.map(&format/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+    |> Enum.sort()
+    |> case do
+      [] -> "Moto operation failed."
+      [message] -> message
+      messages -> "Multiple Moto errors:\n" <> Enum.map_join(messages, "\n", &"- #{&1}")
+    end
+  end
+
+  defp flatten_class_errors(errors) do
+    errors
+    |> List.wrap()
+    |> Enum.flat_map(fn
+      %struct{errors: nested} = error when is_list(nested) ->
+        if function_exported?(struct, :error_class?, 0) and struct.error_class?() do
+          flatten_class_errors(nested)
+        else
+          [error]
+        end
+
+      error ->
+        [error]
+    end)
+  end
 
   defp schema_error_message(errors) do
     case format_schema_errors(errors) do

@@ -46,3 +46,13 @@ Use these rules when generating Moto code or reviewing Moto examples.
 - Put runnable examples under `examples/`.
 - Keep demo-only wiring out of `lib/`.
 - Prefer simple examples first, then kitchen-sink coverage.
+
+## Runtime Errors
+
+- Public runtime APIs should return `{:ok, value}`, `{:interrupt, interrupt}`,
+  or `{:error, %Moto.Error.*{}}`.
+- Do not expose raw internal error tuples from chat, workflow, subagent, MCP,
+  memory, hook, or guardrail runtime boundaries.
+- Use `Moto.format_error/1` when printing errors in docs, demos, and CLIs.
+- Preserve low-level causes in `error.details.cause`; do not require users to
+  pattern-match on those causes.

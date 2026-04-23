@@ -222,9 +222,11 @@ defmodule Moto.Hooks do
         {:ok, agent, {:ai_react_request_error, %{request_id: request_id, reason: :interrupt, message: query}}}
 
       {:error, reason} ->
+        error = normalize_hook_error(:before_turn, reason, agent, request_id)
+
         agent =
           agent
-          |> Request.fail_request(request_id, {:hook, :before_turn, reason})
+          |> Request.fail_request(request_id, error)
           |> put_request_hook_meta(request_id, %{
             hooks: hooks,
             metadata: input.metadata,
@@ -232,7 +234,8 @@ defmodule Moto.Hooks do
             message: input.message,
             context: input.context,
             allowed_tools: input.allowed_tools,
-            llm_opts: input.llm_opts
+            llm_opts: input.llm_opts,
+            error: error
           })
 
         {:ok, agent, {:ai_react_request_error, %{request_id: request_id, reason: :hook_failed, message: query}}}
@@ -365,7 +368,9 @@ defmodule Moto.Hooks do
           :ok
 
         {:error, reason} ->
-          Logger.warning("Moto on_interrupt hook failed: #{inspect(reason)}")
+          Logger.warning(
+            "Moto on_interrupt hook failed: #{Moto.format_error(normalize_hook_error(:on_interrupt, reason, input.agent, input.request_id))}"
+          )
 
         other ->
           Logger.warning("Moto on_interrupt hook returned invalid result: #{inspect(other)}")
@@ -636,12 +641,16 @@ defmodule Moto.Hooks do
               {:ok, agent, directives}
 
             {:error, reason} ->
+              error = normalize_hook_error(:after_turn, reason, agent, request_id)
+
               agent =
                 agent
-                |> Request.fail_request(request_id, {:hook, :after_turn, reason})
+                |> Request.fail_request(request_id, error)
                 |> put_request_hook_meta(
                   request_id,
-                  Map.put(hook_meta, :after_turn_applied?, true)
+                  hook_meta
+                  |> Map.put(:after_turn_applied?, true)
+                  |> Map.put(:error, error)
                 )
 
               {:ok, agent, directives}
@@ -654,4 +663,11 @@ defmodule Moto.Hooks do
   end
 
   defp run_after_turn_hooks(agent, _request_id, directives), do: {:ok, agent, directives}
+
+  defp normalize_hook_error(stage, reason, agent, request_id) do
+    Moto.Error.Normalize.hook_error(stage, reason,
+      agent_id: Map.get(agent, :id),
+      request_id: request_id
+    )
+  end
 end

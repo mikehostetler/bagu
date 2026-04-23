@@ -86,8 +86,13 @@ defmodule MotoTest.GuardrailsTest do
                {:ai_react_start, %{query: "Tell me the secret", request_id: "req-guard-1"}}
              )
 
-    assert Jido.AI.Request.get_result(updated_agent, "req-guard-1") ==
-             {:error, {:guardrail, :input, "safe_prompt", :unsafe_prompt}}
+    assert {:error, %Moto.Error.ExecutionError{} = error} =
+             Jido.AI.Request.get_result(updated_agent, "req-guard-1")
+
+    assert error.message == "Guardrail safe_prompt blocked input."
+    assert error.details.stage == :input
+    assert error.details.label == "safe_prompt"
+    assert error.details.cause == :unsafe_prompt
   end
 
   test "runs output guardrails after hooks and blocks the final result" do
@@ -105,8 +110,13 @@ defmodule MotoTest.GuardrailsTest do
     assert {:ok, updated_agent, []} =
              runtime.on_after_cmd(agent, {:ai_react_start, %{request_id: "req-guard-2"}}, [])
 
-    assert Jido.AI.Request.get_result(updated_agent, "req-guard-2") ==
-             {:error, {:guardrail, :output, "safe_reply", :unsafe_reply}}
+    assert {:error, %Moto.Error.ExecutionError{} = error} =
+             Jido.AI.Request.get_result(updated_agent, "req-guard-2")
+
+    assert error.message == "Guardrail safe_reply blocked output."
+    assert error.details.stage == :output
+    assert error.details.label == "safe_reply"
+    assert error.details.cause == :unsafe_reply
   end
 
   test "tool guardrails attach a runtime callback that interrupts before tool execution" do

@@ -45,7 +45,7 @@ defmodule Moto.Subagent.Runtime do
 
       {:error, reason, metadata} ->
         maybe_record_metadata(context, metadata)
-        {:error, {:subagent_failed, subagent.name, reason}}
+        {:error, normalize_subagent_error(subagent, reason, context, metadata)}
     end
   end
 
@@ -59,7 +59,7 @@ defmodule Moto.Subagent.Runtime do
 
       {:error, reason, metadata} ->
         maybe_record_metadata(context, metadata)
-        {:error, {:subagent_failed, subagent.name, reason}}
+        {:error, normalize_subagent_error(subagent, reason, context, metadata)}
     end
   end
 
@@ -120,7 +120,7 @@ defmodule Moto.Subagent.Runtime do
 
   defp visible_outcome(:ok), do: :ok
   defp visible_outcome({:interrupt, _interrupt}), do: :interrupt
-  defp visible_outcome({:error, reason}), do: {:error, inspect(reason)}
+  defp visible_outcome({:error, reason}), do: {:error, Moto.format_error(reason)}
   defp visible_outcome(other), do: other
 
   defp start_child(agent_module, child_id) do
@@ -642,6 +642,15 @@ defmodule Moto.Subagent.Runtime do
       context_keys: context_keys(context),
       child_result_meta: child_result_meta
     }
+  end
+
+  defp normalize_subagent_error(subagent, reason, context, metadata) do
+    Moto.Error.Normalize.subagent_error(reason,
+      agent_id: subagent.name,
+      target: subagent.target,
+      request_id: Map.get(context, Moto.Subagent.request_id_key()) || Map.get(metadata, :child_request_id),
+      cause: reason
+    )
   end
 
   defp target_mode(:ephemeral), do: :ephemeral
