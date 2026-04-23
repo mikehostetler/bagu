@@ -14,7 +14,8 @@ defmodule BaguTest.ImportedAgentTest do
     RestrictRefundsHook,
     ReviewSpecialist,
     SafePromptGuardrail,
-    SafeReplyGuardrail
+    SafeReplyGuardrail,
+    WorkflowCapability
   }
 
   test "imports a constrained imported agent from JSON" do
@@ -362,6 +363,61 @@ defmodule BaguTest.ImportedAgentTest do
 
     assert [%{timeout: 45_000, forward_context: {:except, ["secret"]}, result: :structured}] =
              agent.subagents
+  end
+
+  test "imports constrained workflows and compiles them into generated tool modules" do
+    assert {:ok, %ImportedAgent{} = agent} =
+             Bagu.import_agent(
+               imported_spec("workflow_import_agent",
+                 instructions: "You can run workflows.",
+                 capabilities: %{
+                   "workflows" => [
+                     %{
+                       "workflow" => "workflow_capability_math",
+                       "as" => "run_math",
+                       "description" => "Run the deterministic math workflow",
+                       "timeout" => 12_345,
+                       "forward_context" => %{"mode" => "none"},
+                       "result" => "structured"
+                     }
+                   ]
+                 }
+               ),
+               available_workflows: [WorkflowCapability.MathWorkflow]
+             )
+
+    assert [%{name: "run_math", timeout: 12_345, forward_context: :none, result: :structured}] =
+             agent.workflows
+
+    assert Enum.map(agent.tool_modules, & &1.name()) == ["run_math"]
+
+    workflow_tool = hd(agent.tool_modules)
+
+    assert {:ok, %{output: %{value: 12}, workflow: metadata}} =
+             workflow_tool.run(%{value: 5}, %{suffix: "ignored"})
+
+    assert metadata.name == "run_math"
+
+    assert {:ok, encoded_json} = Bagu.encode_agent(agent, format: :json)
+    assert encoded_json =~ "\"workflows\""
+    assert encoded_json =~ "\"workflow\": \"workflow_capability_math\""
+    assert encoded_json =~ "\"timeout\": 12345"
+
+    assert {:ok, encoded_yaml} = Bagu.encode_agent(agent, format: :yaml)
+    assert encoded_yaml =~ "workflows:"
+    assert encoded_yaml =~ "workflow: \"workflow_capability_math\""
+  end
+
+  test "imports workflow string entries through available_workflows" do
+    assert {:ok, %ImportedAgent{} = agent} =
+             Bagu.import_agent(
+               imported_spec("workflow_string_import_agent",
+                 capabilities: %{"workflows" => ["workflow_capability_math"]}
+               ),
+               available_workflows: [WorkflowCapability.MathWorkflow]
+             )
+
+    assert [%{name: "workflow_capability_math"}] = agent.workflows
   end
 
   test "starts an imported agent under the shared runtime" do
@@ -777,6 +833,90 @@ defmodule BaguTest.ImportedAgentTest do
              )
 
     assert reason =~ "subagent result must be :text or :structured"
+  end
+
+  test "rejects imported workflows without an available registry" do
+    assert {:error, reason} =
+             Bagu.import_agent(
+               imported_spec("missing_workflow_registry",
+                 instructions: "You can run workflows.",
+                 capabilities: %{"workflows" => ["workflow_capability_math"]}
+               )
+             )
+
+    assert reason =~ "available_workflows registry"
+  end
+
+  test "rejects unknown imported workflows" do
+    assert {:error, reason} =
+             Bagu.import_agent(
+               imported_spec("bad_workflow_import",
+                 capabilities: %{"workflows" => ["does_not_exist"]}
+               ),
+               available_workflows: [WorkflowCapability.MathWorkflow]
+             )
+
+    assert reason =~ "unknown workflow"
+  end
+
+  test "rejects imported workflows with duplicate published names" do
+    assert {:error, reason} =
+             Bagu.import_agent(
+               imported_spec("duplicate_workflow_import",
+                 capabilities: %{
+                   "workflows" => [
+                     "workflow_capability_math",
+                     %{"workflow" => "workflow_capability_context", "as" => "workflow_capability_math"}
+                   ]
+                 }
+               ),
+               available_workflows: [WorkflowCapability.MathWorkflow, WorkflowCapability.ContextWorkflow]
+             )
+
+    assert reason =~ "workflow capability names must be unique"
+  end
+
+  test "rejects imported workflows with invalid timeout" do
+    assert {:error, reason} =
+             Bagu.import_agent(
+               imported_spec("invalid_workflow_timeout_import",
+                 capabilities: %{"workflows" => [%{"workflow" => "workflow_capability_math", "timeout" => 0}]}
+               ),
+               available_workflows: [WorkflowCapability.MathWorkflow]
+             )
+
+    assert reason =~ "workflow capability timeout must be a positive integer"
+  end
+
+  test "rejects imported workflows with invalid forward_context" do
+    assert {:error, reason} =
+             Bagu.import_agent(
+               imported_spec("invalid_workflow_forward_context_import",
+                 capabilities: %{
+                   "workflows" => [
+                     %{
+                       "workflow" => "workflow_capability_math",
+                       "forward_context" => %{"mode" => "only"}
+                     }
+                   ]
+                 }
+               ),
+               available_workflows: [WorkflowCapability.MathWorkflow]
+             )
+
+    assert reason =~ "workflow capability forward_context keys must be a list"
+  end
+
+  test "rejects raw module strings as imported workflow refs" do
+    assert {:error, reason} =
+             Bagu.import_agent(
+               imported_spec("raw_workflow_module_import",
+                 capabilities: %{"workflows" => ["BaguTest.WorkflowCapability.MathWorkflow"]}
+               ),
+               available_workflows: [WorkflowCapability.MathWorkflow]
+             )
+
+    assert reason =~ "expected map"
   end
 
   test "rejects importing plugins without an available registry" do

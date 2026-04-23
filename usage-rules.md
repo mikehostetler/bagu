@@ -14,10 +14,12 @@ Use these rules when generating Bagu code or reviewing Bagu examples.
 ## Extensions
 
 - Use `capabilities do` for explicit tool modules, Ash resources, MCP tool
-  sync, skills, plugins, and subagents.
+  sync, skills, plugins, subagents, and workflow capabilities.
 - Use `lifecycle do` for memory, hooks, and guardrails.
 - Use `subagent` for manager-pattern delegation inside an agent turn. Do not
   model handoffs or workflow graphs as subagents.
+- Use `workflow` inside `capabilities do` when an agent should choose a known
+  deterministic process as a tool-like capability.
 
 ## Workflow DSL
 
@@ -30,6 +32,9 @@ Use these rules when generating Bagu code or reviewing Bagu examples.
 - Use workflows when application code owns the sequence and data dependencies.
   Use agents for open-ended LLM turns and subagents for delegated capabilities
   inside one agent turn.
+- Workflows may call agents as bounded steps, and agents may expose workflows
+  as tool-like capabilities. Keep the boundary explicit: agents decide intent;
+  workflows run fixed processes.
 - Keep raw Runic concepts out of public Bagu code. Do not expose facts,
   directives, strategy state, or Runic nodes in user-authored workflows.
 

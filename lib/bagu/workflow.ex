@@ -30,18 +30,41 @@ defmodule Bagu.Workflow do
   @doc false
   @spec definition(module()) :: {:ok, map()} | {:error, term()}
   def definition(workflow_module) when is_atom(workflow_module) do
-    _ = Code.ensure_loaded(workflow_module)
+    case Code.ensure_compiled(workflow_module) do
+      {:module, ^workflow_module} ->
+        workflow_definition(workflow_module)
 
-    cond do
-      function_exported?(workflow_module, :__bagu__, 0) ->
-        case workflow_module.__bagu__() do
-          %{kind: :workflow_definition} = definition -> {:ok, definition}
-          _other -> {:error, Bagu.Error.config_error("Module is not a Bagu workflow.", module: workflow_module)}
-        end
-
-      true ->
-        {:error, Bagu.Error.config_error("Module is not a Bagu workflow.", module: workflow_module)}
+      {:error, reason} ->
+        {:error,
+         Bagu.Error.config_error("Module is not a Bagu workflow.",
+           field: :workflow,
+           value: workflow_module,
+           details: %{module: workflow_module, reason: reason}
+         )}
     end
+  end
+
+  defp workflow_definition(workflow_module) do
+    if function_exported?(workflow_module, :__bagu__, 0) do
+      case workflow_module.__bagu__() do
+        %{kind: :workflow_definition} = definition ->
+          {:ok, definition}
+
+        _other ->
+          not_workflow_error(workflow_module)
+      end
+    else
+      not_workflow_error(workflow_module)
+    end
+  end
+
+  defp not_workflow_error(workflow_module) do
+    {:error,
+     Bagu.Error.config_error("Module is not a Bagu workflow.",
+       field: :workflow,
+       value: workflow_module,
+       details: %{module: workflow_module, reason: :not_bagu_workflow}
+     )}
   end
 
   defmacro __using__(opts \\ []) do

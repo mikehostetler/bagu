@@ -29,7 +29,7 @@ defmodule Bagu.Agent do
   - `agent.schema` as an optional Zoi map/object schema for runtime context
   - `defaults.model`
   - `defaults.instructions` as a string, module callback, or MFA tuple
-  - `capabilities` for tools, Ash resources, MCP tools, skills, plugins, and subagents
+  - `capabilities` for tools, Ash resources, MCP tools, skills, plugins, subagents, and workflows
   - `lifecycle` for memory, hooks, and guardrails
 
   A nested runtime module is generated automatically and uses `Jido.AI.Agent`
@@ -39,6 +39,9 @@ defmodule Bagu.Agent do
   capabilities while keeping the parent agent in control. Subagent entries can
   tune child `timeout`, public `forward_context`, and parent-visible `result`
   shape without introducing handoffs or workflow graphs.
+  Workflow entries compile deterministic `Bagu.Workflow` modules into
+  tool-like capabilities while keeping ordered business processes in the
+  workflow runtime.
   Plugin entries accept `Bagu.Plugin` modules and merge their declared
   action-backed tools into the same LLM-visible tool registry.
   """

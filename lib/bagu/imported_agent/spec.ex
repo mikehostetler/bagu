@@ -39,6 +39,18 @@ defmodule Bagu.ImportedAgent.Spec do
                              |> Zoi.max(128)
                              |> Zoi.regex(~r/^[a-z][a-z0-9_]*$/)
 
+  @workflow_name_schema Zoi.string()
+                        |> Zoi.trim()
+                        |> Zoi.min(1)
+                        |> Zoi.max(128)
+                        |> Zoi.regex(~r/^[a-z][a-z0-9_]*$/)
+
+  @workflow_tool_name_schema Zoi.string()
+                             |> Zoi.trim()
+                             |> Zoi.min(1)
+                             |> Zoi.max(128)
+                             |> Zoi.regex(~r/^[a-z][a-z0-9_]*$/)
+
   @subagent_forward_context_key_schema Zoi.union([
                                          Zoi.string() |> Zoi.trim() |> Zoi.min(1),
                                          Zoi.atom()
@@ -60,6 +72,8 @@ defmodule Bagu.ImportedAgent.Spec do
                                        unrecognized_keys: :error
                                      )
                                    ])
+
+  @workflow_forward_context_schema @subagent_forward_context_schema
 
   @hook_name_schema Zoi.string()
                     |> Zoi.trim()
@@ -93,6 +107,7 @@ defmodule Bagu.ImportedAgent.Spec do
   @default_guardrails %{input: [], output: [], tool: []}
   @default_memory nil
   @default_subagents []
+  @default_workflows []
   @default_skills []
   @default_skill_paths []
   @default_mcp_tools []
@@ -164,6 +179,31 @@ defmodule Bagu.ImportedAgent.Spec do
                      coerce: true,
                      unrecognized_keys: :error
                    )
+
+  @workflow_schema Zoi.union([
+                     @workflow_name_schema,
+                     Zoi.object(
+                       %{
+                         workflow: @workflow_name_schema,
+                         as: @workflow_tool_name_schema |> Zoi.optional(),
+                         description:
+                           Zoi.string()
+                           |> Zoi.trim()
+                           |> Zoi.min(1)
+                           |> Zoi.max(1_000)
+                           |> Zoi.optional(),
+                         timeout: Zoi.integer() |> Zoi.optional(),
+                         forward_context: @workflow_forward_context_schema |> Zoi.optional(),
+                         result:
+                           Zoi.string()
+                           |> Zoi.trim()
+                           |> Zoi.min(1)
+                           |> Zoi.optional()
+                       },
+                       coerce: true,
+                       unrecognized_keys: :error
+                     )
+                   ])
 
   @guardrails_schema Zoi.object(
                        %{
@@ -269,6 +309,7 @@ defmodule Bagu.ImportedAgent.Spec do
                            skill_paths: Zoi.list(@skill_path_schema) |> Zoi.default(@default_skill_paths),
                            mcp_tools: Zoi.list(@mcp_tool_schema) |> Zoi.default(@default_mcp_tools),
                            subagents: Zoi.list(@subagent_schema) |> Zoi.default(@default_subagents),
+                           workflows: Zoi.list(@workflow_schema) |> Zoi.default(@default_workflows),
                            plugins: Zoi.list(@plugin_name_schema) |> Zoi.default([])
                          },
                          coerce: true,
@@ -316,6 +357,7 @@ defmodule Bagu.ImportedAgent.Spec do
           skill_paths: [String.t()],
           mcp_tools: [map()],
           subagents: [map()],
+          workflows: [String.t() | map()],
           plugins: [String.t()],
           hooks: %{
             before_turn: [String.t()],
@@ -342,6 +384,7 @@ defmodule Bagu.ImportedAgent.Spec do
     skill_paths: @default_skill_paths,
     mcp_tools: @default_mcp_tools,
     subagents: @default_subagents,
+    workflows: @default_workflows,
     plugins: [],
     hooks: @default_hooks,
     guardrails: @default_guardrails
@@ -359,6 +402,7 @@ defmodule Bagu.ImportedAgent.Spec do
          {:ok, spec} <- validate_tools(spec, Keyword.get(opts, :available_tools, %{})),
          {:ok, spec} <- validate_skills(spec, Keyword.get(opts, :available_skills, %{})),
          {:ok, spec} <- validate_subagents(spec, Keyword.get(opts, :available_subagents, %{})),
+         {:ok, spec} <- validate_workflows(spec, Keyword.get(opts, :available_workflows, %{})),
          {:ok, spec} <- validate_plugins(spec, Keyword.get(opts, :available_plugins, %{})),
          {:ok, spec} <- validate_hooks(spec, Keyword.get(opts, :available_hooks, %{})) do
       validate_guardrails(
@@ -404,6 +448,11 @@ defmodule Bagu.ImportedAgent.Spec do
            validate_subagents(
              normalized_spec,
              Keyword.get(opts, :available_subagents, %{})
+           ),
+         {:ok, normalized_spec} <-
+           validate_workflows(
+             normalized_spec,
+             Keyword.get(opts, :available_workflows, %{})
            ),
          {:ok, normalized_spec} <-
            validate_plugins(
@@ -454,6 +503,7 @@ defmodule Bagu.ImportedAgent.Spec do
         "skill_paths" => spec.skill_paths,
         "mcp_tools" => spec.mcp_tools,
         "subagents" => spec.subagents,
+        "workflows" => spec.workflows,
         "plugins" => spec.plugins
       },
       "lifecycle" => %{
@@ -491,6 +541,7 @@ defmodule Bagu.ImportedAgent.Spec do
       skill_paths: Map.get(capabilities, :skill_paths, @default_skill_paths),
       mcp_tools: Map.get(capabilities, :mcp_tools, @default_mcp_tools),
       subagents: Map.get(capabilities, :subagents, @default_subagents),
+      workflows: normalize_workflow_specs(Map.get(capabilities, :workflows, @default_workflows)),
       plugins: Map.get(capabilities, :plugins, []),
       hooks: Map.get(lifecycle, :hooks, @default_hooks),
       guardrails: Map.get(lifecycle, :guardrails, @default_guardrails)
@@ -682,6 +733,40 @@ defmodule Bagu.ImportedAgent.Spec do
     end
   end
 
+  defp validate_workflows(%__MODULE__{} = spec, available_workflows)
+       when is_map(available_workflows) do
+    cond do
+      not workflows_unique?(spec.workflows) ->
+        {:error, "workflow capability names must be unique"}
+
+      spec.workflows == [] ->
+        {:ok, spec}
+
+      map_size(available_workflows) == 0 ->
+        {:error, "workflows require an available_workflows registry when importing Bagu agents"}
+
+      true ->
+        spec.workflows
+        |> Enum.reduce_while({:ok, spec}, fn workflow, {:ok, spec_acc} ->
+          with {:ok, workflow_module} <-
+                 Bagu.Workflow.Capability.resolve_workflow_name(workflow.workflow, available_workflows),
+               {:ok, _normalized} <-
+                 Bagu.Workflow.Capability.new(
+                   workflow_module,
+                   as: Map.get(workflow, :as),
+                   description: Map.get(workflow, :description),
+                   timeout: Map.get(workflow, :timeout, 30_000),
+                   forward_context: Map.get(workflow, :forward_context, :public),
+                   result: Map.get(workflow, :result, :output)
+                 ) do
+            {:cont, {:ok, spec_acc}}
+          else
+            {:error, reason} -> {:halt, {:error, reason}}
+          end
+        end)
+    end
+  end
+
   defp validate_hooks(%__MODULE__{} = spec, available_hooks) when is_map(available_hooks) do
     cond do
       not hooks_unique?(spec.hooks) ->
@@ -757,6 +842,22 @@ defmodule Bagu.ImportedAgent.Spec do
       end)
 
     Enum.uniq(names) == names
+  end
+
+  defp workflows_unique?(workflows) do
+    names =
+      Enum.map(workflows, fn workflow ->
+        Map.get(workflow, :as) || Map.fetch!(workflow, :workflow)
+      end)
+
+    Enum.uniq(names) == names
+  end
+
+  defp normalize_workflow_specs(workflows) when is_list(workflows) do
+    Enum.map(workflows, fn
+      workflow when is_binary(workflow) -> %{workflow: workflow}
+      %{} = workflow -> workflow
+    end)
   end
 
   defp imported_subagent_target(%{target: "ephemeral"}), do: :ephemeral

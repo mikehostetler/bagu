@@ -81,11 +81,13 @@ defmodule BaguTest.MixTaskTest do
       end)
 
     assert output =~ "Bagu support demo"
-    assert output =~ "This example keeps the current boundary explicit"
+    assert output =~ "chat agents coordinate, workflows run fixed processes"
     assert output =~ "Subagents"
     assert output =~ "billing_specialist"
     assert output =~ "operations_specialist"
     assert output =~ "writer_specialist"
+    assert output =~ "Workflows"
+    assert output =~ "review_refund"
     assert output =~ "Deterministic workflows"
     assert output =~ "refund_review"
     assert output =~ "tool-only refund policy process"

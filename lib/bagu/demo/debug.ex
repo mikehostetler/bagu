@@ -147,6 +147,7 @@ defmodule Bagu.Demo.Debug do
         print_capability_summary(summary, level)
         print_memory_summary(summary.memory)
         print_subagent_summary(summary.subagents, level)
+        print_workflow_summary(summary.workflows, level)
         print_usage_summary(summary)
         print_error_summary(summary)
         print_event_summary(events)
@@ -297,6 +298,26 @@ defmodule Bagu.Demo.Debug do
     end)
   end
 
+  defp print_workflow_summary([], _level), do: :ok
+
+  defp print_workflow_summary(calls, level) when is_list(calls) do
+    section("Workflows")
+
+    Enum.each(calls, fn call ->
+      duration = call[:duration_ms] || 0
+      status = workflow_status(call)
+
+      row(to_string(call.name), "#{status} #{duration}ms")
+
+      if level == :trace do
+        maybe_row("workflow", format_optional_term(call[:workflow]))
+        maybe_row("input", format_context_keys(call[:input_keys]))
+        maybe_row("context", format_context_keys(call[:context_keys]))
+        maybe_row("output", preview(call[:output_preview], level))
+      end
+    end)
+  end
+
   defp print_usage_summary(%{usage: nil, duration_ms: nil}), do: :ok
 
   defp print_usage_summary(%{usage: nil, duration_ms: duration_ms}),
@@ -406,6 +427,10 @@ defmodule Bagu.Demo.Debug do
   defp subagent_status(%{outcome: {:interrupt, _interrupt}}), do: "interrupt"
   defp subagent_status(%{outcome: {:error, reason}}), do: "error:#{Bagu.format_error(reason)}"
   defp subagent_status(call), do: get_in(call, [:child_result_meta, :status]) || "unknown"
+
+  defp workflow_status(%{outcome: :ok}), do: "ok"
+  defp workflow_status(%{outcome: {:error, reason}}), do: "error:#{Bagu.format_error(reason)}"
+  defp workflow_status(_call), do: "unknown"
 
   defp invalid_log_level(level) do
     "invalid --log-level #{inspect(level)}. Expected one of: info, debug, trace"

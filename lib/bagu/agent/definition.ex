@@ -42,6 +42,11 @@ defmodule Bagu.Agent.Definition do
       |> section_entities([:capabilities], &match?(%Bagu.Agent.Dsl.Subagent{}, &1))
       |> resolve_subagents!(owner_module)
 
+    configured_workflows =
+      owner_module
+      |> section_entities([:capabilities], &match?(%Bagu.Agent.Dsl.Workflow{}, &1))
+      |> resolve_workflows!(owner_module)
+
     configured_memory =
       owner_module
       |> resolve_memory_config!(configured_context_schema)
@@ -116,6 +121,15 @@ defmodule Bagu.Agent.Definition do
 
     subagent_tool_names = Enum.map(configured_subagents, & &1.name)
 
+    workflow_tool_modules =
+      configured_workflows
+      |> Enum.with_index()
+      |> Enum.map(fn {workflow, index} ->
+        Bagu.Workflow.Capability.tool_module(owner_module, workflow, index)
+      end)
+
+    workflow_tool_names = Enum.map(configured_workflows, & &1.name)
+
     runtime_plugins = Bagu.Agent.Runtime.runtime_plugins(plugin_modules, configured_memory)
 
     tool_modules =
@@ -123,14 +137,16 @@ defmodule Bagu.Agent.Definition do
         ash_resource_info.tool_modules ++
         skill_tool_modules ++
         plugin_tool_modules ++
-        subagent_tool_modules
+        subagent_tool_modules ++
+        workflow_tool_modules
 
     tool_names =
       direct_tool_names ++
         ash_resource_info.tool_names ++
         skill_tool_names ++
         plugin_tool_names ++
-        subagent_tool_names
+        subagent_tool_names ++
+        workflow_tool_names
 
     ensure_unique_tool_names!(owner_module, tool_names)
 
@@ -170,6 +186,8 @@ defmodule Bagu.Agent.Definition do
       mcp_tools: configured_mcp_tools,
       subagents: configured_subagents,
       subagent_names: subagent_tool_names,
+      workflows: configured_workflows,
+      workflow_names: workflow_tool_names,
       plugins: plugin_modules,
       plugin_names: plugin_names,
       hooks: configured_hooks,
@@ -201,6 +219,9 @@ defmodule Bagu.Agent.Definition do
       subagents: configured_subagents,
       subagent_tool_modules: subagent_tool_modules,
       subagent_names: subagent_tool_names,
+      workflows: configured_workflows,
+      workflow_tool_modules: workflow_tool_modules,
+      workflow_names: workflow_tool_names,
       runtime_plugins: runtime_plugins,
       plugins: plugin_modules,
       plugin_names: plugin_names,
@@ -580,6 +601,49 @@ defmodule Bagu.Agent.Definition do
                 message: message,
                 path: [:capabilities, :subagent],
                 hint: "Declare subagents inside `capabilities` with a Bagu-compatible module.",
+                module: owner_module
+              )
+    end
+  end
+
+  defp resolve_workflows!(entries, owner_module) when is_list(entries) do
+    entries
+    |> Enum.reduce_while({:ok, []}, fn %Bagu.Agent.Dsl.Workflow{} = entry, {:ok, acc} ->
+      case Bagu.Workflow.Capability.new(
+             entry.workflow,
+             as: entry.as,
+             description: entry.description,
+             timeout: entry.timeout,
+             forward_context: entry.forward_context,
+             result: entry.result
+           ) do
+        {:ok, workflow} ->
+          {:cont, {:ok, acc ++ [workflow]}}
+
+        {:error, message} ->
+          {:halt, {:error, message}}
+      end
+    end)
+    |> case do
+      {:ok, workflows} ->
+        case Bagu.Workflow.Capability.workflow_names(workflows) do
+          {:ok, _names} ->
+            workflows
+
+          {:error, message} ->
+            raise Bagu.Agent.Dsl.Error.exception(
+                    message: message,
+                    path: [:capabilities, :workflow],
+                    hint: "Give each workflow capability a unique published tool name.",
+                    module: owner_module
+                  )
+        end
+
+      {:error, message} ->
+        raise Bagu.Agent.Dsl.Error.exception(
+                message: message,
+                path: [:capabilities, :workflow],
+                hint: "Declare workflows inside `capabilities` with a Bagu workflow module.",
                 module: owner_module
               )
     end

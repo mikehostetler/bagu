@@ -6,9 +6,7 @@ defmodule Bagu.Workflow.Codegen do
     public_definition = definition.public_definition
 
     quote location: :keep do
-      @doc """
-      Returns Bagu's compiled workflow-definition metadata for inspection tooling.
-      """
+      @doc false
       @spec __bagu__() :: map()
       def __bagu__, do: unquote(Macro.escape(public_definition))
 
@@ -36,9 +34,7 @@ defmodule Bagu.Workflow.Codegen do
       @spec output() :: term()
       def output, do: unquote(Macro.escape(definition.output))
 
-      @doc """
-      Builds the internal `Runic.Workflow` graph for this Bagu workflow.
-      """
+      @doc false
       @spec build_workflow() :: Runic.Workflow.t()
       def build_workflow, do: Bagu.Workflow.Runtime.build_workflow(__bagu__())
 

@@ -16,7 +16,7 @@ defmodule BaguTest.Evals.SupportAgentEvalTest do
     def name, do: "Support Specialist Routing"
 
     @impl true
-    def description, do: "Checks whether the support agent delegated to the expected specialist."
+    def description, do: "Checks whether the support agent used the expected specialist or workflow capability."
 
     @impl true
     def required_fields, do: [:response]
@@ -29,8 +29,12 @@ defmodule BaguTest.Evals.SupportAgentEvalTest do
 
     @impl true
     def evaluate(%SingleTurn{} = sample, _config, _opts) do
-      expected = sample.tags["expected_subagent"]
-      observed = sample.tags["observed_subagents"] || ""
+      expected = sample.tags["expected_capability"]
+
+      observed =
+        [sample.tags["observed_subagents"], sample.tags["observed_workflows"]]
+        |> Enum.reject(&(&1 in [nil, ""]))
+        |> Enum.join(",")
 
       score =
         observed
@@ -120,23 +124,24 @@ defmodule BaguTest.Evals.SupportAgentEvalTest do
     cases = [
       %{
         id: "refund-damaged-order",
-        prompt: "Customer says order ord_damaged arrived broken and wants a refund. Help them.",
-        expected_subagent: "billing_specialist",
-        reference:
-          "Should address refund handling for a damaged order and avoid claiming the refund was already issued.",
-        criteria: "Mentions refund or billing next steps; does not expose internal orchestration; stays concise."
+        prompt:
+          "Customer acct_vip says order ord_damaged arrived broken and wants a refund because it was damaged on arrival. Help them.",
+        expected_capability: "review_refund",
+        reference: "Should use the deterministic refund review and address the refund decision for the damaged order.",
+        criteria:
+          "Mentions refund eligibility or refund next steps; does not expose internal orchestration; stays concise."
       },
       %{
         id: "delivery-delay",
         prompt: "Customer asks where order ord_late is and says the delivery is late.",
-        expected_subagent: "operations_specialist",
+        expected_capability: "operations_specialist",
         reference: "Should address order status or delivery troubleshooting.",
         criteria: "Mentions delivery, shipment, or operational next steps; does not route to billing."
       },
       %{
         id: "rewrite-support-copy",
         prompt: "Rewrite this support reply to sound calmer and more direct: We cannot help you with this.",
-        expected_subagent: "writer_specialist",
+        expected_capability: "writer_specialist",
         reference: "Should produce calmer customer-facing copy.",
         criteria: "Improves tone; keeps the message brief; does not add unsupported policy claims."
       }
@@ -178,6 +183,7 @@ defmodule BaguTest.Evals.SupportAgentEvalTest do
       assert error.details.cause == :unsafe_support_data_request
       assert Bagu.format_error(error) == "Guardrail support_sensitive_data blocked input."
       assert Bagu.Subagent.latest_request_calls(pid) == []
+      assert Bagu.Workflow.Capability.latest_request_calls(pid) == []
     after
       Bagu.stop_agent(pid)
     end
@@ -206,6 +212,11 @@ defmodule BaguTest.Evals.SupportAgentEvalTest do
       |> Bagu.Subagent.latest_request_calls()
       |> Enum.map_join(",", & &1.name)
 
+    observed_workflows =
+      pid
+      |> Bagu.Workflow.Capability.latest_request_calls()
+      |> Enum.map_join(",", & &1.name)
+
     %SingleTurn{
       id: case.id,
       user_input: case.prompt,
@@ -213,8 +224,9 @@ defmodule BaguTest.Evals.SupportAgentEvalTest do
       reference: case.reference,
       rubrics: %{"criteria" => case.criteria},
       tags: %{
-        "expected_subagent" => case.expected_subagent,
-        "observed_subagents" => observed_subagents
+        "expected_capability" => case.expected_capability,
+        "observed_subagents" => observed_subagents,
+        "observed_workflows" => observed_workflows
       }
     }
   end

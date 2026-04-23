@@ -19,6 +19,7 @@ defmodule Bagu.Debug do
           context_preview: [String.t()],
           memory: map() | nil,
           subagents: [map()],
+          workflows: [map()],
           usage: map() | nil,
           duration_ms: non_neg_integer() | nil,
           interrupt: Bagu.Interrupt.t() | nil,
@@ -47,9 +48,9 @@ defmodule Bagu.Debug do
 
   @spec request_summary(pid() | String.t()) :: {:ok, summary()} | {:error, term()}
   def request_summary(server_or_id) do
-    with {:ok, agent, request_id, request, pending_meta, subagent_calls} <-
+    with {:ok, agent, request_id, request, pending_meta, subagent_calls, workflow_calls} <-
            latest_request_snapshot(server_or_id) do
-      {:ok, build_summary(agent, request_id, request, pending_meta, subagent_calls)}
+      {:ok, build_summary(agent, request_id, request, pending_meta, subagent_calls, workflow_calls)}
     end
   end
 
@@ -60,7 +61,15 @@ defmodule Bagu.Debug do
         {:error, Bagu.Error.Normalize.debug_error(:request_not_found, request_id: request_id)}
 
       request ->
-        {:ok, build_summary(agent, request_id, request, %{}, stored_subagent_calls(agent, request_id))}
+        {:ok,
+         build_summary(
+           agent,
+           request_id,
+           request,
+           %{},
+           stored_subagent_calls(agent, request_id),
+           stored_workflow_calls(agent, request_id)
+         )}
     end
   end
 
@@ -80,7 +89,8 @@ defmodule Bagu.Debug do
           request ->
             pending_meta = pending_runtime_meta(server_or_id, request_id)
             subagent_calls = Bagu.Subagent.request_calls(server_or_id, request_id)
-            {:ok, agent, request_id, request, pending_meta, subagent_calls}
+            workflow_calls = Bagu.Workflow.Capability.request_calls(server_or_id, request_id)
+            {:ok, agent, request_id, request, pending_meta, subagent_calls, workflow_calls}
         end
 
       {:error, reason} ->
@@ -88,7 +98,7 @@ defmodule Bagu.Debug do
     end
   end
 
-  defp build_summary(agent, request_id, request, pending_meta, subagent_calls) do
+  defp build_summary(agent, request_id, request, pending_meta, subagent_calls, workflow_calls) do
     request_meta = Map.get(request, :meta, %{})
     debug_meta = Map.merge(Map.get(request_meta, @meta_key, %{}), pending_meta)
     hook_meta = Map.get(request_meta, :bagu_hooks, %{})
@@ -115,6 +125,7 @@ defmodule Bagu.Debug do
       context_preview: context_preview(hook_meta, guardrail_meta, memory_meta),
       memory: memory_summary(memory_meta),
       subagents: subagent_calls,
+      workflows: workflow_calls,
       usage: usage_summary(Map.get(request_meta, :usage)),
       duration_ms: duration_ms(request),
       interrupt: interrupt,
@@ -301,6 +312,13 @@ defmodule Bagu.Debug do
 
   defp stored_subagent_calls(agent, request_id) do
     case Bagu.Subagent.get_request_meta(agent, request_id) do
+      %{calls: calls} when is_list(calls) -> calls
+      _ -> []
+    end
+  end
+
+  defp stored_workflow_calls(agent, request_id) do
+    case Bagu.Workflow.Capability.get_request_meta(agent, request_id) do
       %{calls: calls} when is_list(calls) -> calls
       _ -> []
     end

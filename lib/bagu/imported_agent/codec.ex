@@ -140,6 +140,8 @@ defmodule Bagu.ImportedAgent.Codec do
       indent_lines(encode_yaml_mcp_tools(spec.mcp_tools), 2),
       "  subagents:",
       indent_lines(encode_yaml_subagents(spec.subagents), 2),
+      "  workflows:",
+      indent_lines(encode_yaml_workflows(spec.workflows), 2),
       "  plugins:",
       indent_lines(encode_yaml_plugins(spec.plugins), 2),
       "lifecycle:",
@@ -228,6 +230,28 @@ defmodule Bagu.ImportedAgent.Codec do
           )
 
       Enum.join(lines, "\n")
+    end)
+  end
+
+  defp encode_yaml_workflows([]), do: "  []"
+
+  defp encode_yaml_workflows(workflows) do
+    Enum.map_join(workflows, "\n", fn
+      workflow when is_binary(workflow) ->
+        "  - #{Jason.encode!(workflow)}"
+
+      workflow ->
+        lines =
+          [
+            "  - workflow: #{Jason.encode!(workflow["workflow"] || workflow[:workflow])}"
+          ] ++
+            maybe_yaml_line("as", workflow["as"] || workflow[:as]) ++
+            maybe_yaml_line("description", workflow["description"] || workflow[:description]) ++
+            maybe_yaml_line("timeout", workflow["timeout"] || workflow[:timeout], "    ") ++
+            maybe_yaml_line("result", workflow["result"] || workflow[:result], "    ") ++
+            maybe_yaml_forward_context(workflow["forward_context"] || workflow[:forward_context])
+
+        Enum.join(lines, "\n")
     end)
   end
 

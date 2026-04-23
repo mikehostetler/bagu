@@ -5,6 +5,7 @@ defmodule Bagu.ImportedAgent.Registries do
           tools: Bagu.Tool.registry(),
           skills: Bagu.Skill.registry(),
           subagents: Bagu.Subagent.registry(),
+          workflows: Bagu.Workflow.Capability.registry(),
           plugins: Bagu.Plugin.registry(),
           hooks: Bagu.Hook.registry(),
           guardrails: Bagu.Guardrail.registry()
@@ -22,6 +23,7 @@ defmodule Bagu.ImportedAgent.Registries do
     with {:ok, tool_registry} <- available_tool_registry(opts),
          {:ok, skill_registry} <- available_skill_registry(opts),
          {:ok, subagent_registry} <- available_subagent_registry(opts),
+         {:ok, workflow_registry} <- available_workflow_registry(opts),
          {:ok, plugin_registry} <- available_plugin_registry(opts),
          {:ok, hook_registry} <- available_hook_registry(opts),
          {:ok, guardrail_registry} <- available_guardrail_registry(opts) do
@@ -30,6 +32,7 @@ defmodule Bagu.ImportedAgent.Registries do
          tools: tool_registry,
          skills: skill_registry,
          subagents: subagent_registry,
+         workflows: workflow_registry,
          plugins: plugin_registry,
          hooks: hook_registry,
          guardrails: guardrail_registry
@@ -45,6 +48,7 @@ defmodule Bagu.ImportedAgent.Registries do
        |> Keyword.put(:available_tools, registries.tools)
        |> Keyword.put(:available_skills, registries.skills)
        |> Keyword.put(:available_subagents, registries.subagents)
+       |> Keyword.put(:available_workflows, registries.workflows)
        |> Keyword.put(:available_plugins, registries.plugins)
        |> Keyword.put(:available_hooks, registries.hooks)
        |> Keyword.put(:available_guardrails, registries.guardrails)}
@@ -105,6 +109,29 @@ defmodule Bagu.ImportedAgent.Registries do
     end)
   end
 
+  @spec resolve_workflows([map()], Bagu.Workflow.Capability.registry()) ::
+          {:ok, [Bagu.Workflow.Capability.t()]} | {:error, String.t()}
+  def resolve_workflows(workflows, workflow_registry) do
+    workflows
+    |> Enum.reduce_while({:ok, []}, fn workflow_spec, {:ok, acc} ->
+      with {:ok, workflow_module} <-
+             Bagu.Workflow.Capability.resolve_workflow_name(workflow_spec.workflow, workflow_registry),
+           {:ok, workflow} <-
+             Bagu.Workflow.Capability.new(
+               workflow_module,
+               as: Map.get(workflow_spec, :as),
+               description: Map.get(workflow_spec, :description),
+               timeout: Map.get(workflow_spec, :timeout, 30_000),
+               forward_context: Map.get(workflow_spec, :forward_context, :public),
+               result: Map.get(workflow_spec, :result, :output)
+             ) do
+        {:cont, {:ok, acc ++ [workflow]}}
+      else
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
   defp available_tool_registry(opts) do
     opts
     |> Keyword.get(:available_tools, [])
@@ -127,6 +154,12 @@ defmodule Bagu.ImportedAgent.Registries do
     opts
     |> Keyword.get(:available_subagents, [])
     |> Bagu.Subagent.normalize_available_subagents()
+  end
+
+  defp available_workflow_registry(opts) do
+    opts
+    |> Keyword.get(:available_workflows, [])
+    |> Bagu.Workflow.Capability.normalize_available_workflows()
   end
 
   defp available_hook_registry(opts) do

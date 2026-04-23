@@ -34,6 +34,7 @@ defmodule Bagu.Demo.Inventory do
       print_capabilities(definition)
       print_pipeline(definition)
       print_subagents(definition)
+      print_workflows(definition)
       print_try_next(Keyword.get(opts, :try, []))
     end
 
@@ -78,6 +79,7 @@ defmodule Bagu.Demo.Inventory do
     maybe_row("mcp", format_mcp(Map.get(definition, :mcp_tools, [])))
     maybe_row("skills", format_skills(Map.get(definition, :skills)))
     maybe_row("plugins", format_list(Map.get(definition, :plugin_names, [])))
+    maybe_row("workflows", format_list(Map.get(definition, :workflow_names, [])))
   end
 
   defp print_pipeline(definition) do
@@ -115,6 +117,27 @@ defmodule Bagu.Demo.Inventory do
   end
 
   defp print_subagents(_definition), do: :ok
+
+  defp print_workflows(%{workflows: workflows}) when is_list(workflows) and workflows != [] do
+    section("Workflows")
+
+    Enum.each(workflows, fn workflow ->
+      row(
+        workflow.name,
+        Enum.join(
+          [
+            format_ref(workflow.workflow),
+            "timeout=#{workflow.timeout}ms",
+            "result=#{workflow.result}",
+            "forwards=#{format_forward_context(workflow.forward_context)}"
+          ],
+          ", "
+        )
+      )
+    end)
+  end
+
+  defp print_workflows(_definition), do: :ok
 
   defp print_try_next([]), do: :ok
 

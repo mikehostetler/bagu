@@ -20,7 +20,8 @@ defmodule Bagu.Agent.Dsl do
     SkillRef,
     Subagent,
     Tool,
-    ToolGuardrail
+    ToolGuardrail,
+    Workflow
   }
 
   @agent_section %Spark.Dsl.Section{
@@ -272,10 +273,54 @@ defmodule Bagu.Agent.Dsl do
     ]
   }
 
+  @workflow_entity %Spark.Dsl.Entity{
+    name: :workflow,
+    describe: """
+    Register a deterministic Bagu workflow as a tool-like agent capability.
+    """,
+    target: Workflow,
+    args: [:workflow],
+    schema: [
+      workflow: [
+        type: :atom,
+        required: true,
+        doc: "A module defined with `use Bagu.Workflow`."
+      ],
+      as: [
+        type: :any,
+        required: false,
+        doc: "Optional published tool name override for this workflow."
+      ],
+      description: [
+        type: :string,
+        required: false,
+        doc: "Optional tool description override for this workflow."
+      ],
+      timeout: [
+        type: :any,
+        required: false,
+        default: 30_000,
+        doc: "Workflow execution timeout in milliseconds."
+      ],
+      forward_context: [
+        type: :any,
+        required: false,
+        default: :public,
+        doc: "Context forwarding policy: :public, :none, {:only, keys}, or {:except, keys}."
+      ],
+      result: [
+        type: :any,
+        required: false,
+        default: :output,
+        doc: "Parent-visible result shape: :output or :structured."
+      ]
+    ]
+  }
+
   @capabilities_section %Spark.Dsl.Section{
     name: :capabilities,
     describe: """
-    Register the tools, skills, plugins, and subagents available to this agent.
+    Register the tools, skills, plugins, subagents, and workflows available to this agent.
     """,
     entities: [
       @tool_entity,
@@ -284,7 +329,8 @@ defmodule Bagu.Agent.Dsl do
       @skill_ref_entity,
       @skill_path_entity,
       @plugin_entity,
-      @subagent_entity
+      @subagent_entity,
+      @workflow_entity
     ]
   }
 

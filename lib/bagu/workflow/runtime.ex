@@ -41,8 +41,6 @@ defmodule Bagu.Workflow.Runtime do
   @doc false
   @spec inspect_definition(definition()) :: map()
   def inspect_definition(%{kind: :workflow_definition} = definition) do
-    workflow = build_workflow(definition)
-
     %{
       kind: :workflow_definition,
       id: definition.id,
@@ -51,10 +49,7 @@ defmodule Bagu.Workflow.Runtime do
       input_schema: definition.input_schema,
       steps: inspect_steps(definition),
       dependencies: definition.dependencies,
-      output: definition.output,
-      graph: Introspection.workflow_graph(workflow),
-      node_map: Introspection.node_map(workflow),
-      execution_summary: Introspection.execution_summary(workflow)
+      output: definition.output
     }
   end
 

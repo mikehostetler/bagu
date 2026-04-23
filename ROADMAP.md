@@ -73,6 +73,8 @@ Out of scope:
 
 Goal: make every important runtime failure readable and predictable before beta.
 
+Status: done.
+
 Scope:
 
 - Normalize workflow errors into `Bagu.Error`.
@@ -200,6 +202,8 @@ Exit criteria:
 
 Goal: freeze the beta public surface.
 
+Status: done.
+
 Scope:
 
 - Review all public modules and function names.
@@ -211,6 +215,78 @@ Scope:
 - Confirm imported JSON/YAML specs match the beta section layout.
 - Update README, usage rules, changelog, docs groups, and package metadata.
 - Run the full release gate and demo smoke checks.
+
+Detailed plan:
+
+1. Inventory the public surface.
+   - List exported modules and functions from `lib/bagu`.
+   - Separate intended beta API from implementation modules.
+   - Mark internal modules with `@moduledoc false` where they should not be
+     presented as public.
+   - Confirm ExDoc grouping matches the intended public story.
+
+2. Freeze top-level runtime APIs.
+   - Confirm `Bagu.chat/3`, `Bagu.start_agent/2`, `Bagu.stop_agent/1`,
+     `Bagu.format_error/1`, `Bagu.Workflow.run/3`, and
+     `Bagu.inspect_workflow/1` are the intended beta entrypoints.
+   - Decide whether `Bagu.run/3` belongs in beta or should be deferred.
+   - Ensure successful return shapes and error return shapes are documented and
+     tested at public boundaries.
+
+3. Freeze the Agent DSL.
+   - Confirm `agent`, `defaults`, `capabilities`, and `lifecycle` are the beta
+     sections.
+   - Confirm `instructions` is the only public prompt field.
+   - Audit examples and imported specs for stale `system_prompt`, legacy flat
+     placement, or old `Moto` naming.
+   - Keep Jido-specific terms out of public docs unless they explain an internal
+     adapter boundary.
+
+4. Freeze the Workflow DSL.
+   - Confirm workflow `id`, `description`, `input`, `steps`, and `output` are
+     the beta contract.
+   - Confirm `tool`, `function`, and `agent` are the only beta step kinds.
+   - Confirm direct `Runic` concepts stay internal.
+   - Decide whether workflow inspection output is stable enough for beta or
+     should be marked experimental.
+
+5. Decide the agent/workflow integration boundary.
+   - Evaluate whether beta needs an agent capability adapter for workflows, for
+     example `workflow MyWorkflow, as: :review_refund`.
+   - If included, keep it narrow: expose workflows to agents as tool-like
+     capabilities, but continue running them through `Bagu.Workflow`.
+   - If deferred, document the current rule clearly: workflows may call agents,
+     but agents do not yet call workflows directly.
+   - Use the support example as the decision fixture because it already exposes
+     both directions.
+
+6. Stabilize errors and diagnostics.
+   - Confirm runtime errors are always Bagu/Splode errors at public boundaries.
+   - Confirm `Bagu.format_error/1` is the only recommended display path.
+   - Audit demo CLIs, evals, and debug output for raw `inspect(reason)` usage on
+     known Bagu errors.
+
+7. Stabilize examples and eval posture.
+   - Keep kitchen sink broad, but make focused examples the primary docs path.
+   - Ensure support, workflow, imported, orchestrator, and chat demos all use
+     the renamed `mix bagu` commands.
+   - Keep live LLM evals excluded by default and document required environment
+     variables.
+
+8. Stabilize dependency posture.
+   - Decide which local path dependencies are acceptable for beta.
+   - For public Hex beta, replace local paths with Hex releases, Git refs, or
+     pinned tags.
+   - Document any dependency that remains intentionally experimental.
+
+9. Run the beta release gate.
+   - `mix format --check-formatted`
+   - `mix compile --warnings-as-errors`
+   - `mix test`
+   - `mix credo --min-priority higher`
+   - `mix dialyzer`
+   - `mix quality`
+   - Smoke all `mix bagu ... --dry-run` demos.
 
 Exit criteria:
 
@@ -336,9 +412,9 @@ Possible recipes:
 
 The next work should follow this order:
 
-1. Runtime error normalization.
-2. Public API stabilization.
-3. Beta release prep.
+1. Beta release prep.
+2. Dependency posture for a public beta.
+3. Post-beta character/handoff/team planning.
 
 Characters, handoffs, Pods, and Crew-style coordination are important, but they
 should not block the first beta unless the beta positioning explicitly requires

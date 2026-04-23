@@ -62,7 +62,8 @@ defmodule Bagu.Agent.Runtime do
                Bagu.Guardrails.on_after_cmd(agent, action, directives, @bagu_guardrail_defaults),
              {:ok, agent, directives} <-
                Bagu.Memory.on_after_cmd(agent, action, directives, @bagu_memory_defaults),
-             {:ok, agent, directives} <- Bagu.Subagent.on_after_cmd(agent, action, directives) do
+             {:ok, agent, directives} <- Bagu.Subagent.on_after_cmd(agent, action, directives),
+             {:ok, agent, directives} <- Bagu.Workflow.Capability.on_after_cmd(agent, action, directives) do
           {:ok, agent, directives}
         end
       end

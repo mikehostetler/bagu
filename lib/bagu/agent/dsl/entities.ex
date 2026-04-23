@@ -58,6 +58,20 @@ defmodule Bagu.Agent.Dsl.Subagent do
   ]
 end
 
+defmodule Bagu.Agent.Dsl.Workflow do
+  @moduledoc false
+
+  defstruct [
+    :workflow,
+    :as,
+    :description,
+    :timeout,
+    :forward_context,
+    :result,
+    :__spark_metadata__
+  ]
+end
+
 defmodule Bagu.Agent.Dsl.MemoryMode do
   @moduledoc false
 

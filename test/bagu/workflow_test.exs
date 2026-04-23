@@ -92,8 +92,8 @@ defmodule BaguTest.WorkflowTest do
     assert inspection.id == "tool_only_workflow"
     assert Enum.map(inspection.steps, & &1.name) == [:add, :double]
     assert inspection.dependencies.double == [:add]
-    assert %{nodes: nodes, edges: edges} = inspection.graph
-    assert length(nodes) == 2
-    assert length(edges) >= 1
+    refute Map.has_key?(inspection, :graph)
+    refute Map.has_key?(inspection, :node_map)
+    refute Map.has_key?(inspection, :execution_summary)
   end
 end

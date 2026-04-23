@@ -5,14 +5,15 @@ and workflows.
 
 It intentionally keeps both surfaces visible:
 
-- a front-door support chat agent with a team of specialist subagents
+- a front-door support chat agent with a team of specialist subagents and one
+  deterministic workflow capability
 - explicit workflows for fixed support processes
 
-The current example does **not** pretend that workflows are embedded inside the
-agent runtime. Instead it shows the honest shape Bagu has today:
+The current example keeps the boundaries explicit:
 
 - chat agent owns open-ended intake and delegation
 - workflows own deterministic support processes
+- the chat agent can expose a workflow as a tool-like capability
 - workflows can reuse a specialist agent as one bounded step
 - guardrails own hard safety boundaries before the agent calls a model or
   specialist
@@ -21,6 +22,7 @@ agent runtime. Instead it shows the honest shape Bagu has today:
 
 The front-door `support_router_agent` can delegate to:
 
+- `review_refund`, a deterministic workflow capability for known refund cases
 - `billing_specialist`
 - `operations_specialist`
 - `writer_specialist`
@@ -36,6 +38,7 @@ before the LLM or any specialist subagent is called.
   - loads customer + order data
   - applies deterministic refund policy
   - returns a structured decision
+  - is exposed to the router as `review_refund`
 
 - `escalation_draft`
   - deterministic process
@@ -54,7 +57,7 @@ mix bagu support --log-level trace --dry-run
 Chat path:
 
 ```bash
-mix bagu support -- "Customer says order ord_damaged arrived broken and wants a refund."
+mix bagu support -- "Customer acct_vip says order ord_damaged arrived broken and wants a refund because it was damaged on arrival."
 ```
 
 Workflow path:

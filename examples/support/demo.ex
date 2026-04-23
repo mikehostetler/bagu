@@ -120,9 +120,9 @@ defmodule Bagu.Examples.Support.Demo do
 
   defp print_header(log_level) do
     Inventory.print_compiled("Bagu support demo", agent_module(), log_level,
-      notice: "This example keeps the current boundary explicit: chat agents and workflows are adjacent entrypoints.",
+      notice: "This example keeps the boundary explicit: chat agents coordinate, workflows run fixed processes.",
       try: [
-        ~s(mix bagu support -- "Customer says order ord_damaged arrived broken and wants a refund."),
+        ~s(mix bagu support -- "Customer acct_vip says order ord_damaged arrived broken and wants a refund because it was damaged on arrival."),
         ~s(mix bagu support -- "/refund acct_vip ord_damaged Damaged on arrival"),
         ~s(mix bagu support -- "/escalate acct_trial Customer is locked out and threatening to cancel")
       ]
@@ -144,6 +144,7 @@ defmodule Bagu.Examples.Support.Demo do
     IO.puts("")
     IO.puts("Boundary")
     IO.puts("  chat agent: open-ended intake and delegation across specialist teammates")
+    IO.puts("  workflow capability: review_refund lets the agent run a fixed refund process")
     IO.puts("  workflows: app-owned support processes with fixed step order")
     IO.puts("  escalation_draft: deterministic flow that reuses writer_specialist as one bounded step")
     IO.puts("")
@@ -187,7 +188,7 @@ defmodule Bagu.Examples.Support.Demo do
       reply_label: "support",
       interactive_reply_label: "support",
       try: [
-        "Customer says order ord_damaged arrived broken and wants a refund.",
+        "Customer acct_vip says order ord_damaged arrived broken and wants a refund because it was damaged on arrival.",
         "Please rewrite this reply to sound calmer and more direct."
       ],
       subagents: [empty: :silent, result_preview?: true],

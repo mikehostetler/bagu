@@ -120,7 +120,7 @@ defmodule Bagu.Demo.Loader do
       "guardrails" in segments -> 50
       "subagents" in segments -> 60
       "agents" in segments -> 70
-      "workflows" in segments -> 80
+      "workflows" in segments -> 70
       true -> 15
     end
   end

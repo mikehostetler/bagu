@@ -5,10 +5,12 @@ defmodule Bagu.Agent.Codegen do
   def emit(definition) when is_map(definition) do
     request_transformer_definition = request_transformer_definition(definition)
     subagent_tool_definitions = subagent_tool_definitions(definition)
+    workflow_tool_definitions = workflow_tool_definitions(definition)
 
     quote location: :keep do
       unquote(request_transformer_definition)
       unquote_splicing(subagent_tool_definitions)
+      unquote_splicing(workflow_tool_definitions)
 
       defmodule unquote(definition.runtime_module) do
         use Jido.AI.Agent,
@@ -82,6 +84,15 @@ defmodule Bagu.Agent.Codegen do
     end)
   end
 
+  defp workflow_tool_definitions(definition) do
+    definition.workflows
+    |> Enum.with_index()
+    |> Enum.map(fn {workflow, index} ->
+      tool_module = Enum.at(definition.workflow_tool_modules, index)
+      Bagu.Workflow.Capability.tool_module_ast(tool_module, workflow)
+    end)
+  end
+
   defp public_agent_functions(definition) do
     quote location: :keep do
       @doc """
@@ -125,15 +136,11 @@ defmodule Bagu.Agent.Codegen do
         end
       end
 
-      @doc """
-      Returns Bagu's compiled agent-definition metadata for inspection tooling.
-      """
+      @doc false
       @spec __bagu__() :: map()
       def __bagu__, do: unquote(Macro.escape(definition.public_definition))
 
-      @doc """
-      Returns the generated runtime module used internally by Bagu.
-      """
+      @doc false
       @spec runtime_module() :: module()
       def runtime_module, do: unquote(definition.runtime_module)
 
@@ -155,9 +162,7 @@ defmodule Bagu.Agent.Codegen do
       @spec instructions() :: Bagu.Agent.SystemPrompt.spec()
       def instructions, do: unquote(Macro.escape(definition.configured_instructions))
 
-      @doc """
-      Returns the generated request transformer used for a dynamic system prompt, if any.
-      """
+      @doc false
       @spec request_transformer() :: module() | nil
       def request_transformer, do: unquote(definition.effective_request_transformer)
 
@@ -232,6 +237,18 @@ defmodule Bagu.Agent.Codegen do
       """
       @spec subagent_names() :: [String.t()]
       def subagent_names, do: unquote(Macro.escape(definition.subagent_names))
+
+      @doc """
+      Returns the configured workflow capabilities.
+      """
+      @spec workflows() :: [Bagu.Workflow.Capability.t()]
+      def workflows, do: unquote(Macro.escape(definition.workflows))
+
+      @doc """
+      Returns the configured published workflow capability names.
+      """
+      @spec workflow_names() :: [String.t()]
+      def workflow_names, do: unquote(Macro.escape(definition.workflow_names))
 
       @doc """
       Returns the configured Bagu plugin modules.

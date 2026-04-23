@@ -4,11 +4,11 @@ Minimal harness layer over Jido and Jido.AI for defining and starting chat agent
 
 ## Status
 
-`bagu` is currently an experimental spike only.
+`bagu` is currently a pre-beta package.
 
-It is a design/prototyping repo, not a stable package. The API is expected to
-change, large parts may be rewritten, and the repository may disappear entirely
-if the spike does not hold up.
+The beta surface is being stabilized around agents, workflows, runtime errors,
+imports, and examples. APIs outside the documented Bagu facade may still change
+before a public Hex release.
 
 This beta implementation keeps the Spark DSL deliberately structured: immutable
 agent identity, runtime defaults, capabilities, and lifecycle policy are
@@ -16,7 +16,7 @@ declared in separate sections.
 
 ## Installation
 
-Bagu is not published to Hex yet. For local spike work, use the repository
+Bagu is not published to Hex yet. For local beta-candidate work, use the repository
 directly:
 
 ```elixir
@@ -62,6 +62,8 @@ Today, Bagu can:
   `Bagu.Runtime`
 - define explicit deterministic workflows with `use Bagu.Workflow`, backed by
   `jido_runic`, for multi-step tool/function/agent pipelines
+- expose deterministic workflows to agents as tool-like capabilities when a
+  chat turn needs a fixed business process
 - import constrained agents from JSON or YAML at runtime with explicit
   allowlists for tools, plugins, hooks, and guardrails, including default
   imported context and memory settings
@@ -98,9 +100,9 @@ mix quality
 `mix quality` follows the Jido package quality baseline: formatting, compiler
 warnings, Credo, Dialyzer, and documentation coverage.
 
-Coverage is enforced with ExCoveralls at the current spike baseline of 70%.
+Coverage is enforced with ExCoveralls at the current pre-beta baseline of 70%.
 The Jido package target is 90%; Bagu should raise this before any stable
-release instead of pretending the spike is already there.
+release.
 
 The generated runtime currently uses:
 
@@ -141,7 +143,7 @@ The DSL currently supports:
 
 - `agent do`: required `id`, optional `description`, optional Zoi `schema`
 - `defaults do`: required `instructions`, optional `model`
-- `capabilities do`: `tool`, `ash_resource`, `mcp_tools`, `skill`, `load_path`, `plugin`, and `subagent`
+- `capabilities do`: `tool`, `ash_resource`, `mcp_tools`, `skill`, `load_path`, `plugin`, `subagent`, and `workflow`
 - `lifecycle do`: `memory`, hooks, and guardrails
 
 `model` accepts the same shapes Jido.AI and ReqLLM support:
@@ -283,8 +285,10 @@ Workflow refs are explicit:
 - `context(:key)` reads runtime side-band context from `opts[:context]`.
 - `value(term)` marks a static value.
 
-`Bagu.inspect_workflow/1` returns a stable definition map with step
-dependencies and the internal `jido_runic` graph data.
+`Bagu.inspect_workflow/1` returns a stable definition map with workflow id,
+steps, dependencies, and output selection. Debug workflow runs can include
+internal graph data, but raw Runic graph structures are not part of the stable
+Bagu authoring surface.
 
 ## Default Context
 
@@ -950,6 +954,28 @@ The imported manager reference spec at
 `examples/orchestrator/imported/sample_manager_agent.json` shows the equivalent
 JSON `subagents` shape.
 
+## Workflow Capabilities
+
+Agents can expose deterministic workflows as tool-like capabilities. Use this
+when the agent should decide that a request needs a known business process, but
+the ordered work should still run through `Bagu.Workflow`.
+
+```elixir
+capabilities do
+  workflow MyApp.Workflows.RefundReview,
+    as: :review_refund,
+    description: "Review refund eligibility for a known account and order.",
+    timeout: 30_000,
+    forward_context: {:only, [:tenant, :session]},
+    result: :structured
+end
+```
+
+The generated tool uses the workflow input schema as its tool schema. By
+default it returns `%{output: workflow_output}`. With `result: :structured`, it
+also returns bounded workflow metadata for debugging. Workflow failures return
+structured Bagu errors and should be displayed with `Bagu.format_error/1`.
+
 ## Demo CLI
 
 Interactive:
@@ -994,7 +1020,7 @@ Support example:
 
 ```bash
 mix bagu support --log-level trace --dry-run
-mix bagu support -- "Customer says order ord_damaged arrived broken and wants a refund."
+mix bagu support -- "Customer acct_vip says order ord_damaged arrived broken and wants a refund because it was damaged on arrival."
 mix bagu support -- "/refund acct_vip ord_damaged Damaged on arrival"
 mix bagu support -- "/escalate acct_trial Customer is locked out and threatening to cancel"
 ```
@@ -1158,7 +1184,7 @@ The imported-agent path is intentionally narrower than the Elixir DSL:
 - `agent.context` as a plain default map
 - `defaults.model`
 - `defaults.instructions`
-- published tool, skill, MCP, plugin, and subagent declarations under `capabilities`
+- published tool, skill, MCP, plugin, subagent, and workflow declarations under `capabilities`
 - memory, hook, and guardrail declarations under `lifecycle`
 - `model` supports:
   - alias strings like `"fast"`
@@ -1178,6 +1204,10 @@ The imported-agent path is intentionally narrower than the Elixir DSL:
 - `mcp_tools` supports:
   - objects like `%{"endpoint" => "github", "prefix" => "github_"}`
   - endpoints may come from app config or runtime `Bagu.MCP.register_endpoint/2`
+- `workflows` supports:
+  - string names like `["refund_review"]`
+  - objects like `%{"workflow" => "refund_review", "as" => "review_refund"}`
+  - explicit resolution through `available_workflows: [MyApp.Workflows.RefundReview]`
 - `hooks` supports:
   - a stage-keyed map like `%{"before_turn" => ["reply_with_final_answer"]}`
   - multiple names per stage
@@ -1191,6 +1221,9 @@ The imported path does not currently support the `ash_resource` shorthand
 directly, because JSON/YAML specs cannot safely encode Elixir resource modules.
 It also does not support dynamic `instructions` callbacks yet, because the
 constrained JSON/YAML format intentionally avoids executable Elixir references.
+Imported workflow capabilities are supported through `capabilities.workflows`,
+but workflow names must resolve through an explicit `available_workflows`
+registry.
 
 The top-level helpers are:
 
@@ -1203,6 +1236,8 @@ The top-level helpers are:
 
 - The shared runtime lives in `Bagu.Runtime` and is started by the application supervisor.
 - `Bagu.Agent` uses a very small Spark DSL and generates a nested runtime module.
+- Workflow capabilities let agents call deterministic Bagu workflows; raw Runic
+  authoring remains internal.
 - `Bagu.Tool` is a thin wrapper over `Jido.Action`, but it restricts tool schemas to Zoi.
 - `Bagu.Plugin` is a thin wrapper over `Jido.Plugin` and currently focuses on contributing tools.
 - `Bagu.Hook` is a thin wrapper for turn-scoped hook modules and interrupt-aware callbacks.
@@ -1212,3 +1247,6 @@ The top-level helpers are:
 - Imported tools, plugins, hooks, and guardrails are constrained to explicit allowlist registries.
 - Imported skills can resolve through `available_skills`, runtime `skill_paths`, or both.
 - The nested runtime module still uses `Jido.AI.Agent` underneath.
+- Internal beta development can use local `jido_runic` and `jido_eval` path
+  dependencies. A public Hex beta should replace local paths with Hex releases,
+  Git refs, or pinned tags.
