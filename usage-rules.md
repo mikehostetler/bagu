@@ -8,8 +8,9 @@ Use these rules when generating Bagu code or reviewing Bagu examples.
 - Put core configuration inside `agent do ... end`.
 - Use `schema Zoi.object(...)` for runtime context validation.
 - Prefer `context:` at runtime. Do not pass `tool_context:` to Bagu public APIs.
-- Use `defaults.character` for structured persona/voice data. Use
-  `defaults.instructions` for task, policy, and safety instructions.
+- Use `defaults.character` for structured persona/voice data backed by
+  `jido_character`. Use `defaults.instructions` for task, policy, and safety
+  instructions.
 - Use per-call `character:` only when a request should override the configured
   character for that turn.
 - Keep prompts explicit. Bagu does not automatically inject context into model
@@ -47,9 +48,9 @@ Use these rules when generating Bagu code or reviewing Bagu examples.
 - Use `Bagu.import_agent/2` or `Bagu.import_agent_file/2` for JSON/YAML specs.
 - Resolve imported tools, characters, hooks, guardrails, plugins, skills, and subagents
   through explicit `available_*` registries.
-- Prefer inline `defaults.character` maps for portable imported specs; use
-  string character refs only when the importing application provides
-  `available_characters`.
+- Prefer inline `defaults.character` maps that parse through `Jido.Character`
+  for portable imported specs; use string character refs only when the
+  importing application provides `available_characters`.
 - Use `Bagu.ImportedAgent.Subagent` when an Elixir manager agent delegates to a
   JSON/YAML-authored specialist.
 

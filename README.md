@@ -58,6 +58,7 @@ Today, Bagu can:
   input/output/tool validation stages or per-request overrides
 - enable conversation-first memory with bounded retrieval and opt-in
   auto-capture on top of `jido_memory`
+- compose structured character/persona prompts through `jido_character`
 - start many runtime instances from the same agent module under the shared
   `Bagu.Runtime`
 - define explicit deterministic workflows with `use Bagu.Workflow`, backed by
@@ -276,11 +277,8 @@ Bagu.chat(pid, "Can I get a refund?",
 
 Character sources can be:
 
-- an inline map
-- a rendered prompt string
-- a module implementing `Bagu.Character.render_character/1`
-- an MFA tuple like `{MyApp.Characters, :render, ["support"]}`
-- a `jido_character` module/map when that package is available
+- an inline map parsed by `Jido.Character.new/1`
+- a module generated with `use Jido.Character`
 
 The prompt order is character first, then `defaults.instructions`, then Bagu
 skill and memory sections. Per-request `character:` overrides the compile-time
@@ -1268,6 +1266,7 @@ The imported-agent path is intentionally narrower than the Elixir DSL:
   - explicit resolution through `available_workflows: [MyApp.Workflows.RefundReview]`
 - `character` supports:
   - inline character maps under `defaults.character`
+  - modules generated with `use Jido.Character`
   - string refs like `"support_advisor"`
   - explicit resolution through `available_characters: %{"support_advisor" => MyApp.Characters.SupportAdvisor}`
 - `hooks` supports:
@@ -1286,7 +1285,7 @@ constrained JSON/YAML format intentionally avoids executable Elixir references.
 Imported workflow capabilities are supported through `capabilities.workflows`,
 but workflow names must resolve through an explicit `available_workflows`
 registry. Imported character refs must resolve through an explicit
-`available_characters` registry; inline character maps are portable.
+`available_characters` registry; inline `Jido.Character` maps are portable.
 
 The top-level helpers are:
 

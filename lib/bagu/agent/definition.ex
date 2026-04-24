@@ -378,7 +378,7 @@ defmodule Bagu.Agent.Definition do
                 message: message,
                 path: [:defaults, :character],
                 value: character,
-                hint: "Use a renderable character map, string, module, MFA tuple, or `jido_character` module.",
+                hint: "Use an inline `Jido.Character` map or a `use Jido.Character` module.",
                 module: owner_module
               )
     end

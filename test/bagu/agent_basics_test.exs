@@ -156,15 +156,14 @@ defmodule BaguTest.AgentBasicsTest do
     assert {:ok, %{messages: [%{role: :system, content: prompt}, %{role: :user, content: "hello"}]}} =
              CharacterAgent.request_transformer().transform_request(request, state, config, %{})
 
-    assert prompt =~ "Character"
-    assert prompt =~ "Name: Policy Advisor"
-    assert prompt =~ "Role: Support policy specialist"
-    assert prompt =~ "Tone: professional"
+    assert prompt =~ "# Character: Policy Advisor"
+    assert prompt =~ "- Role: Support policy specialist"
+    assert prompt =~ "Tone: Professional"
     assert prompt =~ "Stay within published policy."
     assert prompt =~ "Answer with the support policy first."
   end
 
-  test "composes compile-time module characters with runtime context" do
+  test "composes compile-time Jido.Character modules" do
     assert ModuleCharacterAgent.character() == SupportCharacter
 
     request = react_request([%{role: :user, content: "hello"}])
@@ -176,11 +175,12 @@ defmodule BaguTest.AgentBasicsTest do
                request,
                state,
                config,
-               %{tier: "enterprise"}
+               %{}
              )
 
-    assert prompt =~ "Name: Support Advisor"
-    assert prompt =~ "Tier: enterprise"
+    assert prompt =~ "# Character: Support Advisor"
+    assert prompt =~ "- Role: Support specialist"
+    assert prompt =~ "Use the configured support persona."
     assert prompt =~ "Adapt the response to the account tier."
   end
 
@@ -206,8 +206,8 @@ defmodule BaguTest.AgentBasicsTest do
     assert {:ok, %{messages: [%{role: :system, content: prompt}, %{role: :user, content: "hello"}]}} =
              ChatAgent.request_transformer().transform_request(request, state, config, runtime_context)
 
-    assert prompt =~ "Name: Runtime Advisor"
-    assert prompt =~ "Tone: warm"
+    assert prompt =~ "# Character: Runtime Advisor"
+    assert prompt =~ "Tone: Warm"
     assert prompt =~ "Use runtime persona."
     assert prompt =~ "You are a concise assistant."
   end
@@ -218,6 +218,13 @@ defmodule BaguTest.AgentBasicsTest do
 
     assert error.field == :character
     assert error.details.reason == :invalid_character
+
+    assert {:error, %Bagu.Error.ValidationError{} = string_error} =
+             Bagu.Agent.prepare_chat_opts([character: "rendered character prompt"], nil)
+
+    assert string_error.field == :character
+    assert string_error.details.reason == :invalid_character
+    assert string_error.details.cause =~ "must be a map"
   end
 
   test "appends retrieved memory to the effective system prompt" do

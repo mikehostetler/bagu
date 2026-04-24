@@ -83,13 +83,13 @@ defmodule BaguTest.PromptCallbacks do
 end
 
 defmodule BaguTest.SupportCharacter do
-  @behaviour Bagu.Character
-
-  @impl true
-  def render_character(%{context: context}) do
-    tier = Map.get(context, :tier, Map.get(context, "tier", "standard"))
-    "Character\nName: Support Advisor\nTier: #{tier}"
-  end
+  use Jido.Character,
+    defaults: %{
+      name: "Support Advisor",
+      identity: %{role: "Support specialist"},
+      voice: %{tone: :professional, style: "Practical and concise"},
+      instructions: ["Use the configured support persona."]
+    }
 end
 
 defmodule BaguTest.ModulePromptAgent do

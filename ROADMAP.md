@@ -312,8 +312,9 @@ Scope:
 
 Goal: add persona/voice composition without bloating `Bagu.Agent`.
 
-Status: basic Bagu integration done; direct dependency on `jido_character`
-remains deferred until the package is published or pinned.
+Status: basic Bagu integration done; Bagu now has a direct Git dependency on
+`jido_character`. Public Hex beta still needs a dependency posture decision:
+Hex release, pinned tag, or another stable source.
 
 Candidate package:
 
@@ -421,8 +422,10 @@ The next work should follow this order:
 
 1. Beta release prep.
 2. Dependency posture for a public beta.
-3. Post-beta character/handoff/team planning.
+3. Handoff design and implementation.
+4. Pods/team-level coordination planning.
+5. Crew-style recipe examples after the lower-level primitives are stable.
 
-Characters, handoffs, Pods, and Crew-style coordination are important, but they
-should not block the first beta unless the beta positioning explicitly requires
-them.
+Characters are integrated for the beta candidate. Handoffs, Pods, and
+Crew-style coordination remain important, but they should not block the first
+beta unless the beta positioning explicitly requires them.

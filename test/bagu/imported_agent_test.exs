@@ -115,9 +115,10 @@ defmodule BaguTest.ImportedAgentTest do
              )
 
     assert agent.spec.character["name"] == "Imported Advisor"
-    assert {:static, prompt} = agent.character_spec
-    assert prompt =~ "Name: Imported Advisor"
-    assert prompt =~ "Role: Billing support"
+    assert {:character, character} = agent.character_spec
+    prompt = Jido.Character.to_system_prompt(character)
+    assert prompt =~ "# Character: Imported Advisor"
+    assert prompt =~ "- Role: Billing support"
 
     assert {:ok, encoded_json} = Bagu.encode_agent(agent, format: :json)
     assert encoded_json =~ "\"character\""
@@ -135,7 +136,7 @@ defmodule BaguTest.ImportedAgentTest do
              )
 
     assert agent.spec.character == "support_advisor"
-    assert {:dynamic, SupportCharacter} = agent.character_spec
+    assert {:module, SupportCharacter} = agent.character_spec
 
     request = react_request([%{role: :user, content: "hello"}])
     state = react_state()
@@ -147,11 +148,12 @@ defmodule BaguTest.ImportedAgentTest do
                request,
                state,
                config,
-               %{tier: "vip"}
+               %{}
              )
 
-    assert prompt =~ "Name: Support Advisor"
-    assert prompt =~ "Tier: vip"
+    assert prompt =~ "# Character: Support Advisor"
+    assert prompt =~ "- Role: Support specialist"
+    assert prompt =~ "Use the configured support persona."
     assert prompt =~ "You are concise."
   end
 
