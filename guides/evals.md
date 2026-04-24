@@ -70,9 +70,10 @@ Use a mix of assertions:
 - Did guardrails block the request before a model/tool call?
 - Did the response preserve tenant/account context?
 
-## Support Agent Eval Pattern
+## Consumer Support Eval Pattern
 
-The support example is a good first eval target because it has clear boundaries:
+The Phoenix consumer support app is a good first eval target because it has clear
+boundaries:
 
 - refund requests with account/order/reason should use `review_refund`
 - ambiguous billing questions should delegate to `billing_specialist`

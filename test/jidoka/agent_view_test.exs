@@ -45,6 +45,49 @@ defmodule JidokaTest.AgentViewTest do
              Jidoka.Agent.View.project(thread, context_ref: "support")
   end
 
+  test "projects in-flight streaming assistant message from strategy state" do
+    agent = %Jido.Agent{
+      id: "support-router",
+      state: %{
+        __strategy__: %{
+          status: :awaiting_llm,
+          active_request_id: "req-stream",
+          streaming_text: "Refund review is still running",
+          streaming_thinking: "Checking policy"
+        }
+      }
+    }
+
+    assert {:ok, %{streaming_message: streaming_message}} = Jidoka.Agent.View.snapshot(agent)
+
+    assert streaming_message == %{
+             id: "streaming-req-stream",
+             seq: -1,
+             role: :assistant,
+             content: "Refund review is still running",
+             request_id: "req-stream",
+             run_id: "req-stream",
+             streaming?: true,
+             thinking: "Checking policy"
+           }
+  end
+
+  test "does not project completed streaming text as a visible draft" do
+    agent = %Jido.Agent{
+      id: "support-router",
+      state: %{
+        __strategy__: %{
+          status: :completed,
+          active_request_id: nil,
+          streaming_text: "Final answer",
+          streaming_thinking: ""
+        }
+      }
+    }
+
+    assert {:ok, %{streaming_message: nil}} = Jidoka.Agent.View.snapshot(agent)
+  end
+
   defp ai_message(role, content, attrs) do
     payload =
       attrs

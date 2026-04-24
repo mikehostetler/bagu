@@ -10,9 +10,9 @@ defmodule Jidoka.Agent.View do
   - `:events` is a compact debug stream for tool calls, tool results, and
     context operations.
 
-  This module is intentionally projection-only. LiveView, controllers, and
-  other UI layers should own rendering, optimistic pending messages, and UI
-  event hooks.
+  This module is intentionally projection-only. `Jidoka.AgentView` builds on top
+  of this projection to provide a reusable, rendering-free application surface
+  for LiveView, controllers, CLI sessions, tests, channels, or jobs.
   """
 
   alias Jido.Thread
@@ -45,6 +45,18 @@ defmodule Jidoka.Agent.View do
           run_id: String.t() | nil
         }
 
+  @typedoc "An in-flight assistant message projected from ReAct strategy streaming state."
+  @type streaming_message :: %{
+          required(:id) => String.t(),
+          required(:seq) => -1,
+          required(:role) => :assistant,
+          required(:content) => String.t(),
+          required(:request_id) => String.t() | nil,
+          required(:run_id) => String.t() | nil,
+          required(:streaming?) => true,
+          optional(:thinking) => String.t()
+        }
+
   @typedoc "A compact non-chat event projected from `Jido.Thread`."
   @type event :: %{
           id: String.t() | nil,
@@ -66,6 +78,7 @@ defmodule Jidoka.Agent.View do
           entry_count: non_neg_integer(),
           llm_context: [llm_message()],
           visible_messages: [visible_message()],
+          streaming_message: streaming_message() | nil,
           events: [event()]
         }
 
@@ -109,6 +122,7 @@ defmodule Jidoka.Agent.View do
           entry_count: non_neg_integer(),
           llm_context: [llm_message()],
           visible_messages: [visible_message()],
+          streaming_message: nil,
           events: [event()]
         }
   def project(thread, opts \\ []) when is_list(opts) do
@@ -122,6 +136,7 @@ defmodule Jidoka.Agent.View do
       entry_count: length(entries),
       llm_context: llm_context(entries, context_ref, opts),
       visible_messages: visible_messages(entries, context_ref),
+      streaming_message: nil,
       events: events(entries, context_ref)
     }
   end
@@ -141,6 +156,7 @@ defmodule Jidoka.Agent.View do
       entry_count: length(entries),
       llm_context: llm_context(entries, context_ref, opts),
       visible_messages: visible_messages(entries, context_ref),
+      streaming_message: streaming_message(agent),
       events: events(entries, context_ref)
     }
   end
@@ -159,6 +175,56 @@ defmodule Jidoka.Agent.View do
   end
 
   defp strategy_context_ref(_agent), do: nil
+
+  defp streaming_message(%Jido.Agent{state: state}) when is_map(state) do
+    strategy = strategy_state(state)
+    status = strategy_value(state, strategy, :status)
+    active_request_id = normalize_text(strategy_value(state, strategy, :active_request_id))
+    streaming_text = normalize_text(strategy_value(state, strategy, :streaming_text))
+    streaming_thinking = normalize_text(strategy_value(state, strategy, :streaming_thinking))
+
+    cond do
+      status not in [:awaiting_llm, :awaiting_tool] ->
+        nil
+
+      active_request_id == "" ->
+        nil
+
+      streaming_text == "" and streaming_thinking == "" ->
+        nil
+
+      true ->
+        %{
+          id: "streaming-" <> active_request_id,
+          seq: -1,
+          role: :assistant,
+          content: streaming_content(streaming_text, streaming_thinking),
+          request_id: active_request_id,
+          run_id: active_request_id,
+          streaming?: true
+        }
+        |> maybe_put(:thinking, streaming_thinking)
+    end
+  end
+
+  defp streaming_message(_agent), do: nil
+
+  defp strategy_state(state) when is_map(state) do
+    case fetch(state, :__strategy__) do
+      strategy when is_map(strategy) -> strategy
+      _ -> %{}
+    end
+  end
+
+  defp strategy_value(state, strategy, key) do
+    case fetch(strategy, key) do
+      nil -> fetch(state, key)
+      value -> value
+    end
+  end
+
+  defp streaming_content("", thinking) when is_binary(thinking) and thinking != "", do: "Thinking..."
+  defp streaming_content(content, _thinking), do: content
 
   defp thread_entries(%Thread{} = thread), do: Thread.to_list(thread)
   defp thread_entries(_thread), do: []

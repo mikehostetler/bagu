@@ -116,7 +116,7 @@ defmodule JidokaTest.Evals.SupportAgentEvalTest do
 
   setup_all do
     ensure_real_anthropic_key!()
-    Jidoka.Demo.Loader.load!(:support)
+    load_consumer_support!()
     :ok
   end
 
@@ -172,7 +172,7 @@ defmodule JidokaTest.Evals.SupportAgentEvalTest do
 
       assert {:error, %Jidoka.Error.ExecutionError{} = error} =
                agent_module.chat(pid, prompt,
-                 context: %{channel: "support_eval", session: "sensitive-data-guardrail"},
+                 context: support_context("sensitive-data-guardrail"),
                  timeout: 60_000
                )
 
@@ -203,7 +203,7 @@ defmodule JidokaTest.Evals.SupportAgentEvalTest do
   defp run_support_agent_case(pid, agent_module, case) do
     assert {:ok, reply} =
              agent_module.chat(pid, case.prompt,
-               context: %{channel: "support_eval", session: case.id},
+               context: support_context(case.id),
                timeout: 60_000
              )
 
@@ -235,7 +235,43 @@ defmodule JidokaTest.Evals.SupportAgentEvalTest do
   defp normalize_reply(reply), do: Jido.AI.Turn.extract_text(reply)
 
   defp support_agent_module do
-    Module.concat([Jidoka, Examples, Support, Agents, SupportRouterAgent])
+    Module.concat([JidokaConsumer, Support, Agents, SupportRouterAgent])
+  end
+
+  defp support_context(session) do
+    %{
+      actor: %{id: "support_eval_actor", name: "Support Eval Actor"},
+      channel: "support_eval",
+      session: session,
+      account_id: "acct_vip",
+      customer_id: "acct_vip",
+      order_id: "ord_damaged"
+    }
+  end
+
+  defp load_consumer_support! do
+    root = Path.expand("../..", __DIR__)
+
+    [
+      "dev/jidoka_consumer/lib/jidoka_consumer/support/ticket.ex",
+      "dev/jidoka_consumer/lib/jidoka_consumer/support.ex",
+      "dev/jidoka_consumer/lib/jidoka_consumer/support/data.ex",
+      "dev/jidoka_consumer/lib/jidoka_consumer/support/fns.ex",
+      "dev/jidoka_consumer/lib/jidoka_consumer/support/tools/load_customer_profile.ex",
+      "dev/jidoka_consumer/lib/jidoka_consumer/support/tools/load_order.ex",
+      "dev/jidoka_consumer/lib/jidoka_consumer/support/tools/evaluate_refund_policy.ex",
+      "dev/jidoka_consumer/lib/jidoka_consumer/support/tools/classify_escalation.ex",
+      "dev/jidoka_consumer/lib/jidoka_consumer/support/guardrails/sensitive_data_guardrail.ex",
+      "dev/jidoka_consumer/lib/jidoka_consumer/support/agents/billing_specialist_agent.ex",
+      "dev/jidoka_consumer/lib/jidoka_consumer/support/agents/operations_specialist_agent.ex",
+      "dev/jidoka_consumer/lib/jidoka_consumer/support/agents/writer_specialist_agent.ex",
+      "dev/jidoka_consumer/lib/jidoka_consumer/support/workflows/refund_review.ex",
+      "dev/jidoka_consumer/lib/jidoka_consumer/support/workflows/escalation_draft.ex",
+      "dev/jidoka_consumer/lib/jidoka_consumer/support/agents/support_router_agent.ex"
+    ]
+    |> Enum.each(fn path ->
+      Code.require_file(Path.join(root, path))
+    end)
   end
 
   defp assert_metric_mean!(result, metric, minimum) do

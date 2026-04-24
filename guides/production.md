@@ -164,10 +164,11 @@ Jidoka.inspect_request(pid)
 Jidoka.inspect_workflow(MyApp.Workflows.RefundReview)
 ```
 
-Turn on demo trace logs when learning behavior:
+Use package demos and the Phoenix consumer app when learning behavior:
 
 ```bash
-mix jidoka support --log-level trace --dry-run
+mix jidoka orchestrator --log-level trace --dry-run
+cd dev/jidoka_consumer && PORT=4002 mix phx.server
 ```
 
 For application observability, log request ids, agent ids, workflow ids, tool

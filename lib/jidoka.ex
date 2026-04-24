@@ -148,16 +148,39 @@ defmodule Jidoka do
   @spec chat(pid() | atom() | {:via, module(), term()} | String.t(), String.t(), keyword()) ::
           {:ok, term()} | {:error, term()} | {:interrupt, Jidoka.Interrupt.t()} | {:handoff, Jidoka.Handoff.t()}
   def chat(server_or_id, message, opts \\ []) when is_binary(message) do
+    with {:ok, request} <- start_chat_request(server_or_id, message, opts) do
+      await_chat_request(request, opts)
+    end
+  end
+
+  @doc false
+  @spec start_chat_request(pid() | atom() | {:via, module(), term()} | String.t(), String.t(), keyword()) ::
+          {:ok, Request.Handle.t()} | {:error, term()}
+  def start_chat_request(server_or_id, message, opts \\ []) when is_binary(message) and is_list(opts) do
     result =
       with :ok <- validate_conversation_opt(opts),
            {:ok, target} <- route_conversation_owner(server_or_id, opts),
            {:ok, server} <- resolve_server(target, opts),
            {:ok, prepared_opts} <- Jidoka.Agent.prepare_chat_opts(opts, chat_config(server)) do
-        chat_request(server, message, prepared_opts)
-        |> Jidoka.Hooks.translate_chat_result()
+        request_opts = Keyword.merge(prepared_opts, signal_type: "ai.react.query", source: "/jidoka/agent")
+
+        Request.create_and_send(server, message, request_opts)
       end
 
-    normalize_chat_result(result, server_or_id, opts)
+    normalize_start_chat_result(result, server_or_id, opts)
+  end
+
+  @doc false
+  @spec await_chat_request(Request.Handle.t(), keyword()) ::
+          {:ok, term()} | {:error, term()} | {:interrupt, Jidoka.Interrupt.t()} | {:handoff, Jidoka.Handoff.t()}
+  def await_chat_request(%Request.Handle{} = request, opts \\ []) when is_list(opts) do
+    timeout = Keyword.get(opts, :timeout, 30_000)
+
+    request
+    |> Request.await(timeout: timeout)
+    |> then(&finalize_chat_request(request.server, request.id, &1))
+    |> Jidoka.Hooks.translate_chat_result()
+    |> normalize_chat_result(request.server, opts)
   end
 
   @doc """
@@ -299,6 +322,16 @@ defmodule Jidoka do
 
   defp normalize_chat_result({:handoff, %Jidoka.Handoff{} = handoff}, _target, _opts), do: {:handoff, handoff}
   defp normalize_chat_result(result, _target, _opts), do: result
+
+  defp normalize_start_chat_result({:error, reason}, target, opts) do
+    {:error,
+     Jidoka.Error.Normalize.chat_error(reason,
+       target: target,
+       timeout: Keyword.get(opts, :timeout, 30_000)
+     )}
+  end
+
+  defp normalize_start_chat_result(result, _target, _opts), do: result
 
   @doc false
   @spec finalize_chat_request(pid() | atom() | {:via, module(), term()}, String.t(), term()) ::

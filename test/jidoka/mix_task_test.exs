@@ -74,43 +74,6 @@ defmodule JidokaTest.MixTaskTest do
     assert Jidoka.Runtime.debug() == :off
   end
 
-  test "support demo mix task prints agent and workflow boundaries in dry-run mode" do
-    output =
-      capture_io(fn ->
-        Mix.Tasks.Jidoka.run(["support", "--log-level", "trace", "--dry-run"])
-      end)
-
-    assert output =~ "Jidoka support demo"
-    assert output =~ "chat agents coordinate, workflows run fixed processes"
-    assert output =~ "Subagents"
-    assert output =~ "billing_specialist"
-    assert output =~ "operations_specialist"
-    assert output =~ "writer_specialist"
-    assert output =~ "Workflows"
-    assert output =~ "review_refund"
-    assert output =~ "Deterministic workflows"
-    assert output =~ "refund_review"
-    assert output =~ "tool-only refund policy process"
-    assert output =~ "escalation_draft"
-    assert output =~ "writer agent step"
-    assert output =~ "Boundary"
-    assert output =~ "Dry run: no agent started and no workflow executed."
-    assert Jidoka.Runtime.debug() == :off
-  end
-
-  test "support demo refund workflow runs through the mix task" do
-    output =
-      capture_io(fn ->
-        Mix.Tasks.Jidoka.run(["support", "--", "/refund", "acct_vip", "ord_damaged", "Damaged on arrival"])
-      end)
-
-    assert output =~ "Jidoka support demo"
-    assert output =~ "workflow: :refund_review"
-    assert output =~ "decision: :approve"
-    assert output =~ "refund_type: :original_payment"
-    assert Jidoka.Runtime.debug() == :off
-  end
-
   test "kitchen sink demo mix task prints showcase trace details in dry-run mode" do
     output =
       capture_io(fn ->

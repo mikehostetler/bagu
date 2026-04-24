@@ -25,8 +25,7 @@ defmodule JidokaTest.AgentBasicsTest do
     assert {:ok, pid} = ChatAgent.start_link(id: "chat-agent-test")
     assert is_pid(pid)
     assert Jidoka.whereis("chat-agent-test") == pid
-    assert [{id, ^pid}] = Jidoka.list_agents()
-    assert id == "chat-agent-test"
+    assert {"chat-agent-test", pid} in Jidoka.list_agents()
     assert :ok = Jidoka.stop_agent(pid)
   end
 

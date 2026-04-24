@@ -1,5 +1,9 @@
-defmodule Jidoka.Examples.Support.Agents.BillingSpecialistAgent do
+defmodule JidokaConsumer.Support.Agents.BillingSpecialistAgent do
+  @moduledoc false
+
   use Jidoka.Agent
+
+  alias JidokaConsumer.Support.Workflows.RefundReview
 
   @context_fields %{
     channel: Zoi.string() |> Zoi.default("support_chat"),
@@ -23,5 +27,13 @@ defmodule Jidoka.Examples.Support.Agents.BillingSpecialistAgent do
     Return concise customer-support guidance with one clear recommendation.
     Do not mention delegation or orchestration.
     """
+  end
+
+  capabilities do
+    workflow RefundReview,
+      as: :review_refund,
+      description: "Review refund eligibility when account, order, and reason are available.",
+      forward_context: {:only, [:channel, :session]},
+      result: :structured
   end
 end

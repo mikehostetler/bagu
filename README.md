@@ -1124,19 +1124,19 @@ mix jidoka orchestrator --log-level trace -- "Use the writer_specialist speciali
 
 Use `--log-level trace` to see subagent config and delegation metadata.
 
-Support example:
+Phoenix support app:
 
 ```bash
-mix jidoka support --log-level trace --dry-run
-mix jidoka support -- "Customer acct_vip says order ord_damaged arrived broken and wants a refund because it was damaged on arrival."
-mix jidoka support -- "/refund acct_vip ord_damaged Damaged on arrival"
-mix jidoka support -- "/escalate acct_trial Customer is locked out and threatening to cancel"
+cd dev/jidoka_consumer
+PORT=4002 mix phx.server
 ```
 
-This example keeps the current boundary explicit: the chat agent owns open-ended
-intake, subagents handle one-off specialist work, workflows own fixed support
-processes, and handoffs transfer future conversation ownership. One workflow is
-tool-only, and one reuses the writer specialist as a bounded workflow step.
+The consumer app is the full support decision fixture. It keeps the current
+boundary explicit: the chat agent owns open-ended intake, the ETS-backed Ash
+ticket resource owns ticket state, subagents handle one-off specialist work,
+workflows own fixed support processes, and handoffs transfer future conversation
+ownership. One workflow is tool-only, and one reuses the writer specialist as a
+bounded workflow step.
 
 Kitchen sink showcase:
 
@@ -1155,17 +1155,17 @@ entrypoint for running them.
 
 ## Live Agent Evals
 
-Jidoka includes a tagged live eval suite for the support example. These tests use
-real provider calls and are excluded from normal `mix test` runs.
+Jidoka includes a tagged live eval suite for the consumer support app. These
+tests use real provider calls and are excluded from normal `mix test` runs.
 
 ```bash
 ANTHROPIC_API_KEY=... mix test --include llm_eval test/evals/support_agent_eval_test.exs
 ```
 
-The support evals use the local `jido_eval` checkout as the dataset/result
-harness, then run custom Jidoka metrics for specialist routing and LLM-judged
-support quality. If the tag is included without a real key, the suite fails
-clearly instead of skipping.
+The support evals load the consumer app support modules, use the local
+`jido_eval` checkout as the dataset/result harness, then run custom Jidoka
+metrics for specialist routing and LLM-judged support quality. If the tag is
+included without a real key, the suite fails clearly instead of skipping.
 
 ## Inspection
 

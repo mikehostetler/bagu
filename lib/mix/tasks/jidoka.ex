@@ -9,7 +9,6 @@ defmodule Mix.Tasks.Jidoka do
       mix jidoka chat --dry-run
       mix jidoka imported -- "Add 17 and 25"
       mix jidoka chat --log-level debug -- "Add 17 and 25"
-      mix jidoka support --dry-run
       mix jidoka workflow --dry-run
       mix jidoka orchestrator --log-level trace -- "Use the research_agent specialist ..."
       mix jidoka kitchen_sink --log-level trace --dry-run

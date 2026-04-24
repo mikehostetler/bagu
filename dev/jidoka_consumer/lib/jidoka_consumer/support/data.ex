@@ -1,4 +1,4 @@
-defmodule Jidoka.Examples.Support.SupportData do
+defmodule JidokaConsumer.Support.Data do
   @moduledoc false
 
   @spec customer_profile(String.t()) :: map()

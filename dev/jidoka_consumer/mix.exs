@@ -30,6 +30,7 @@ defmodule JidokaConsumer.MixProject do
       {:floki, ">= 0.34.0", only: :test},
       {:jason, "~> 1.4"},
       {:lazy_html, ">= 0.1.0", only: :test},
+      {:mdex, "~> 0.12.1"},
       {:phoenix, "~> 1.8"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_view, "~> 1.1"},

@@ -155,9 +155,9 @@ Jidoka.handoff_owner("support-123")
 Jidoka.reset_handoff("support-123")
 ```
 
-## Support Example Boundary
+## Consumer Support Boundary
 
-The support example demonstrates all three primitives:
+The Phoenix consumer support app demonstrates all three primitives:
 
 - `billing_specialist`, `operations_specialist`, and `writer_specialist` are
   subagents for one-off specialist work.
@@ -166,10 +166,11 @@ The support example demonstrates all three primitives:
 - `escalation_draft` is a workflow that uses `writer_specialist` as one bounded
   step.
 
-Run the dry-run boundary summary:
+Run the app:
 
 ```bash
-mix jidoka support --dry-run --log-level trace
+cd dev/jidoka_consumer
+PORT=4002 mix phx.server
 ```
 
 ## Practical Rule

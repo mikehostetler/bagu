@@ -1,4 +1,6 @@
-defmodule Jidoka.Examples.Support.Guardrails.SensitiveDataGuardrail do
+defmodule JidokaConsumer.Support.Guardrails.SensitiveDataGuardrail do
+  @moduledoc false
+
   use Jidoka.Guardrail, name: "support_sensitive_data"
 
   @sensitive_terms [

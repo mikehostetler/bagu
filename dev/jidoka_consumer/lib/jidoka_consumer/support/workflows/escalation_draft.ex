@@ -1,11 +1,11 @@
-defmodule Jidoka.Examples.Support.Workflows.EscalationDraft do
+defmodule JidokaConsumer.Support.Workflows.EscalationDraft do
   @moduledoc false
 
   use Jidoka.Workflow
 
-  alias Jidoka.Examples.Support.Agents.WriterSpecialistAgent
-  alias Jidoka.Examples.Support.SupportFns
-  alias Jidoka.Examples.Support.Tools.{ClassifyEscalation, LoadCustomerProfile}
+  alias JidokaConsumer.Support.Agents.WriterSpecialistAgent
+  alias JidokaConsumer.Support.Fns
+  alias JidokaConsumer.Support.Tools.{ClassifyEscalation, LoadCustomerProfile}
 
   workflow do
     id :escalation_draft
@@ -27,7 +27,7 @@ defmodule Jidoka.Examples.Support.Workflows.EscalationDraft do
         issue: input(:issue)
       }
 
-    function :prompt, {SupportFns, :build_escalation_prompt, 2},
+    function :prompt, {Fns, :build_escalation_prompt, 2},
       input: %{
         account_id: input(:account_id),
         classification: from(:classification),
@@ -42,7 +42,7 @@ defmodule Jidoka.Examples.Support.Workflows.EscalationDraft do
         channel: input(:channel)
       }
 
-    function :result, {SupportFns, :finalize_escalation_result, 2},
+    function :result, {Fns, :finalize_escalation_result, 2},
       input: %{
         classification: from(:classification),
         draft: from(:draft)

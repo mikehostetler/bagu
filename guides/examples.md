@@ -67,27 +67,28 @@ Source:
 
 This is the smallest deterministic workflow: add one, then double.
 
-## Support
+## Phoenix Support App
 
 ```bash
-mix jidoka support --dry-run --log-level trace
-mix jidoka support -- "Customer acct_vip says order ord_damaged arrived broken and wants a refund because it was damaged on arrival."
-mix jidoka support -- "/refund acct_vip ord_damaged Damaged on arrival"
-mix jidoka support -- "/escalate acct_trial Customer is locked out and threatening to cancel"
+cd dev/jidoka_consumer
+PORT=4002 mix phx.server
 ```
 
 Source:
 
-- `examples/support/agents/support_router_agent.ex`
-- `examples/support/agents/billing_specialist_agent.ex`
-- `examples/support/agents/operations_specialist_agent.ex`
-- `examples/support/agents/writer_specialist_agent.ex`
-- `examples/support/workflows/refund_review.ex`
-- `examples/support/workflows/escalation_draft.ex`
+- `dev/jidoka_consumer/lib/jidoka_consumer/support/agents/support_router_agent.ex`
+- `dev/jidoka_consumer/lib/jidoka_consumer/support/agents/billing_specialist_agent.ex`
+- `dev/jidoka_consumer/lib/jidoka_consumer/support/agents/operations_specialist_agent.ex`
+- `dev/jidoka_consumer/lib/jidoka_consumer/support/agents/writer_specialist_agent.ex`
+- `dev/jidoka_consumer/lib/jidoka_consumer/support/workflows/refund_review.ex`
+- `dev/jidoka_consumer/lib/jidoka_consumer/support/workflows/escalation_draft.ex`
+- `dev/jidoka_consumer/lib/jidoka_consumer/support/ticket.ex`
+- `dev/jidoka_consumer/lib/jidoka_consumer_web/live/support_chat_live.ex`
 
 This is the decision fixture for Jidoka orchestration:
 
 - chat agent owns open-ended intake
+- Ash owns local ETS-backed ticket state
 - subagents handle one-off specialist tasks
 - workflows own fixed processes
 - workflow capabilities let the agent choose a deterministic process
@@ -118,7 +119,7 @@ provider key for live agent runs:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
-mix jidoka support
+mix jidoka chat -- "Use one sentence to explain what Jidoka is."
 ```
 
 Use `--log-level debug` for compact traces and `--log-level trace` for detailed
@@ -132,7 +133,7 @@ Copy from examples by intent:
 - need imported JSON: start from `examples/chat/imported`
 - need manager delegation: start from `examples/orchestrator`
 - need deterministic steps: start from `examples/workflow`
-- need all orchestration boundaries: start from `examples/support`
+- need all orchestration boundaries: start from `dev/jidoka_consumer`
 
 Avoid copying demo-only CLI wiring into application code. Keep application
 agents under your app modules and call them through `Jidoka.start_agent/2`,

@@ -147,6 +147,7 @@ defmodule Jidoka.MixProject do
       groups_for_modules: [
         Agents: [
           Jidoka.Agent,
+          Jidoka.AgentView,
           Jidoka.Agent.View,
           Jidoka.ImportedAgent,
           Jidoka.ImportedAgent.Subagent

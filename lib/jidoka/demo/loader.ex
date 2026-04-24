@@ -1,7 +1,7 @@
 defmodule Jidoka.Demo.Loader do
   @moduledoc false
 
-  @spec load!(:chat | :orchestrator | :kitchen_sink | :support | :workflow) :: :ok
+  @spec load!(:chat | :orchestrator | :kitchen_sink | :workflow) :: :ok
   def load!(:chat) do
     require_example!("chat")
   end
@@ -12,10 +12,6 @@ defmodule Jidoka.Demo.Loader do
 
   def load!(:kitchen_sink) do
     require_example!("kitchen_sink")
-  end
-
-  def load!(:support) do
-    require_example!("support")
   end
 
   def load!(:workflow) do

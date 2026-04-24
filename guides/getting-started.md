@@ -129,7 +129,6 @@ From the Jidoka package directory:
 mix jidoka chat --dry-run
 mix jidoka imported --dry-run
 mix jidoka orchestrator --dry-run
-mix jidoka support --dry-run
 mix jidoka workflow --dry-run
 ```
 
@@ -138,6 +137,13 @@ credentials.
 
 ```bash
 mix jidoka chat -- "Use one sentence to explain what Jidoka is."
+```
+
+The full support demo lives in the Phoenix consumer app:
+
+```bash
+cd dev/jidoka_consumer
+PORT=4002 mix phx.server
 ```
 
 ## Next Step

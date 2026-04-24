@@ -1,10 +1,10 @@
-defmodule Jidoka.Examples.Support.Workflows.RefundReview do
+defmodule JidokaConsumer.Support.Workflows.RefundReview do
   @moduledoc false
 
   use Jidoka.Workflow
 
-  alias Jidoka.Examples.Support.SupportFns
-  alias Jidoka.Examples.Support.Tools.{EvaluateRefundPolicy, LoadCustomerProfile, LoadOrder}
+  alias JidokaConsumer.Support.Fns
+  alias JidokaConsumer.Support.Tools.{EvaluateRefundPolicy, LoadCustomerProfile, LoadOrder}
 
   workflow do
     id :refund_review
@@ -33,7 +33,7 @@ defmodule Jidoka.Examples.Support.Workflows.RefundReview do
         reason: input(:reason)
       }
 
-    function :decision, {SupportFns, :finalize_refund_decision, 2},
+    function :decision, {Fns, :finalize_refund_decision, 2},
       input: %{
         account_id: input(:account_id),
         order_id: input(:order_id),

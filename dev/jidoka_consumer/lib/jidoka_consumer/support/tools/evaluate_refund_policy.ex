@@ -1,4 +1,6 @@
-defmodule Jidoka.Examples.Support.Tools.EvaluateRefundPolicy do
+defmodule JidokaConsumer.Support.Tools.EvaluateRefundPolicy do
+  @moduledoc false
+
   use Jidoka.Tool,
     description: "Applies a deterministic refund policy to a support case.",
     schema:
@@ -8,10 +10,10 @@ defmodule Jidoka.Examples.Support.Tools.EvaluateRefundPolicy do
         reason: Zoi.string()
       })
 
-  alias Jidoka.Examples.Support.SupportData
+  alias JidokaConsumer.Support.Data
 
   @impl true
   def run(%{customer: customer, order: order, reason: reason}, _context) do
-    {:ok, SupportData.refund_policy(customer, order, reason)}
+    {:ok, Data.refund_policy(customer, order, reason)}
   end
 end

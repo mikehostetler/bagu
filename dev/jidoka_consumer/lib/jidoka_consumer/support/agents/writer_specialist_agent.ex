@@ -1,4 +1,6 @@
-defmodule Jidoka.Examples.Support.Agents.WriterSpecialistAgent do
+defmodule JidokaConsumer.Support.Agents.WriterSpecialistAgent do
+  @moduledoc false
+
   use Jidoka.Agent
 
   @context_fields %{

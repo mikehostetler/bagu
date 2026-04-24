@@ -1,4 +1,6 @@
-defmodule Jidoka.Examples.Support.Tools.ClassifyEscalation do
+defmodule JidokaConsumer.Support.Tools.ClassifyEscalation do
+  @moduledoc false
+
   use Jidoka.Tool,
     description: "Classifies a support issue into a deterministic escalation queue.",
     schema:
@@ -7,10 +9,10 @@ defmodule Jidoka.Examples.Support.Tools.ClassifyEscalation do
         issue: Zoi.string()
       })
 
-  alias Jidoka.Examples.Support.SupportData
+  alias JidokaConsumer.Support.Data
 
   @impl true
   def run(%{customer: customer, issue: issue}, _context) do
-    {:ok, SupportData.escalation_classification(customer, issue)}
+    {:ok, Data.escalation_classification(customer, issue)}
   end
 end

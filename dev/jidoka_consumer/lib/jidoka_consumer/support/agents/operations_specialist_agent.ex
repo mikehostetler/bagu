@@ -1,5 +1,9 @@
-defmodule Jidoka.Examples.Support.Agents.OperationsSpecialistAgent do
+defmodule JidokaConsumer.Support.Agents.OperationsSpecialistAgent do
+  @moduledoc false
+
   use Jidoka.Agent
+
+  alias JidokaConsumer.Support.Tools.LoadOrder
 
   @context_fields %{
     channel: Zoi.string() |> Zoi.default("support_chat"),
@@ -23,5 +27,9 @@ defmodule Jidoka.Examples.Support.Agents.OperationsSpecialistAgent do
     Return concise next steps with a clear operational status.
     Do not mention delegation or orchestration.
     """
+  end
+
+  capabilities do
+    tool(LoadOrder)
   end
 end

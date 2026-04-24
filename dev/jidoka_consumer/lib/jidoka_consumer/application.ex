@@ -4,6 +4,7 @@ defmodule JidokaConsumer.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      {Task.Supervisor, name: JidokaConsumer.AgentViewTaskSupervisor},
       {Phoenix.PubSub, name: JidokaConsumer.PubSub},
       JidokaConsumerWeb.Endpoint
     ]

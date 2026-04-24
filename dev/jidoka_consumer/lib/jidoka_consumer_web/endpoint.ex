@@ -11,6 +11,21 @@ defmodule JidokaConsumerWeb.Endpoint do
     websocket: [connect_info: [session: @session_options]],
     longpoll: false
 
+  plug Plug.Static,
+    at: "/assets/phoenix",
+    from: {:phoenix, "priv/static"},
+    only: ~w(phoenix.min.js)
+
+  plug Plug.Static,
+    at: "/assets/phoenix_live_view",
+    from: {:phoenix_live_view, "priv/static"},
+    only: ~w(phoenix_live_view.min.js)
+
+  plug Plug.Static,
+    at: "/assets",
+    from: :jidoka_consumer,
+    only: ~w(app.js)
+
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
