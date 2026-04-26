@@ -205,7 +205,10 @@ The ExDoc guides under `guides/` are the recommended next step:
 
 The top-level `livebook/` folder contains runnable onboarding notebooks:
 
-- [Hello Agent](livebook/01_hello_agent.livemd)
+[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmikehostetler%2Fjidoka%2Fmain%2Flivebook%2F01_hello_agent.livemd)
+
+- [Hello Agent](livebook/01_hello_agent.livemd): compiled agents, tools,
+  workflows, imported agents, structured errors, and inspection helpers.
 
 ## Package Development
 

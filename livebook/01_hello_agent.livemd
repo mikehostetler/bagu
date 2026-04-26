@@ -1,5 +1,7 @@
 # Jidoka: Hello Agent
 
+[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmikehostetler%2Fjidoka%2Fmain%2Flivebook%2F01_hello_agent.livemd)
+
 This notebook is the first Jidoka onboarding notebook. It starts with the
 smallest useful agent, then adds one deterministic tool, one workflow, and one
 imported JSON agent.
@@ -9,18 +11,13 @@ cells are optional and run only when `ANTHROPIC_API_KEY` is set.
 
 ## Setup
 
-This notebook expects to live in the repository's top-level `livebook/` folder.
-If you move it elsewhere, set `JIDOKA_PATH` to the local `jidoka` package path
-before running the setup cell.
+This notebook installs Jidoka from GitHub so it can run from LiveBook without a
+local checkout.
 
 ```elixir
-jidoka_path =
-  System.get_env("JIDOKA_PATH") ||
-    Path.expand("..", __DIR__)
-
 Mix.install(
   [
-    {:jidoka, path: jidoka_path}
+    {:jidoka, git: "https://github.com/mikehostetler/jidoka.git", branch: "main"}
   ],
   config: [
     jidoka: [
@@ -42,7 +39,7 @@ provider_ready? =
   end
 
 %{
-  jidoka_path: jidoka_path,
+  jidoka_source: "https://github.com/mikehostetler/jidoka.git",
   provider_ready?: provider_ready?,
   model_aliases: Jidoka.model_aliases()
 }
@@ -364,8 +361,10 @@ Map.take(imported_definition, [:id, :description, :context, :tool_names])
 Encode the imported agent back to YAML:
 
 ```elixir
-{:ok, yaml} = Jidoka.encode_agent(imported_agent, format: :yaml)
-yaml
+case Jidoka.encode_agent(imported_agent, format: :yaml) do
+  {:ok, yaml} -> yaml
+  {:error, reason} -> Jidoka.format_error(reason)
+end
 ```
 
 Optional provider-backed imported-agent chat:
