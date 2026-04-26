@@ -7,7 +7,8 @@ smallest useful agent, then adds one deterministic tool, one workflow, and one
 imported JSON agent.
 
 Most cells are deterministic and do not require a provider key. The live chat
-cells are optional and run only when `ANTHROPIC_API_KEY` is set.
+cells are optional and run only when `ANTHROPIC_API_KEY` is set. In Livebook,
+a secret named `ANTHROPIC_API_KEY` is also supported through `LB_ANTHROPIC_API_KEY`.
 
 ## Setup
 
@@ -21,26 +22,44 @@ Mix.install(
   ],
   config: [
     jidoka: [
-      model_aliases: [
+      model_aliases: %{
         fast: "anthropic:claude-haiku-4-5"
-      ]
+      }
     ]
   ]
 )
 ```
 
 ```elixir
-provider_ready? =
-  System.get_env("ANTHROPIC_API_KEY")
-  |> case do
-    nil -> false
-    "" -> false
-    _key -> true
+provider_env =
+  ["ANTHROPIC_API_KEY", "LB_ANTHROPIC_API_KEY"]
+  |> Enum.find_value(fn name ->
+    case System.get_env(name) do
+      nil -> nil
+      "" -> nil
+      key -> {name, key}
+    end
+  end)
+
+provider_ready? = not is_nil(provider_env)
+
+provider_env_source =
+  case provider_env do
+    nil ->
+      :not_configured
+
+    {name, key} ->
+      System.put_env("ANTHROPIC_API_KEY", key)
+      name
   end
+
+provider_setup_hint =
+  "Set ANTHROPIC_API_KEY, or a Livebook secret named ANTHROPIC_API_KEY"
 
 %{
   jidoka_source: "https://github.com/mikehostetler/jidoka.git",
   provider_ready?: provider_ready?,
+  provider_env_source: provider_env_source,
   model_aliases: Jidoka.model_aliases()
 }
 ```
@@ -101,7 +120,7 @@ Map.take(definition, [
 
 ## Optional Live Chat
 
-This cell starts the agent and sends one message if `ANTHROPIC_API_KEY` is set.
+This cell starts the agent and sends one message if a provider key is configured.
 If the key is absent, it returns a skip tuple.
 
 ```elixir
@@ -113,7 +132,7 @@ if provider_ready? do
 
   LivebookDemo.AssistantAgent.chat(pid, "Write one sentence about what Jidoka does.")
 else
-  {:skip, "Set ANTHROPIC_API_KEY to run provider-backed chat cells."}
+  {:skip, provider_setup_hint <> " to run provider-backed chat cells."}
 end
 ```
 
@@ -198,7 +217,7 @@ if provider_ready? do
     context: %{session: "livebook"}
   )
 else
-  {:skip, "Set ANTHROPIC_API_KEY to run provider-backed tool calls."}
+  {:skip, provider_setup_hint <> " to run provider-backed tool calls."}
 end
 ```
 
@@ -319,7 +338,7 @@ if provider_ready? do
 
   LivebookDemo.WorkflowAgent.chat(pid, "Use the run_math_pipeline workflow with value 20. What is the output?")
 else
-  {:skip, "Set ANTHROPIC_API_KEY to run provider-backed workflow capability calls."}
+  {:skip, provider_setup_hint <> " to run provider-backed workflow capability calls."}
 end
 ```
 
@@ -380,7 +399,7 @@ if provider_ready? do
     context: %{"session" => "livebook-imported"}
   )
 else
-  {:skip, "Set ANTHROPIC_API_KEY to run provider-backed imported-agent chat."}
+  {:skip, provider_setup_hint <> " to run provider-backed imported-agent chat."}
 end
 ```
 
