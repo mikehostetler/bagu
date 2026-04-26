@@ -11,7 +11,10 @@ the beta surface is stabilizing:
 ```elixir
 def deps do
   [
-    {:jidoka, git: "https://github.com/mikehostetler/jidoka.git", branch: "main"}
+    # Replace COMMIT_SHA with the Jidoka commit you are testing.
+    {:jidoka,
+     git: "https://github.com/mikehostetler/jidoka.git",
+     ref: "COMMIT_SHA"}
   ]
 end
 ```

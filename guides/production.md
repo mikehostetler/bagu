@@ -176,13 +176,14 @@ names, and formatted Jidoka errors.
 
 ## Dependency Posture
 
-The current beta candidate still uses local or pre-release ecosystem
-dependencies in development, including `jido_runic` and `jido_eval` in this
-monorepo.
+The current beta candidate still uses pre-release ecosystem dependencies. The
+package pins those Git dependencies by commit ref so consuming apps do not track
+moving branches by accident.
 
-Before a public Hex beta release, replace local paths with Hex releases, Git
-refs, or pinned tags. Keep the public Jidoka API documented in these guides rather
-than relying on upstream internals.
+Before a public Hex beta release, replace remaining local development-only paths
+such as test fixtures with Hex releases, Git refs, or pinned tags. Keep the
+public Jidoka API documented in these guides rather than relying on upstream
+internals.
 
 ## Release Checklist
 

@@ -1,84 +1,190 @@
 # Jidoka
 
-Minimal harness layer over Jido and Jido.AI for defining and starting chat agents.
+Build Jido-powered LLM agents with a small, opinionated Elixir API.
+
+Jidoka is for developers who want Jido's runtime strengths without starting with
+signals, directives, state operations, strategy internals, or request plumbing.
+Start with an agent module, add instructions, then opt into tools, memory,
+workflows, handoffs, and other runtime features only when you need them.
 
 ## Status
 
-`jidoka` is currently a pre-beta package.
-
-The beta surface is being stabilized around agents, workflows, runtime errors,
-imports, and examples. APIs outside the documented Jidoka facade may still change
-before a public Hex release.
-
-This beta implementation keeps the Spark DSL deliberately structured: immutable
-agent identity, runtime defaults, capabilities, and lifecycle policy are
-declared in separate sections.
+`jidoka` is currently alpha software and is not published to Hex yet. The beta
+surface is being stabilized around agents, tools, workflows, runtime errors,
+imports, examples, and the Phoenix LiveView consumer app.
 
 ## Installation
 
-Jidoka is not published to Hex yet. For local beta-candidate work, use the repository
-directly:
+For local alpha work, use the repository directly. Prefer pinning a commit ref
+when consuming Jidoka from another app:
 
 ```elixir
 def deps do
   [
-    {:jidoka, git: "https://github.com/mikehostetler/jidoka.git", branch: "main"}
+    # Replace COMMIT_SHA with the Jidoka commit you are testing.
+    {:jidoka,
+     git: "https://github.com/mikehostetler/jidoka.git",
+     ref: "COMMIT_SHA"}
   ]
 end
 ```
 
-When Jidoka is published, this section will be replaced with the Hex dependency
-and any Igniter installer instructions.
+If you are working from a local checkout, use a path dependency from your
+consumer app and adjust the path to match your directory layout:
 
-## Overview
+```elixir
+def deps do
+  [
+    {:jidoka, path: "../jidoka"}
+  ]
+end
+```
 
-Jidoka currently gives you a narrow, developer-friendly way to build chat-style
-LLM agents on top of Jido and Jido.AI.
+Fetch dependencies:
 
-Today, Jidoka can:
+```bash
+mix deps.get
+```
 
-- define agents with a small Spark DSL via `use Jidoka.Agent`
-- configure agent `id`, runtime context `schema`, runtime `defaults`,
-  `capabilities`, and `lifecycle`
-- resolve models through Jidoka-owned aliases like `:fast`, direct model strings,
-  inline maps, and `%LLMDB.Model{}`
-- support static or dynamic instructions through strings, module callbacks,
-  and MFA tuples
-- define tools with `use Jidoka.Tool` as a thin, Zoi-only wrapper over `Jido.Action`
-- compose prompt-level agent skills from Jido.AI skills, including runtime
-  `SKILL.md` files
-- sync remote MCP tool catalogs into an agent with `mcp_tools`
-- add low-risk public web search and read-only page access with `web`, backed by
-  `jido_browser`
-- attach tools directly or expose all generated `AshJido` actions for an Ash
-  resource with `ash_resource`
-- define plugins with `use Jidoka.Plugin` and let them contribute tools into the
-  agent's visible tool registry
-- define reusable `Jidoka.Hook` modules and attach them as default turn hooks or
-  per-request overrides
-- define reusable `Jidoka.Guardrail` modules and attach them as default
-  input/output/tool validation stages or per-request overrides
-- enable conversation-first memory with bounded retrieval and opt-in
-  auto-capture on top of `jido_memory`
-- compose structured character/persona prompts through `jido_character`
-- start many runtime instances from the same agent module under the shared
-  `Jidoka.Runtime`
-- define explicit deterministic workflows with `use Jidoka.Workflow`, backed by
-  `jido_runic`, for multi-step tool/function/agent pipelines
-- expose deterministic workflows to agents as tool-like capabilities when a
-  chat turn needs a fixed business process
-- import constrained agents from JSON or YAML at runtime with explicit
-  allowlists for tools, plugins, hooks, and guardrails, including default
-  imported context and memory settings
-- run local demo scripts that exercise full LLM + tool-call loops
+## Configure A Provider
 
-Jidoka is intentionally opinionated. It keeps the public surface focused on
-common agent authoring and hides most low-level Jido runtime machinery by
-default.
+The examples use Anthropic through ReqLLM/Jido.AI:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+In this repository, `.env` is loaded automatically at runtime through
+`dotenvy`. Shell environment variables still win over `.env` values.
+
+Jidoka owns model aliases under `config :jidoka, :model_aliases`. The default
+`:fast` alias maps to `anthropic:claude-haiku-4-5`.
+
+## Build Your First Agent
+
+This is the smallest useful Jidoka agent:
+
+```elixir
+defmodule MyApp.AssistantAgent do
+  use Jidoka.Agent
+
+  agent do
+    id :assistant_agent
+  end
+
+  defaults do
+    model :fast
+    instructions "You are a concise assistant. Answer directly."
+  end
+end
+```
+
+Start it and send a message:
+
+```elixir
+{:ok, pid} = MyApp.AssistantAgent.start_link(id: "assistant-1")
+
+{:ok, reply} =
+  MyApp.AssistantAgent.chat(pid, "Write one sentence about why Elixir works well for agents.")
+```
+
+Or use the top-level facade:
+
+```elixir
+{:ok, reply} = Jidoka.chat(pid, "Write one sentence about Jido.")
+```
+
+Handle errors with Jidoka's formatter at user-facing boundaries:
+
+```elixir
+case Jidoka.chat(pid, "Hello") do
+  {:ok, reply} ->
+    reply
+
+  {:interrupt, interrupt} ->
+    interrupt
+
+  {:handoff, handoff} ->
+    handoff
+
+  {:error, reason} ->
+    Jidoka.format_error(reason)
+end
+```
+
+That is enough to get a Jido-backed LLM agent running. Add capabilities only
+when the agent needs to do something beyond text generation.
+
+## Add One Tool
+
+```elixir
+defmodule MyApp.Tools.AddNumbers do
+  use Jidoka.Tool,
+    description: "Adds two integers.",
+    schema: Zoi.object(%{a: Zoi.integer(), b: Zoi.integer()})
+
+  @impl true
+  def run(%{a: a, b: b}, _context) do
+    {:ok, %{sum: a + b}}
+  end
+end
+
+defmodule MyApp.MathAgent do
+  use Jidoka.Agent
+
+  agent do
+    id :math_agent
+  end
+
+  defaults do
+    model :fast
+    instructions "Use tools when they help. Keep the final answer short."
+  end
+
+  capabilities do
+    tool MyApp.Tools.AddNumbers
+  end
+end
+```
+
+Now the model can call `add_numbers` during a turn.
+
+## The DSL Shape
+
+Jidoka keeps agent authoring deliberately sectioned:
+
+- `agent do`: required `id`, optional `description`, optional Zoi `schema`
+- `defaults do`: required `instructions`, optional `model`, optional `character`
+- `capabilities do`: `tool`, `ash_resource`, `mcp_tools`, `web`, `skill`,
+  `load_path`, `plugin`, `subagent`, `workflow`, and `handoff`
+- `lifecycle do`: `memory`, hooks, and guardrails
+
+Only `agent.id` and `defaults.instructions` are required for a basic agent.
+
+## What Jidoka Adds On Top Of Jido
+
+Jidoka currently gives you:
+
+- a small Spark DSL via `use Jidoka.Agent`
+- Jidoka-owned model aliases like `:fast`
+- static and dynamic instructions
+- Zoi-backed tools through `use Jidoka.Tool`
+- Ash resource tools through `ash_resource`
+- MCP tool sync through `mcp_tools`
+- constrained public web search and page-reading tools through `web`
+- prompt-level skills and runtime `SKILL.md` load paths
+- plugins as deeper runtime extension points
+- hooks and guardrails around each turn
+- conversation-first memory on top of `jido_memory`
+- structured characters/personas through `jido_character`
+- deterministic workflows through `use Jidoka.Workflow`
+- subagents, workflow capabilities, and handoffs
+- constrained JSON/YAML imported agents
+- local demos and a Phoenix LiveView consumer fixture
 
 ## Guides
 
-The ExDoc guides under `guides/` are the recommended onboarding path:
+The ExDoc guides under `guides/` are the recommended next step:
 
 - [Jidoka Guides](guides/overview.md)
 - [Getting Started](guides/getting-started.md)
@@ -95,23 +201,9 @@ The ExDoc guides under `guides/` are the recommended onboarding path:
 - [Phoenix LiveView](guides/phoenix-liveview.md)
 - [Production](guides/production.md)
 
-## Setup
+## Package Development
 
-Set your Anthropic API key:
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-```
-
-Or copy `.env.example` to `.env` and fill in the key.
-
-`jidoka` uses `dotenvy` in `config/runtime.exs` to load `.env` automatically at
-runtime. Shell environment variables still win over `.env` values.
-
-`jidoka` owns its model aliases under `config :jidoka, :model_aliases`.
-By default, `:fast` maps to `anthropic:claude-haiku-4-5`.
-
-For package development:
+From this package directory:
 
 ```bash
 mix setup
@@ -119,54 +211,10 @@ mix test
 mix quality
 ```
 
-`mix quality` follows the Jido package quality baseline: formatting, compiler
-warnings, Credo, Dialyzer, and documentation coverage.
+`mix quality` runs formatting, compiler warnings, Credo, Dialyzer, and
+documentation coverage.
 
-Coverage is enforced with ExCoveralls at the current pre-beta baseline of 70%.
-The Jido package target is 90%; Jidoka should raise this before any stable
-release.
-
-The generated runtime currently uses:
-
-- the DSL-configured `defaults.model` value, defaulting to `:fast`
-- the DSL-configured context `schema`
-- the DSL-configured `lifecycle.memory`
-- the DSL-configured `capabilities`
-- the DSL-configured `lifecycle` hooks and guardrails
-
-Model configuration lives in:
-
-- `config/config.exs` maps `:fast` under `config :jidoka, :model_aliases`
-- `config/runtime.exs` loads `.env` and configures `:req_llm`
-
-## Define An Agent
-
-```elixir
-defmodule MyApp.ChatAgent do
-  use Jidoka.Agent
-
-  agent do
-    id :chat_agent
-
-    schema Zoi.object(%{
-      tenant: Zoi.string() |> Zoi.default("demo"),
-      channel: Zoi.string() |> Zoi.default("web")
-    })
-  end
-
-  defaults do
-    model :fast
-    instructions "You are a concise assistant."
-  end
-end
-```
-
-The DSL currently supports:
-
-- `agent do`: required `id`, optional `description`, optional Zoi `schema`
-- `defaults do`: required `instructions`, optional `model`, optional `character`
-- `capabilities do`: `tool`, `ash_resource`, `mcp_tools`, `web`, `skill`, `load_path`, `plugin`, `subagent`, `workflow`, and `handoff`
-- `lifecycle do`: `memory`, hooks, and guardrails
+## Model And Instructions
 
 `model` accepts the same shapes Jido.AI and ReqLLM support:
 
@@ -174,8 +222,6 @@ The DSL currently supports:
 - direct model strings like `"anthropic:claude-haiku-4-5"`
 - inline maps like `%{provider: :anthropic, id: "claude-haiku-4-5"}`
 - `%LLMDB.Model{}` structs
-
-Example with all three:
 
 ```elixir
 defmodule MyApp.SupportAgent do
@@ -197,8 +243,6 @@ end
 - a static string
 - a module implementing `resolve_system_prompt/1`
 - an MFA tuple like `{MyApp.SupportPrompt, :build, ["prefix"]}`
-
-Module-based dynamic prompt:
 
 ```elixir
 defmodule MyApp.SupportPrompt do
@@ -1002,25 +1046,27 @@ Jidoka does not automatically inject `context` into prompts or messages. If you
 want the model to see part of it, project it explicitly through a hook, tool,
 or dynamic instructions.
 
-## Start And Chat
+## Runtime Entry Points
+
+After an agent module is defined, you can start it through the generated helper:
 
 ```elixir
-{:ok, pid} = MyApp.ChatAgent.start_link(id: "chat-1")
-{:ok, reply} = MyApp.ChatAgent.chat(pid, "Write a one-line haiku about Elixir.")
+{:ok, pid} = MyApp.AssistantAgent.start_link(id: "assistant-1")
+{:ok, reply} = MyApp.AssistantAgent.chat(pid, "Write a one-line haiku about Elixir.")
 ```
 
 Or through the top-level Jidoka runtime facade:
 
 ```elixir
-{:ok, pid} = MyApp.ChatAgent.start_link(id: "chat-1")
+{:ok, pid} = MyApp.AssistantAgent.start_link(id: "assistant-1")
 {:ok, reply} = Jidoka.chat(pid, "Write a one-line haiku about Elixir.")
 ```
 
 Or use the shared runtime facade directly:
 
 ```elixir
-{:ok, pid} = Jidoka.start_agent(MyApp.ChatAgent.runtime_module(), id: "chat-2")
-{:ok, reply} = MyApp.ChatAgent.chat(pid, "Say hello.")
+{:ok, pid} = Jidoka.start_agent(MyApp.AssistantAgent.runtime_module(), id: "assistant-2")
+{:ok, reply} = MyApp.AssistantAgent.chat(pid, "Say hello.")
 ```
 
 ## Subagents
@@ -1410,6 +1456,7 @@ The top-level helpers are:
 - Imported tools, characters, plugins, hooks, and guardrails are constrained to explicit allowlist registries.
 - Imported skills can resolve through `available_skills`, runtime `skill_paths`, or both.
 - The nested runtime module still uses `Jido.AI.Agent` underneath.
-- Internal beta development can use local `jido_runic` and `jido_eval` path
-  dependencies. A public Hex beta should replace local paths with Hex releases,
-  Git refs, or pinned tags.
+- Internal beta development can use pinned Git refs for pre-release Jido
+  ecosystem packages and local paths for test-only fixtures such as `jido_eval`.
+  A public Hex beta should replace remaining local paths with Hex releases, Git
+  refs, or pinned tags.

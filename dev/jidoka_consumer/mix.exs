@@ -22,12 +22,15 @@ defmodule JidokaConsumer.MixProject do
   defp deps do
     [
       {:ash, "~> 3.24"},
-      {:ash_jido, path: "../../../ash_jido", override: true},
-      {:jido, path: "../../../jido", override: true},
+      {:ash_jido,
+       git: "https://github.com/agentjido/ash_jido.git",
+       ref: "d10cf6e8292ab7c1a9caf826b641787eb7e864c4",
+       override: true},
+      {:jido, "~> 2.2", override: true},
       {:jidoka, path: "../.."},
       {:bandit, "~> 1.5"},
       {:dotenvy, "~> 1.1"},
-      {:floki, ">= 0.34.0", only: :test},
+      {:floki, ">= 0.38.0"},
       {:jason, "~> 1.4"},
       {:lazy_html, ">= 0.1.0", only: :test},
       {:mdex, "~> 0.12.1"},

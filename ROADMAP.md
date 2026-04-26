@@ -1,433 +1,289 @@
 # Jidoka Roadmap
 
-Updated: 2026-04-23
+Updated: 2026-04-26
 
-This roadmap is the high-level guide for moving Jidoka toward beta and then into
-the next orchestration layers. `TODO.md` remains the tactical checklist; this
-file explains sequencing, scope, and boundaries.
+This is the single planning document for `jidoka`. It carries the current
+assessment, tactical beta checklist, release gate, and post-beta direction.
+
+## Current Status
+
+Jidoka is an alpha, pre-beta package. It is not published to Hex yet.
+
+The core design has been proven: Jidoka can be a narrow, developer-friendly
+layer over Jido and Jido.AI without exposing raw signals, directives, state
+operations, strategy internals, or request plumbing as the default authoring
+surface.
+
+The next phase is release discipline, not broadening. The highest-value work is
+dependency posture, release packaging, docs, and runtime hardening around the
+surface that already exists.
 
 ## Product Direction
 
-Jidoka should stay a narrow, developer-friendly layer over Jido and Jido.AI. The
-core design line is:
+Jidoka should grow through clear adjacent nouns, not by turning `Jidoka.Agent`
+into a catch-all runtime.
 
-- `agent` is the executable unit.
-- `workflow` coordinates explicit multi-step work.
+- `agent` is the executable chat turn unit.
+- `tool` is a model-callable deterministic capability.
+- `model`, `instructions`, `context`, `memory`, `output`, and `middleware` style
+  lifecycle concepts should remain familiar to developers coming from modern LLM
+  agent frameworks.
+- `workflow` coordinates explicit multi-step deterministic work.
 - `character` shapes identity, voice, and prompt persona.
+- `web` is constrained read-only public web access, not browser control.
 - `handoff` transfers conversation/control ownership.
-- `team` or `pod` represents a durable supervised group.
-
-Do not let `Jidoka.Agent` absorb every concept. The package should grow by adding
-clear adjacent nouns, not by turning the agent DSL into a catch-all runtime.
-
-## Milestone Order
-
-### 1. Workflow Spike With `jido_runic`
-
-Goal: prove the workflow substrate before committing the public Jidoka API.
-
-Status: done.
-
-Scope:
-
-- Use the local `../jido_runic` checkout as a path dependency in a feature
-  branch.
-- Build the smallest Jidoka-owned proof that can compile a workflow and run it.
-- Decide whether Jidoka should use direct `Runic.Workflow` execution,
-  `Jido.Runic.Strategy`, or both.
-- Decide how Jidoka agent calls become workflow nodes.
-- Identify any required upstream changes in `jido_runic`.
-
-Exit criteria:
-
-- One tiny local workflow runs end-to-end.
-- We know the runtime path for the MVP.
-- We have a short design note for the public `Jidoka.Workflow` shape.
-
-### 2. Workflow MVP
-
-Goal: land the missing beta feature.
-
-Status: done.
-
-Scope:
-
-- Add `Jidoka.Workflow`.
-- Support workflow id, description, input schema, steps, dependencies, output
-  selection, and inspection.
-- Support agent-backed steps and deterministic function/action steps.
-- Compile Jido Action-backed steps through `Jido.Runic.ActionNode` where that is
-  the right fit.
-- Return Jidoka/Splode errors.
-- Add one focused example that is not the kitchen sink.
-- Add docs explaining when to use an agent, subagent, or workflow.
-
-Out of scope:
-
-- Durable persistence.
-- Planner-generated workflows.
-- Crew/team abstraction.
-- Public raw Runic graph authoring.
-
-### 3. Runtime Error Normalization
-
-Goal: make every important runtime failure readable and predictable before beta.
-
-Status: done.
-
-Scope:
-
-- Normalize workflow errors into `Jidoka.Error`.
-- Normalize subagent failures.
-- Normalize MCP endpoint startup, command, conflict, and partial-sync failures.
-- Normalize memory read/write failures and define which failures are soft vs
-  hard.
-- Ensure CLI demos call `Jidoka.format_error/1`.
-- Add stable tests for multi-error formatting.
-
-Ordering note:
-
-Do this after the workflow MVP so workflow errors are included in the same error
-taxonomy. Otherwise the error design will need to be reopened immediately.
-
-Detailed plan:
-
-1. Define the runtime error contract.
-   - Keep public runtime calls returning `{:ok, value}` or
-     `{:error, %Jidoka.Error.*{}}`.
-   - Treat raw strings, atoms, tuples, exits, and third-party exceptions as
-     internal causes that must be wrapped before crossing a Jidoka public
-     boundary.
-   - Preserve original reasons under `details.cause` or a narrower
-     context-specific key so debugging does not lose information.
-   - Standardize core metadata keys:
-     `:operation`, `:agent_id`, `:workflow_id`, `:step`, `:target`, `:phase`,
-     `:field`, `:value`, `:timeout`, `:request_id`, `:cause`.
-
-2. Add a normalization module.
-   - Introduce `Jidoka.Error.Normalize` as the single place that turns known raw
-     runtime reasons into `Jidoka.Error.ValidationError`,
-     `Jidoka.Error.ConfigError`, or `Jidoka.Error.ExecutionError`.
-   - Keep the existing constructors in `Jidoka.Error`, but route boundary code
-     through named normalizers such as:
-     `chat_error/2`, `workflow_error/2`, `subagent_error/2`,
-     `mcp_error/2`, `memory_error/2`, `hook_error/2`, and
-     `guardrail_error/2`.
-   - Make unknown shapes deterministic by wrapping them as execution or
-     internal errors with the inspected cause in details.
-
-3. Improve formatting.
-   - Expand `Jidoka.Error.format/1` so it formats Splode classes, multi-errors,
-     nested causes, workflow step failures, subagent failures, MCP endpoint
-     failures, and memory failures.
-   - Keep formatting stable and user-facing: one short headline plus sorted
-     field bullets for validation details.
-   - Ensure CLI demos and debug summaries never fall back to raw `inspect/1`
-     for known Jidoka errors.
-
-4. Normalize workflow errors first.
-   - Audit `Jidoka.Workflow.Runtime` for raw reasons produced by input parsing,
-     context refs, imported-agent refs, action execution, agent execution,
-     timeouts, invalid step results, and output selection.
-   - Ensure every `Jidoka.Workflow.run/3` error has workflow id, step name when
-     applicable, target, operation, and original cause.
-   - Add formatting tests for invalid input, missing context refs, missing
-     imported agents, step failure, timeout, and invalid output refs.
-
-5. Normalize subagent errors.
-   - Replace public `{:subagent_failed, name, reason}`,
-     `{:child_error, reason}`, `{:peer_not_found, peer}`, timeout, invalid
-     task, invalid child result, and peer mismatch shapes with
-     `Jidoka.Error.ExecutionError` or `Jidoka.Error.ValidationError`.
-   - Preserve child request metadata and peer target details in error metadata.
-   - Update parent-agent tests so subagent failures are asserted as structured
-     Jidoka errors and formatted messages are stable.
-
-6. Normalize MCP errors.
-   - Wrap endpoint registration conflicts, startup failures, sync failures,
-     command failures, tool limit failures, missing `jido_ai`, partial sync
-     errors, and generated tool validation failures.
-   - Distinguish hard failures from partial sync warnings. Hard failures should
-     return `{:error, %Jidoka.Error.*{}}`; partial sync should return successful
-     sync metadata with structured warning entries.
-   - Add tests for conflict, startup failure, partial sync, missing dependency,
-     and endpoint command errors.
-
-7. Normalize memory errors.
-   - Define which memory failures are hard:
-     invalid memory config, missing required context namespace keys, invalid
-     namespace setup, and write failures when persistence was explicitly
-     requested.
-   - Define which memory failures are soft:
-     optional retrieval misses, empty memory, and disabled/missing plugin cases
-     that should not stop an agent turn.
-   - Wrap `jido_memory` and Jido plugin errors with agent id, namespace,
-     lifecycle phase, and original cause.
-   - Add tests around retrieve/build/persist phases and kitchen sink memory
-     behavior.
-
-8. Normalize hooks and guardrails.
-   - Wrap invalid request refs, invalid stages, hook callback failures,
-     guardrail callback failures, guardrail tool errors, interrupts, and
-     invalid callback return shapes.
-   - Keep interrupt semantics explicit: interrupts should remain interrupt
-     outcomes where expected, but invalid interrupt shapes should become
-     validation errors.
-
-9. Build an error matrix test suite.
-   - Add table-driven tests that exercise each public runtime boundary:
-     `Jidoka.chat/3`, `Jidoka.Agent.prepare_chat_opts/2`,
-     `Jidoka.Workflow.run/3`, subagent tools, MCP sync, and memory lifecycle.
-   - Assert both struct class and formatted output.
-   - Add regression tests proving unknown raw errors are wrapped rather than
-     leaked.
-
-10. Update docs and examples.
-    - Document `Jidoka.format_error/1` as the recommended display path.
-    - Add a short README section showing validation, config, and execution
-      errors.
-    - Update usage rules to say public runtime APIs return Jidoka/Splode errors
-      and examples should not pattern-match on raw internal tuples.
-
-Exit criteria:
-
-- Public Jidoka runtime APIs do not leak known raw string/atom/tuple reasons.
-- `Jidoka.format_error/1` produces stable messages for validation, config,
-  execution, multi-error, workflow, subagent, MCP, memory, hook, and guardrail
-  failures.
-- Existing demos print formatted errors.
-- The full release gate passes.
-
-### 4. Public API Stabilization
-
-Goal: freeze the beta public surface.
-
-Status: done.
-
-Scope:
-
-- Review all public modules and function names.
-- Decide top-level API boundaries, especially `Jidoka.chat/3`,
-  `Jidoka.Workflow.run/3`, and whether a broader `Jidoka.run/3` belongs in beta.
-- Ensure docs use `instructions`, not `system_prompt`, except for internal Jido
-  mapping notes.
-- Ensure examples use the beta DSL shape and parenless style.
-- Confirm imported JSON/YAML specs match the beta section layout.
-- Update README, usage rules, changelog, docs groups, and package metadata.
-- Run the full release gate and demo smoke checks.
-
-Detailed plan:
-
-1. Inventory the public surface.
-   - List exported modules and functions from `lib/jidoka`.
-   - Separate intended beta API from implementation modules.
-   - Mark internal modules with `@moduledoc false` where they should not be
-     presented as public.
-   - Confirm ExDoc grouping matches the intended public story.
-
-2. Freeze top-level runtime APIs.
-   - Confirm `Jidoka.chat/3`, `Jidoka.start_agent/2`, `Jidoka.stop_agent/1`,
-     `Jidoka.format_error/1`, `Jidoka.Workflow.run/3`, and
-     `Jidoka.inspect_workflow/1` are the intended beta entrypoints.
-   - Decide whether `Jidoka.run/3` belongs in beta or should be deferred.
-   - Ensure successful return shapes and error return shapes are documented and
-     tested at public boundaries.
-
-3. Freeze the Agent DSL.
-   - Confirm `agent`, `defaults`, `capabilities`, and `lifecycle` are the beta
-     sections.
-   - Confirm `instructions` is the only public prompt field.
-   - Audit examples and imported specs for stale `system_prompt`, legacy flat
-     placement, or old historical naming.
-   - Keep Jido-specific terms out of public docs unless they explain an internal
-     adapter boundary.
-
-4. Freeze the Workflow DSL.
-   - Confirm workflow `id`, `description`, `input`, `steps`, and `output` are
-     the beta contract.
-   - Confirm `tool`, `function`, and `agent` are the only beta step kinds.
-   - Confirm direct `Runic` concepts stay internal.
-   - Decide whether workflow inspection output is stable enough for beta or
-     should be marked experimental.
-
-5. Decide the agent/workflow integration boundary.
-   - Evaluate whether beta needs an agent capability adapter for workflows, for
-     example `workflow MyWorkflow, as: :review_refund`.
-   - If included, keep it narrow: expose workflows to agents as tool-like
-     capabilities, but continue running them through `Jidoka.Workflow`.
-   - If deferred, document the current rule clearly: workflows may call agents,
-     but agents do not yet call workflows directly.
-   - Use the support example as the decision fixture because it already exposes
-     both directions.
-
-6. Stabilize errors and diagnostics.
-   - Confirm runtime errors are always Jidoka/Splode errors at public boundaries.
-   - Confirm `Jidoka.format_error/1` is the only recommended display path.
-   - Audit demo CLIs, evals, and debug output for raw `inspect(reason)` usage on
-     known Jidoka errors.
-
-7. Stabilize examples and eval posture.
-   - Keep kitchen sink broad, but make focused examples the primary docs path.
-   - Ensure support, workflow, imported, orchestrator, and chat demos all use
-     the renamed `mix jidoka` commands.
-   - Keep live LLM evals excluded by default and document required environment
-     variables.
-
-8. Stabilize dependency posture.
-   - Decide which local path dependencies are acceptable for beta.
-   - For public Hex beta, replace local paths with Hex releases, Git refs, or
-     pinned tags.
-   - Document any dependency that remains intentionally experimental.
-
-9. Run the beta release gate.
-   - `mix format --check-formatted`
-   - `mix compile --warnings-as-errors`
-   - `mix test`
-   - `mix credo --min-priority higher`
-   - `mix dialyzer`
-   - `mix quality`
-   - Smoke all `mix jidoka ... --dry-run` demos.
-
-Exit criteria:
-
-- The beta API is documented and intentionally named.
-- Tactical TODO items blocking beta are either done or explicitly deferred.
-
-### 5. Beta Release
-
-Goal: publish or tag a coherent beta that users can evaluate.
-
-Scope:
-
-- Final release gate.
-- Changelog and migration note for the beta DSL.
-- Dependency posture decision:
-  - internal beta can tolerate path/GitHub dependencies;
-  - public Hex beta should prefer Hex releases or pinned tags.
-- Release notes that clearly state what is stable, experimental, and deferred.
-
-## Post-Beta Milestones
-
-### 6. Characters Via `jido_character`
-
-Goal: add persona/voice composition without bloating `Jidoka.Agent`.
-
-Status: basic Jidoka integration done; Jidoka now has a direct Git dependency on
-`jido_character`. Public Hex beta still needs a dependency posture decision:
-Hex release, pinned tag, or another stable source.
-
-Candidate package:
-
-- `jido_character` exists at `https://github.com/agentjido/jido_character`.
-- It is not currently available through `mix hex.info jido_character`.
-- It provides Zoi-validated character maps, `use Jido.Character`, identity,
-  personality, voice, knowledge, memory, instructions, renderers, and ReqLLM
-  context rendering.
-
-Likely Jidoka scope:
-
-- Add `defaults.character MyApp.Characters.SupportAdvisor` or similar. Done.
-- Compose rendered character output with `defaults.instructions`. Done.
-- Support per-call `character:` overrides. Done.
-- Support imported `defaults.character` inline maps and `available_characters`
-  refs. Done.
-- Define precedence between static instructions, dynamic instructions, and
-  character-rendered prompt sections. Done: character first, instructions
-  second, skills and memory afterward.
-- Keep character memory distinct from `jido_memory` until the model is clear.
-
-Risk:
-
-- Character rendering touches prompt composition, which is public and easy to
-  overfit. Continue refining through examples before expanding the DSL.
-
-### 7. Handoffs
-
-Goal: support explicit control transfer between agents.
-
-Status: done for beta MVP.
-
-Distinction:
-
-- Subagents are "agent as tool": the parent agent remains in control.
-- Handoffs transfer ownership of the next turn or phase to another agent.
-
-Scope questions:
-
-- Ownership is tracked in memory by `conversation_id => owner`.
-- Target agent memory remains independent; handoff context forwarding controls
-  public runtime context only.
-- Source hooks and guardrails apply to the initiating turn; target hooks and
-  guardrails apply on later routed turns.
-- Control does not return automatically in the MVP.
-- The initiating turn surfaces `{:handoff, %Jidoka.Handoff{}}`.
-
-Dependency:
-
-- Workflows should land first so multi-step orchestration is not confused with
-  conversation ownership transfer.
-- Characters should land first or in parallel if handoff examples depend on
-  strong specialist identity.
-
-### 8. Pods And Durable Teams
-
-Goal: expose durable supervised agent groups when users need long-lived teams or
-workspace-level topology.
-
-Underlying runtime:
-
-- Jido Pods model canonical topology, eager/lazy node reconciliation, adoption,
-  nested pods, partitioning, and runtime mutation.
-
-Likely Jidoka noun:
-
-- Prefer `team` publicly unless direct `pod` language proves clearer for
-  Elixir/Jido users.
-
-Scope:
-
-- Define named team members.
-- Start or lookup durable teams by id.
-- Inspect member status.
-- Ensure lazy members.
-- Decide how teams interact with workflows and handoffs.
-
-Out of scope for first pass:
-
-- Full topology mutation DSL.
-- Complex nested teams.
-- Swarm-like peer mesh behavior.
-
-### 9. Crew-Style Recipes
-
-Goal: provide higher-level coordination patterns after the underlying pieces are
-stable.
-
-Positioning:
-
-- CrewAI is useful as product vocabulary: agents, tasks, crews, flows, manager
-  process, planning, memory, and callbacks.
-- Jidoka should not copy YAML-first authoring or role/goal/backstory as the core
-  DSL.
-- Crew-style behavior should be built from Jidoka primitives:
-  `agent + workflow + character + handoff + team`.
+- `team` or `pod` is a future durable supervised group.
+
+## Verified Baseline
+
+Last verified: 2026-04-26.
+
+Package checks:
+
+- `mix deps.get`
+- `mix compile`
+- `mix test` (`276 tests, 0 failures`, `2 excluded` live LLM evals)
+- `mix quality`
+
+Example smoke checks:
+
+- `mix jidoka chat --dry-run`
+- `mix jidoka imported --dry-run`
+- `mix jidoka workflow --dry-run`
+- `mix jidoka workflow -- 7` (`%{value: 16}`)
+- `mix jidoka orchestrator --dry-run`
+- `mix jidoka kitchen_sink --log-level trace --dry-run`
+
+Live provider checks with a configured Anthropic key:
+
+- compiled chat demo returned `42` for the `add_numbers` prompt
+- imported-agent demo returned `42` for the `add_numbers` prompt
+
+Dev consumer app checks:
+
+- `cd dev/jidoka_consumer && mix deps.get`
+- `mix compile --warnings-as-errors`
+- `mix test` (`16 tests, 0 failures`)
+- `PORT=4002 mix phx.server`
+- in-app browser load of `http://localhost:4002`
+
+The dev site loaded successfully with the expected LiveView support console,
+demo ticket queue, prompt buttons, runtime context, and no browser console
+errors. The only browser warning was Tailwind's CDN warning, which is acceptable
+for the local fixture but should not become the production asset story.
+
+## Implemented Foundation
+
+These are considered implemented for the beta candidate. They still need normal
+hardening and documentation care, but they are no longer architectural unknowns.
+
+- [x] Sectioned agent DSL: `agent`, `defaults`, `capabilities`, `lifecycle`
+- [x] Required immutable `agent.id`
+- [x] Required `defaults.instructions`
+- [x] Model aliases and direct model resolution
+- [x] Context schemas and default extraction
+- [x] Direct tools with `use Jidoka.Tool`
+- [x] Ash resource capability expansion
+- [x] MCP tool sync
+- [x] Constrained read-only web capabilities
+- [x] Skills and runtime skill load paths
+- [x] Plugins as deeper extension points
+- [x] Hooks and guardrails
+- [x] Conversation-first memory
+- [x] Subagents as manager-controlled specialist tools
+- [x] Explicit handoffs
+- [x] Deterministic workflows via `Jidoka.Workflow`
+- [x] Workflow capabilities exposed to agents as tools
+- [x] JSON/YAML imported agents with explicit registries
+- [x] Character/persona integration through `jido_character`
+- [x] Jidoka/Splode runtime error normalization
+- [x] Inspection helpers for agents, workflows, requests, and demos
+- [x] CLI demo entrypoints under `mix jidoka`
+- [x] Phoenix LiveView consumer spike under `dev/jidoka_consumer`
+
+## Current Review
+
+### Strong Signals
+
+- The public mental model is clear: agents handle turns, workflows handle
+  deterministic orchestration, handoffs transfer ownership, and the dev support
+  app shows how the pieces fit at a Phoenix boundary.
+- Imported agents are first-class constrained authoring surfaces, not a side
+  path.
+- Tool-like capabilities have useful breadth without losing shape: direct tools,
+  Ash-generated actions, MCP-synced tools, skills, plugins, web tools,
+  subagents, workflows, and handoffs all participate in duplicate-name checks.
+- Error normalization is Jidoka-shaped and demos use `Jidoka.format_error/1`
+  where user-facing output matters.
+- The examples are layered correctly: chat and imported are simple, workflow is
+  deterministic, orchestrator shows delegation, dev support shows app
+  integration, and kitchen sink stays a showcase.
+
+### Recent Findings
+
+- Fixed: `dev/jidoka_consumer` dependency resolution now accounts for
+  package-level `jido_browser` by using runtime `floki >= 0.38.0`.
+- Fixed: planning docs are consolidated into this single roadmap.
+- Fixed: root Jido ecosystem Git dependencies are pinned to explicit commit
+  refs, and `dev/jidoka_consumer` no longer depends on sibling `jido` or
+  `ash_jido` paths.
+- Remaining: Tailwind CDN usage in the dev site is fine for a local fixture but
+  should move to the normal Phoenix asset pipeline if the app becomes a public
+  demo.
+- Remaining: dependency posture still needs periodic review as upstream packages
+  publish tags or Hex releases.
+- Remaining: decide whether `Jidoka.Web` needs DNS-resolution checks to block
+  public hostnames that resolve to private addresses before public beta.
+
+## Active Beta Priorities
+
+### 1. Dependency Posture
+
+- [x] Pin root Jido ecosystem Git dependencies to explicit commit refs.
+- [x] Move `jido_runic` from a sibling path dependency to a pinned Git ref.
+- [x] Keep the dev consumer app using local `jidoka` while resolving sibling
+  Jido ecosystem packages through Hex or pinned Git refs.
+- [ ] Replace pinned Git refs with Hex releases or tags where practical.
+- [ ] Decide whether `jido_runic`, `jido_memory`, `jido_mcp`,
+  `jido_character`, and `ash_jido` need coordinated beta tags.
+- [ ] Remove direct `override: true` entries once upstream dependency ranges
+  align.
+- [ ] Keep the dev consumer dependency graph resolving after package-level
+  dependency changes.
+
+### 2. Release Packaging
+
+- [ ] Update `CHANGELOG.md` for the alpha-to-beta surface.
+- [ ] Review `mix.exs` package metadata, docs groups, extras, and links.
+- [ ] Decide whether `usage-rules.md` should be package-facing, org-facing, or
+  both.
+- [ ] Mark experimental modules and APIs clearly in docs.
+- [ ] Decide whether the coverage gate should stay at 70% for alpha or move to
+  80% for beta. Keep 90% as the v1 target.
+
+### 3. Examples And Demos
+
+- [ ] Keep focused examples first: chat, imported, workflow, orchestrator, dev
+  support app.
+- [ ] Keep `examples/kitchen_sink` positioned as a showcase, not the onboarding
+  path.
+- [ ] Run one real provider-backed compiled demo and one imported-agent demo
+  before a beta tag.
+- [ ] Keep live LLM evals excluded by default and documented with required env
+  vars.
+- [ ] Keep the smoke commands in this file current.
+
+### 4. Dev Consumer Site
+
+- [x] Ensure `dev/jidoka_consumer` resolves after `jido_browser` was added.
+- [x] Compile the consumer app with warnings as errors.
+- [x] Run the consumer test suite.
+- [x] Boot the Phoenix endpoint on port `4002`.
+- [x] Browser-check the root LiveView.
+- [ ] Replace Tailwind CDN usage if the consumer app becomes more than a local
+  dev fixture.
+- [x] Keep `jidoka` as the only local path dependency in the dev app.
+
+### 5. Runtime Hardening
+
+- [ ] Decide whether `Jidoka.Web` needs DNS-resolution checks to block private
+  targets reached through public hostnames before public beta.
+- [ ] Add more formatted-error regression tests around nested subagent,
+  workflow, MCP, memory, hook, and guardrail failures.
+- [ ] Recheck memory namespace isolation for per-agent, shared, and
+  context-derived namespaces.
+- [ ] Improve `inspect_request/1` trace detail for delegation, memory, MCP
+  sync, hooks, guardrails, workflows, and handoffs.
+- [ ] Move proven MCP JSON Schema cleanup upstream to `jido_mcp` when stable.
+
+## Pre-Beta Release Gate
+
+Run from `jidoka/`:
+
+```bash
+mix deps.get
+mix format --check-formatted
+mix compile --warnings-as-errors
+mix test
+mix credo --min-priority higher
+mix dialyzer
+mix quality
+```
+
+Run example smoke checks:
+
+```bash
+mix jidoka chat --dry-run
+mix jidoka imported --dry-run
+mix jidoka workflow --dry-run
+mix jidoka workflow -- 7
+mix jidoka orchestrator --dry-run
+mix jidoka kitchen_sink --log-level trace --dry-run
+```
+
+Run dev consumer checks:
+
+```bash
+cd dev/jidoka_consumer
+mix deps.get
+mix compile --warnings-as-errors
+mix test
+PORT=4002 mix phx.server
+```
+
+Then open `http://localhost:4002` and confirm the LiveView renders without
+console errors.
+
+## Milestone History
+
+### Done For Beta Candidate
+
+- Workflow spike with `jido_runic`
+- Workflow MVP
+- Runtime error normalization
+- Public API stabilization
+- Character integration
+- Handoff MVP
+- Constrained web capability
+- Phoenix LiveView consumer spike
+
+### Active
+
+- Beta release prep
+- Dependency posture for public beta and the `agentjido` org move
+- Release notes and changelog
+- Final example and dev-site smoke checks
+
+## Post-Beta Direction
+
+### Teams Or Pods
+
+Use Jido Pods as the likely runtime substrate for durable supervised groups:
+named nodes, dependencies, adoption, reconciliation, mutation, and supervision.
+Prefer `team` publicly unless direct `pod` language proves clearer for
+Elixir/Jido users.
+
+### Crew-Style Recipes
+
+Crew-style behavior should be built from Jidoka primitives:
+`agent + workflow + character + handoff + team`. Do not copy YAML-first
+authoring or role/goal/backstory as the core DSL.
 
 Possible recipes:
 
-- Research-and-write team.
-- Manager/reviewer/executor team.
-- Planning workflow with specialist handoffs.
-- Durable workspace team backed by Pods.
+- research-and-write team
+- manager/reviewer/executor team
+- planning workflow with specialist handoffs
+- durable workspace team backed by Pods
 
-## Current Priority
+## Intentionally Not Beta
 
-The next work should follow this order:
-
-1. Beta release prep.
-2. Dependency posture for a public beta.
-3. Pods/team-level coordination planning.
-4. Crew-style recipe examples after the lower-level primitives are stable.
-
-Characters are integrated for the beta candidate. Handoffs, Pods, and
-Crew-style coordination remain important, but they should not block the first
-beta unless the beta positioning explicitly requires them.
+- Jidoka as an MCP server
+- Public raw Jido signals, directives, state ops, or strategy configuration
+- Peer mesh or swarm coordination
+- Durable workflow persistence
+- Planner-generated workflows
+- Broad direct Runic component authoring
+- YAML-first authoring
+- Artifact delivery for images, PDFs, voice, or files
+- Dynamic tool exposure/gating beyond current guardrail validation
