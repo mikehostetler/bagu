@@ -64,6 +64,33 @@ provider_setup_hint =
 }
 ```
 
+The tutorial keeps framework logs quiet so provider-backed cells show the result
+instead of runtime internals. Set `show_runtime_logs?` to `true` when you want to
+inspect Jido/Jidoka execution details.
+
+```elixir
+show_runtime_logs? = false
+
+Logger.configure(level: if(show_runtime_logs?, do: :notice, else: :warning))
+Jidoka.Runtime.debug(if(show_runtime_logs?, do: :on, else: :off))
+
+format_chat_result = fn
+  {:ok, turn} ->
+    {:ok, Jido.AI.Turn.extract_text(turn)}
+
+  {:error, reason} ->
+    {:error, Jidoka.format_error(reason)}
+
+  other ->
+    other
+end
+
+%{
+  runtime_logs: if(show_runtime_logs?, do: :notice, else: :warning),
+  jidoka_debug: Jidoka.Runtime.debug()
+}
+```
+
 ```elixir
 start_or_reuse = fn id, start_fun ->
   case Jidoka.whereis(id) do
@@ -130,7 +157,8 @@ if provider_ready? do
       LivebookDemo.AssistantAgent.start_link(id: "livebook-assistant")
     end)
 
-  LivebookDemo.AssistantAgent.chat(pid, "Write one sentence about what Jidoka does.")
+  result = LivebookDemo.AssistantAgent.chat(pid, "Write one sentence about what Jidoka does.")
+  format_chat_result.(result)
 else
   {:skip, provider_setup_hint <> " to run provider-backed chat cells."}
 end
@@ -213,9 +241,12 @@ if provider_ready? do
       LivebookDemo.MathAgent.start_link(id: "livebook-math-agent")
     end)
 
-  LivebookDemo.MathAgent.chat(pid, "Use the add_numbers tool to add 20 and 22. Reply with only the sum.",
-    context: %{session: "livebook"}
-  )
+  result =
+    LivebookDemo.MathAgent.chat(pid, "Use the add_numbers tool to add 20 and 22. Reply with only the sum.",
+      context: %{session: "livebook"}
+    )
+
+  format_chat_result.(result)
 else
   {:skip, provider_setup_hint <> " to run provider-backed tool calls."}
 end
@@ -336,7 +367,8 @@ if provider_ready? do
       LivebookDemo.WorkflowAgent.start_link(id: "livebook-workflow-agent")
     end)
 
-  LivebookDemo.WorkflowAgent.chat(pid, "Use the run_math_pipeline workflow with value 20. What is the output?")
+  result = LivebookDemo.WorkflowAgent.chat(pid, "Use the run_math_pipeline workflow with value 20. What is the output?")
+  format_chat_result.(result)
 else
   {:skip, provider_setup_hint <> " to run provider-backed workflow capability calls."}
 end
@@ -395,9 +427,12 @@ if provider_ready? do
       Jidoka.start_agent(imported_agent, id: "livebook-imported-agent")
     end)
 
-  Jidoka.chat(pid, "Use the add_numbers tool to add 7 and 35. Reply with only the sum.",
-    context: %{"session" => "livebook-imported"}
-  )
+  result =
+    Jidoka.chat(pid, "Use the add_numbers tool to add 7 and 35. Reply with only the sum.",
+      context: %{"session" => "livebook-imported"}
+    )
+
+  format_chat_result.(result)
 else
   {:skip, provider_setup_hint <> " to run provider-backed imported-agent chat."}
 end
