@@ -12,6 +12,12 @@ imports, AgentView, eval checks, and optional provider-backed chat.
 This is a capstone notebook. Start with the focused notebooks first if you are
 new to Jidoka.
 
+The flow is intentionally incremental: each chapter builds one independent
+piece of the support agent, shows the piece in isolation, and includes a small
+test or inspection step. After the individual capabilities are clear, the final
+chapters pull them together into one agent and run an end-to-end provider-backed
+turn.
+
 ## Setup
 
 ```elixir
@@ -210,6 +216,8 @@ defmodule LivebookDemo.KitchenSink.Hooks.NotifyInterrupt do
 
   @impl true
   def call(%Jidoka.Hooks.InterruptInput{interrupt: interrupt}) do
+    # Demo shortcut: sending to a cell PID is useful in Livebook, but real apps
+    # should use a stable event sink such as Telemetry, PubSub, or request state.
     if notify_pid = get_in(interrupt.data, [:notify_pid]) do
       send(notify_pid, {:kitchen_sink_interrupt, interrupt})
     end
