@@ -652,9 +652,14 @@ defmodule Jidoka.Kino do
     parts
     |> Enum.reject(&blank?/1)
     |> Enum.map(&to_string/1)
+    |> Enum.map(&mermaid_label_part/1)
     |> Enum.join("\\n")
-    |> String.replace("\\", "\\\\")
-    |> String.replace("\"", "\\\"")
+  end
+
+  defp mermaid_label_part(part) do
+    part
+    |> String.replace("\\", "/")
+    |> String.replace("\"", "'")
     |> String.replace("[", "(")
     |> String.replace("]", ")")
   end

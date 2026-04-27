@@ -130,6 +130,25 @@ defmodule JidokaTest.KinoTest do
     assert markdown =~ "add_numbers"
   end
 
+  test "agent_diagram escapes inspected quoted values for Mermaid labels" do
+    inspection = %{
+      kind: :agent_definition,
+      id: "quoted_agent",
+      model: "anthropic:claude-haiku-4-5",
+      context: %{tenant: "acme"},
+      mcp_tools: [%{prefix: "ks_fs_", endpoint: :ks_livebook_mcp}],
+      tool_names: ["ks_show_context"]
+    }
+
+    assert {:ok, markdown} = Jidoka.Kino.agent_diagram(inspection)
+
+    assert markdown =~ "quoted_agent"
+    assert markdown =~ "ks_fs_"
+    assert markdown =~ ~s(Agent["Agent\\nquoted_agent"])
+    refute markdown =~ ~s(\\")
+    assert markdown =~ "%{prefix: 'ks_fs_'"
+  end
+
   test "context renders public and internal runtime keys without Kino loaded" do
     assert :ok =
              Jidoka.Kino.context("runtime context", %{
