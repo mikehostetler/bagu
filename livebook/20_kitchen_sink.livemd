@@ -2,7 +2,7 @@
 
 ## Section
 
-[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmikehostetler%2Fjidoka%2Fmain%2Flivebook%2F20_kitchen_sink.livemd)
+[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fagentjido%2Fjidoka%2Fmain%2Flivebook%2F20_kitchen_sink.livemd)
 
 Build one advanced support router that composes the main Jidoka primitives:
 context, dynamic instructions, characters, tools, plugins, Ash resources, MCP,
@@ -27,7 +27,7 @@ jidoka_dep =
   if local_checkout? do
     {:jidoka, path: Path.expand("..", __DIR__)}
   else
-    {:jidoka, git: "https://github.com/mikehostetler/jidoka.git", branch: "main"}
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", branch: "main"}
   end
 
 Mix.install(
@@ -944,11 +944,10 @@ Jidoka.Kino.table("Kitchen-sink pre-flight", preflight_rows)
 
 ## Optional Provider Chat And Debugging
 
-This cell runs the full router through a provider-backed chat call. The trace
-table captures runtime events, the result table reports whether the turn
-completed, interrupted, or handed off, and the inspection table shows the latest
-request state after the turn. Without `ANTHROPIC_API_KEY`, it returns a friendly
-missing-provider result.
+This cell runs the full router through a provider-backed chat call. The
+structured trace timeline and call graph show the runtime path across model,
+tool, workflow, subagent, handoff, guardrail, memory, and MCP events. Without
+`ANTHROPIC_API_KEY`, it returns a friendly missing-provider result.
 
 ```elixir
 Application.put_env(:jidoka, :mcp_sync_module, LivebookDemo.KitchenSink.FakeMCPSync)
@@ -994,6 +993,16 @@ result =
 
 Jidoka.Kino.context("Provider runtime context", runtime_context)
 Jidoka.Kino.debug_agent(pid)
+
+case Jidoka.inspect_trace(pid) do
+  {:ok, trace} ->
+    Jidoka.Kino.timeline(trace)
+    Jidoka.Kino.call_graph(trace)
+    Jidoka.Kino.trace_table(trace)
+
+  {:error, _reason} ->
+    :ok
+end
 
 result
 ```

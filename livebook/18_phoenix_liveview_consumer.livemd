@@ -1,6 +1,6 @@
 # Jidoka: Phoenix LiveView Consumer Boundary
 
-[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmikehostetler%2Fjidoka%2Fmain%2Flivebook%2F18_phoenix_liveview_consumer.livemd)
+[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fagentjido%2Fjidoka%2Fmain%2Flivebook%2F18_phoenix_liveview_consumer.livemd)
 
 Jidoka does not need to render Phoenix components. The reusable boundary is an
 `AgentView`: it chooses the agent, conversation id, runtime context, and
@@ -11,7 +11,7 @@ projection shape that a LiveView can render.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/mikehostetler/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
     {:kino, "~> 0.19.0"}
   ],
   config: [

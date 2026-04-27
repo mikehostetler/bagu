@@ -2,7 +2,7 @@ defmodule Jidoka.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/mikehostetler/jidoka"
+  @source_url "https://github.com/agentjido/jidoka"
   @description "Experimental developer-friendly LLM agent harness built on Jido and Jido.AI."
   @coverage_threshold 70
 
@@ -69,7 +69,8 @@ defmodule Jidoka.MixProject do
       {:jido_mcp, git: "https://github.com/agentjido/jido_mcp.git", ref: "ece85aaf745390ee22d00cdbf68bb9d2fa61de3b"},
       {:jido_memory,
        git: "https://github.com/agentjido/jido_memory.git", ref: "2490899522a775f94dca00c91f163bee56dfd86b"},
-      {:jido_eval, path: "../jido_eval", only: :test},
+      {:jido_eval,
+       git: "https://github.com/agentjido/jido_eval.git", ref: "55eacb36e1e86b7608e898b95323cb81ecb541f3", only: :test},
       {:jido_runic,
        git: "https://github.com/agentjido/jido_runic.git", ref: "6405a66e32e7d5f0d2246b36b523309e31eac8b1"},
       {:mdex, "~> 0.12.1"},
@@ -164,6 +165,8 @@ defmodule Jidoka.MixProject do
           Jidoka,
           Jidoka.Kino,
           Jidoka.Runtime,
+          Jidoka.Trace,
+          Jidoka.Trace.Event,
           Jidoka.Interrupt,
           Jidoka.Handoff
         ],

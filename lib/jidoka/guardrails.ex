@@ -290,18 +290,25 @@ defmodule Jidoka.Guardrails do
 
   defp run_guardrails(guardrails, input) do
     Enum.reduce_while(guardrails, :ok, fn guardrail, :ok ->
+      label = guardrail_label(guardrail)
+      trace_guardrail(input, label, :start)
+
       case invoke_guardrail(guardrail, input) do
         :ok ->
+          trace_guardrail(input, label, :allow, %{outcome: :allow})
           {:cont, :ok}
 
         {:error, reason} ->
-          {:halt, {:error, guardrail_label(guardrail), reason}}
+          trace_guardrail(input, label, :block, %{outcome: :block, error: Jidoka.format_error(reason)})
+          {:halt, {:error, label, reason}}
 
         {:interrupt, interrupt} ->
-          {:halt, {:interrupt, guardrail_label(guardrail), normalize_interrupt(interrupt)}}
+          trace_guardrail(input, label, :interrupt, %{outcome: :interrupt})
+          {:halt, {:interrupt, label, normalize_interrupt(interrupt)}}
 
         other ->
-          {:halt, {:error, guardrail_label(guardrail), invalid_result_message(other)}}
+          trace_guardrail(input, label, :error, %{outcome: :error, error: "invalid guardrail result"})
+          {:halt, {:error, label, invalid_result_message(other)}}
       end
     end)
   end
@@ -466,4 +473,45 @@ defmodule Jidoka.Guardrails do
       request_id: request_id
     )
   end
+
+  defp trace_guardrail(input, label, event, extra \\ %{}) do
+    Jidoka.Trace.emit(
+      :guardrail,
+      Map.merge(
+        %{
+          event: event,
+          phase: guardrail_phase(input),
+          guardrail: label,
+          request_id: Map.get(input, :request_id),
+          agent_id: input |> Map.get(:agent) |> agent_id(),
+          tool_name: Map.get(input, :tool_name),
+          context_keys: input |> Map.get(:context, %{}) |> context_keys()
+        },
+        extra
+      )
+    )
+  end
+
+  defp guardrail_phase(%Input{}), do: :input
+  defp guardrail_phase(%Output{}), do: :output
+  defp guardrail_phase(%Tool{}), do: :tool
+
+  defp agent_id(%Jido.Agent{} = agent), do: Map.get(agent, :id)
+  defp agent_id(_agent), do: nil
+
+  defp context_keys(context) do
+    if is_map(context) do
+      context
+      |> Jidoka.Context.strip_internal()
+      |> Map.keys()
+      |> Enum.map(&key_to_string/1)
+      |> Enum.sort()
+    else
+      []
+    end
+  end
+
+  defp key_to_string(key) when is_atom(key), do: Atom.to_string(key)
+  defp key_to_string(key) when is_binary(key), do: key
+  defp key_to_string(key), do: inspect(key)
 end

@@ -41,13 +41,17 @@ defmodule Jidoka.Subagent.Runtime do
   @spec run_subagent_tool(Jidoka.Subagent.t(), map(), map()) :: {:ok, map()} | {:error, term()}
   def run_subagent_tool(%Jidoka.Subagent{} = subagent, params, context)
       when is_map(params) and is_map(context) do
+    trace_subagent(context, subagent, :start, %{input_keys: map_keys(params)})
+
     case execute_subagent(subagent, params, context) do
       {:ok, result, metadata} ->
         maybe_record_metadata(context, metadata)
+        trace_subagent(context, subagent, :stop, trace_metadata(metadata))
         {:ok, visible_result(subagent, result, metadata)}
 
       {:error, reason, metadata} ->
         maybe_record_metadata(context, metadata)
+        trace_subagent(context, subagent, :error, trace_metadata(metadata, %{error: Jidoka.format_error(reason)}))
         {:error, normalize_subagent_error(subagent, reason, context, metadata)}
     end
   end
@@ -55,13 +59,17 @@ defmodule Jidoka.Subagent.Runtime do
   @spec run_subagent(Jidoka.Subagent.t(), map(), map()) :: {:ok, String.t()} | {:error, term()}
   def run_subagent(%Jidoka.Subagent{} = subagent, params, context)
       when is_map(params) and is_map(context) do
+    trace_subagent(context, subagent, :start, %{input_keys: map_keys(params)})
+
     case execute_subagent(subagent, params, context) do
       {:ok, result, metadata} ->
         maybe_record_metadata(context, metadata)
+        trace_subagent(context, subagent, :stop, trace_metadata(metadata))
         {:ok, result}
 
       {:error, reason, metadata} ->
         maybe_record_metadata(context, metadata)
+        trace_subagent(context, subagent, :error, trace_metadata(metadata, %{error: Jidoka.format_error(reason)}))
         {:error, normalize_subagent_error(subagent, reason, context, metadata)}
     end
   end
@@ -125,6 +133,45 @@ defmodule Jidoka.Subagent.Runtime do
   defp visible_outcome({:interrupt, _interrupt}), do: :interrupt
   defp visible_outcome({:error, reason}), do: {:error, Jidoka.format_error(reason)}
   defp visible_outcome(other), do: other
+
+  defp trace_subagent(context, subagent, event, metadata) do
+    measurements =
+      case Map.get(metadata, :duration_ms) do
+        duration_ms when is_integer(duration_ms) -> %{duration_ms: duration_ms}
+        _ -> %{}
+      end
+
+    Jidoka.Trace.emit(
+      :subagent,
+      Map.merge(
+        %{
+          event: event,
+          subagent: subagent.name,
+          name: subagent.name,
+          target: inspect(subagent.target),
+          request_id: Map.get(context, Jidoka.Subagent.request_id_key()),
+          agent_id: Map.get(context, Jidoka.Trace.agent_id_key())
+        },
+        metadata
+      ),
+      measurements
+    )
+  end
+
+  defp trace_metadata(metadata, extra \\ %{}) when is_map(metadata) do
+    metadata
+    |> Map.take([
+      :child_id,
+      :child_request_id,
+      :context_keys,
+      :duration_ms,
+      :mode,
+      :outcome,
+      :result_preview,
+      :task_preview
+    ])
+    |> Map.merge(extra)
+  end
 
   defp start_child(agent_module, child_id) do
     agent_module.start_link(id: child_id)
@@ -693,6 +740,15 @@ defmodule Jidoka.Subagent.Runtime do
       Jidoka.Subagent.server_key(),
       Jidoka.Subagent.depth_key()
     ])
+    |> Map.keys()
+    |> Enum.map(&key_to_string/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+    |> Enum.sort()
+  end
+
+  defp map_keys(map) when is_map(map) do
+    map
     |> Map.keys()
     |> Enum.map(&key_to_string/1)
     |> Enum.reject(&(&1 == ""))

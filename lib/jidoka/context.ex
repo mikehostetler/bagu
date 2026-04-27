@@ -9,6 +9,7 @@ defmodule Jidoka.Context do
     "__tool_guardrail_callback__",
     "__jidoka_request_id__",
     "__jidoka_server__",
+    "__jidoka_agent_id__",
     "__jidoka_subagent_depth__",
     "__jidoka_conversation__",
     "__jidoka_from_agent__"

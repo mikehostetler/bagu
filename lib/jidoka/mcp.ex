@@ -160,13 +160,16 @@ defmodule Jidoka.MCP do
         key = sync_key(entry)
 
         if Map.get(synced_acc, key, false) do
+          trace_mcp(context, entry, :skip)
           {agent_acc, synced_acc, errors_acc}
         else
           case sync_endpoint(entry, agent_acc) do
             {:ok, updated_agent} ->
+              trace_mcp(context, entry, :sync)
               {updated_agent, Map.put(synced_acc, key, true), errors_acc}
 
             {:error, reason} ->
+              trace_mcp(context, entry, :error, %{error: Jidoka.format_error(reason)})
               {agent_acc, synced_acc, [format_error(entry, reason) | errors_acc]}
           end
         end
@@ -389,4 +392,20 @@ defmodule Jidoka.MCP do
 
   defp drop_empty_errors(%{mcp_errors: []} = meta), do: Map.delete(meta, :mcp_errors)
   defp drop_empty_errors(meta), do: meta
+
+  defp trace_mcp(context, entry, event, metadata \\ %{}) do
+    Jidoka.Trace.emit(
+      :mcp,
+      Map.merge(
+        %{
+          event: event,
+          endpoint: entry.endpoint,
+          prefix: entry.prefix,
+          request_id: Map.get(context, Jidoka.Subagent.request_id_key()),
+          agent_id: Map.get(context, Jidoka.Trace.agent_id_key())
+        },
+        metadata
+      )
+    )
+  end
 end

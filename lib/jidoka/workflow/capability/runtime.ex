@@ -11,16 +11,42 @@ defmodule Jidoka.Workflow.Capability.Runtime do
     started_at = System.monotonic_time(:millisecond)
     workflow_context = forwarded_context(context, workflow.forward_context)
 
-    case Jidoka.Workflow.run(workflow.workflow, params, context: workflow_context, timeout: workflow.timeout) do
-      {:ok, output} ->
+    trace_workflow(context, workflow, :start, %{
+      input_keys: map_keys(params),
+      context_keys: context_keys(workflow_context)
+    })
+
+    case Jidoka.Workflow.run(workflow.workflow, params,
+           context: workflow_context,
+           timeout: workflow.timeout,
+           return: :debug
+         ) do
+      {:ok, %{output: output} = debug} ->
+        trace_workflow_steps(context, workflow, debug)
         metadata = call_metadata(workflow, params, workflow_context, started_at, :ok, output)
         maybe_record_metadata(context, metadata)
+
+        trace_workflow(
+          context,
+          workflow,
+          :stop,
+          Map.take(metadata, [:duration_ms, :input_keys, :context_keys, :output_preview])
+        )
+
         {:ok, visible_result(workflow, output, metadata)}
 
       {:error, reason} ->
         error = normalize_workflow_error(workflow, reason, context)
         metadata = call_metadata(workflow, params, workflow_context, started_at, {:error, error}, nil)
         maybe_record_metadata(context, metadata)
+
+        trace_workflow(context, workflow, :error, %{
+          duration_ms: Map.get(metadata, :duration_ms),
+          input_keys: Map.get(metadata, :input_keys),
+          context_keys: Map.get(metadata, :context_keys),
+          error: Jidoka.format_error(error)
+        })
+
         {:error, error}
     end
   end
@@ -28,6 +54,7 @@ defmodule Jidoka.Workflow.Capability.Runtime do
   def run_workflow_tool(%Jidoka.Workflow.Capability{} = workflow, _params, context) do
     error = normalize_workflow_error(workflow, {:invalid_workflow_input, :expected_map}, context)
     maybe_record_metadata(context, error_metadata(workflow, context, error))
+    trace_workflow(context, workflow, :error, %{error: Jidoka.format_error(error)})
     {:error, error}
   end
 
@@ -119,6 +146,43 @@ defmodule Jidoka.Workflow.Capability.Runtime do
       output_preview: output_preview(output)
     }
   end
+
+  defp trace_workflow(context, workflow, event, metadata) do
+    measurements =
+      case Map.get(metadata, :duration_ms) do
+        duration_ms when is_integer(duration_ms) -> %{duration_ms: duration_ms}
+        _ -> %{}
+      end
+
+    Jidoka.Trace.emit(
+      :workflow,
+      Map.merge(
+        %{
+          event: event,
+          workflow: workflow.workflow,
+          name: workflow.name,
+          request_id: Map.get(context, Jidoka.Subagent.request_id_key()),
+          agent_id: Map.get(context, Jidoka.Trace.agent_id_key())
+        },
+        metadata
+      ),
+      measurements
+    )
+  end
+
+  defp trace_workflow_steps(context, workflow, %{steps: steps}) when is_map(steps) do
+    steps
+    |> Enum.sort_by(fn {name, _result} -> key_to_string(name) end)
+    |> Enum.each(fn {name, result} ->
+      trace_workflow(context, workflow, :step, %{
+        phase: :step,
+        step: key_to_string(name),
+        output_preview: output_preview(result)
+      })
+    end)
+  end
+
+  defp trace_workflow_steps(_context, _workflow, _debug), do: :ok
 
   defp error_metadata(workflow, context, error) do
     %{

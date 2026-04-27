@@ -158,6 +158,55 @@ defmodule JidokaTest.KinoTest do
              })
   end
 
+  test "structured trace helpers render without Kino loaded" do
+    trace = %Jidoka.Trace{
+      agent_id: "trace-agent",
+      request_id: "req-trace",
+      run_id: "run-trace",
+      trace_id: "trace-1",
+      status: :completed,
+      events: [
+        %Jidoka.Trace.Event{
+          seq: 1,
+          at_ms: 1_775_000_000_000,
+          source: :jido_ai,
+          category: :request,
+          event: :start,
+          name: "trace-agent",
+          status: :running,
+          request_id: "req-trace",
+          run_id: "run-trace",
+          trace_id: "trace-1",
+          measurements: %{},
+          metadata: %{agent_id: "trace-agent", request_id: "req-trace"}
+        },
+        %Jidoka.Trace.Event{
+          seq: 2,
+          at_ms: 1_775_000_000_010,
+          source: :jidoka,
+          category: :workflow,
+          event: :stop,
+          name: "quoted \"workflow\"",
+          status: :completed,
+          duration_ms: 10,
+          request_id: "req-trace",
+          run_id: "run-trace",
+          trace_id: "trace-1",
+          measurements: %{duration_ms: 10},
+          metadata: %{workflow: "quoted \"workflow\"", request_id: "req-trace"}
+        }
+      ]
+    }
+
+    assert {:ok, ^trace} = Jidoka.Kino.timeline(trace)
+    assert {:ok, ^trace} = Jidoka.Kino.trace_table(trace)
+    assert {:ok, markdown} = Jidoka.Kino.call_graph(trace)
+
+    assert markdown =~ "flowchart TD"
+    assert markdown =~ "quoted 'workflow'"
+    refute markdown =~ ~s(\\")
+  end
+
   defp restore_env(name, nil), do: System.delete_env(name)
   defp restore_env(name, value), do: System.put_env(name, value)
 end

@@ -86,9 +86,10 @@ scoring result.
 
 ## Use Jido Eval
 
-Jidoka's support eval suite uses the local `jido_eval` checkout as a dataset and
-result harness. Keep `jido_eval` responsible for the eval run structure, then
-write Jidoka-specific checks around request inspection and output.
+Jidoka's support eval suite uses the pinned `agentjido/jido_eval` Git dependency
+as a dataset and result harness. Keep `jido_eval` responsible for the eval run
+structure, then write Jidoka-specific checks around request inspection and
+output.
 
 Typical flow:
 

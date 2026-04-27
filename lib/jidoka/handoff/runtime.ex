@@ -8,6 +8,7 @@ defmodule Jidoka.Handoff.Runtime do
   def run_handoff_tool(%Jidoka.Handoff.Capability{} = capability, params, context)
       when is_map(params) and is_map(context) do
     started_at = System.monotonic_time(:millisecond)
+    trace_handoff(context, capability, :start)
 
     with {:ok, payload} <- normalize_payload(params),
          {:ok, conversation_id} <- conversation_id(context, capability),
@@ -34,12 +35,16 @@ defmodule Jidoka.Handoff.Runtime do
         )
 
       Jidoka.Handoff.Registry.put_owner(conversation_id, handoff)
-      maybe_record_metadata(context, call_metadata(capability, handoff, started_at, :handoff))
+      metadata = call_metadata(capability, handoff, started_at, :handoff)
+      maybe_record_metadata(context, metadata)
+      trace_handoff(context, capability, :stop, trace_metadata(metadata))
       {:error, {:handoff, handoff}}
     else
       {:error, reason} ->
         error = normalize_handoff_error(capability, reason, context)
-        maybe_record_metadata(context, error_metadata(capability, context, error, started_at))
+        metadata = error_metadata(capability, context, error, started_at)
+        maybe_record_metadata(context, metadata)
+        trace_handoff(context, capability, :error, trace_metadata(metadata, %{error: Jidoka.format_error(error)}))
         {:error, error}
     end
   end
@@ -47,6 +52,7 @@ defmodule Jidoka.Handoff.Runtime do
   def run_handoff_tool(%Jidoka.Handoff.Capability{} = capability, _params, context) do
     error = normalize_handoff_error(capability, {:invalid_payload, :expected_map}, context)
     maybe_record_metadata(context, error_metadata(capability, context, error, System.monotonic_time(:millisecond)))
+    trace_handoff(context, capability, :error, %{error: Jidoka.format_error(error)})
     {:error, error}
   end
 
@@ -211,6 +217,46 @@ defmodule Jidoka.Handoff.Runtime do
   defp normalize_start_result({:error, reason}), do: {:error, {:start_failed, reason}}
   defp normalize_start_result(:ignore), do: {:error, {:start_failed, :ignore}}
   defp normalize_start_result(other), do: {:error, {:start_failed, {:invalid_start_return, other}}}
+
+  defp trace_handoff(context, capability, event, metadata \\ %{}) do
+    measurements =
+      case Map.get(metadata, :duration_ms) do
+        duration_ms when is_integer(duration_ms) -> %{duration_ms: duration_ms}
+        _ -> %{}
+      end
+
+    Jidoka.Trace.emit(
+      :handoff,
+      Map.merge(
+        %{
+          event: event,
+          handoff: capability.name,
+          name: capability.name,
+          target: inspect(capability.target),
+          request_id: Map.get(context, Jidoka.Handoff.request_id_key()),
+          agent_id: Map.get(context, Jidoka.Trace.agent_id_key()) || Map.get(context, Jidoka.Handoff.from_agent_key()),
+          conversation_id: context_value(context, Jidoka.Handoff.context_key()) || context_value(context, :conversation)
+        },
+        metadata
+      ),
+      measurements
+    )
+  end
+
+  defp trace_metadata(metadata, extra \\ %{}) when is_map(metadata) do
+    metadata
+    |> Map.take([
+      :context_keys,
+      :conversation_id,
+      :duration_ms,
+      :outcome,
+      :reason_preview,
+      :request_id,
+      :summary_preview,
+      :to_agent_id
+    ])
+    |> Map.merge(extra)
+  end
 
   defp verify_peer_runtime(agent_module, agent_id) do
     expected_runtime = agent_module.runtime_module()

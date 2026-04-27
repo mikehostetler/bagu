@@ -13,7 +13,7 @@ def deps do
   [
     # Replace COMMIT_SHA with the Jidoka commit you are testing.
     {:jidoka,
-     git: "https://github.com/mikehostetler/jidoka.git",
+     git: "https://github.com/agentjido/jidoka.git",
      ref: "COMMIT_SHA"}
   ]
 end

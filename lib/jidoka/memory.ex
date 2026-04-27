@@ -134,11 +134,20 @@ defmodule Jidoka.Memory do
              request_id,
              build_request_meta(config, namespace, records, query, context)
            ) do
+      trace_memory(agent, request_id, :retrieve, %{
+        namespace: namespace,
+        record_count: length(records),
+        inject: config.inject,
+        capture: config.capture,
+        context_keys: context_keys(context)
+      })
+
       {:ok, agent, {:ai_react_start, params}}
     else
       {:error, reason} when is_binary(request_id) ->
         error = memory_error(:retrieve, reason, agent, request_id, config)
         Logger.warning("Jidoka memory retrieval failed: #{Jidoka.format_error(error)}")
+        trace_memory(agent, request_id, :error, %{phase: :retrieve, error: Jidoka.format_error(error)})
 
         failed_agent =
           agent
@@ -151,6 +160,7 @@ defmodule Jidoka.Memory do
       {:error, reason} ->
         error = memory_error(:retrieve, reason, agent, request_id, config)
         Logger.warning("Jidoka memory retrieval failed: #{Jidoka.format_error(error)}")
+        trace_memory(agent, request_id, :error, %{phase: :retrieve, error: Jidoka.format_error(error)})
 
         {:ok, agent, {:ai_react_request_error, %{request_id: request_id, reason: :memory_failed, message: query}}}
     end
@@ -182,6 +192,7 @@ defmodule Jidoka.Memory do
   def on_after_cmd(agent, _action, directives, _config), do: {:ok, agent, directives}
 
   defp capture_conversation(agent, request_id, directives, %{capture: :off}, meta) do
+    trace_memory(agent, request_id, :capture, %{namespace: meta.namespace, captured?: false, reason: :off})
     {:ok, put_request_memory_meta(agent, request_id, Map.put(meta, :captured?, false)), directives}
   end
 
@@ -201,11 +212,19 @@ defmodule Jidoka.Memory do
                  meta.namespace,
                  assistant_record(agent, meta, request_id, result)
                ) do
+          trace_memory(agent, request_id, :capture, %{namespace: meta.namespace, captured?: true})
           {:ok, put_request_memory_meta(agent, request_id, Map.put(meta, :captured?, true)), directives}
         else
           {:error, reason} ->
             error = memory_error(:capture, reason, agent, request_id, config)
             Logger.warning("Jidoka memory capture failed: #{Jidoka.format_error(error)}")
+
+            trace_memory(agent, request_id, :error, %{
+              phase: :capture,
+              namespace: meta.namespace,
+              captured?: false,
+              error: Jidoka.format_error(error)
+            })
 
             {:ok,
              put_request_memory_meta(
@@ -685,6 +704,32 @@ defmodule Jidoka.Memory do
   defp get_request_memory_meta(agent, request_id) when is_binary(request_id) do
     get_in(agent.state, [:requests, request_id, :meta, :jidoka_memory])
   end
+
+  defp trace_memory(agent, request_id, event, metadata) do
+    Jidoka.Trace.emit(
+      :memory,
+      Map.merge(
+        %{
+          event: event,
+          request_id: request_id,
+          agent_id: Map.get(agent, :id)
+        },
+        metadata
+      )
+    )
+  end
+
+  defp context_keys(context) when is_map(context) do
+    context
+    |> Jidoka.Context.strip_internal()
+    |> Map.keys()
+    |> Enum.map(&key_to_string/1)
+    |> Enum.sort()
+  end
+
+  defp key_to_string(key) when is_atom(key), do: Atom.to_string(key)
+  defp key_to_string(key) when is_binary(key), do: key
+  defp key_to_string(key), do: inspect(key)
 
   defp get_value(map, key, default \\ nil) when is_map(map) do
     Map.get(map, key, Map.get(map, normalize_lookup_key(key), default))

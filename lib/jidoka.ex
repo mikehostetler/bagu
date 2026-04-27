@@ -257,6 +257,20 @@ defmodule Jidoka do
           {:ok, map()} | {:error, term()}
   def inspect_request(target, request_id), do: Jidoka.Inspection.inspect_request(target, request_id)
 
+  @doc """
+  Returns the latest structured runtime trace for a running Jidoka agent.
+  """
+  @spec inspect_trace(pid() | String.t() | Jido.Agent.t()) ::
+          {:ok, Jidoka.Trace.t()} | {:error, term()}
+  def inspect_trace(target), do: Jidoka.Trace.latest(target)
+
+  @doc """
+  Returns the structured runtime trace for a specific request.
+  """
+  @spec inspect_trace(pid() | String.t() | Jido.Agent.t(), String.t()) ::
+          {:ok, Jidoka.Trace.t()} | {:error, term()}
+  def inspect_trace(target, request_id), do: Jidoka.Trace.for_request(target, request_id)
+
   @doc false
   @spec chat_request(pid() | atom() | {:via, module(), term()}, String.t(), keyword()) ::
           {:ok, term()} | {:error, term()}

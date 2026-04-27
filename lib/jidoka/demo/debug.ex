@@ -151,6 +151,7 @@ defmodule Jidoka.Demo.Debug do
         print_usage_summary(summary)
         print_error_summary(summary)
         print_event_summary(events)
+        print_structured_trace(pid, level)
 
       _ ->
         :ok
@@ -385,6 +386,34 @@ defmodule Jidoka.Demo.Debug do
         section("Events")
         Enum.each(entries, fn entry -> row("event", entry) end)
     end
+  end
+
+  defp print_structured_trace(_pid, :debug), do: :ok
+
+  defp print_structured_trace(pid, :trace) do
+    case Jidoka.inspect_trace(pid) do
+      {:ok, trace} ->
+        section("Structured Trace")
+        row("events", "#{length(trace.events)} status=#{trace.status || "unknown"}")
+        row("categories", trace_categories(trace))
+
+        trace.events
+        |> Enum.take(-8)
+        |> Enum.each(fn event ->
+          row("trace", "#{event.category}.#{event.event} #{event.name || "-"} #{event.status || "-"}")
+        end)
+
+      {:error, _reason} ->
+        :ok
+    end
+  end
+
+  defp trace_categories(trace) do
+    trace.events
+    |> Enum.map(& &1.category)
+    |> Enum.uniq()
+    |> Enum.map(&Atom.to_string/1)
+    |> Enum.join(", ")
   end
 
   defp summarize_event(%{data: data}) when is_map(data) do

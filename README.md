@@ -23,7 +23,7 @@ def deps do
   [
     # Replace COMMIT_SHA with the Jidoka commit you are testing.
     {:jidoka,
-     git: "https://github.com/mikehostetler/jidoka.git",
+     git: "https://github.com/agentjido/jidoka.git",
      ref: "COMMIT_SHA"}
   ]
 end
@@ -205,7 +205,7 @@ The ExDoc guides under `guides/` are the recommended next step:
 
 The top-level `livebook/` folder contains runnable onboarding notebooks:
 
-[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmikehostetler%2Fjidoka%2Fmain%2Flivebook%2F01_hello_agent.livemd)
+[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fagentjido%2Fjidoka%2Fmain%2Flivebook%2F01_hello_agent.livemd)
 
 - [Hello Agent](livebook/01_hello_agent.livemd): define, inspect, and run a
   minimal agent.
@@ -1225,6 +1225,17 @@ mix jidoka orchestrator --log-level trace -- "Use the writer_specialist speciali
 
 Use `--log-level trace` to see subagent config and delegation metadata.
 
+Trace smoke test:
+
+```bash
+mix jidoka trace
+mix jidoka trace --log-level trace -- 7
+```
+
+This provider-free check emits Jido.AI telemetry, runs a Jidoka workflow
+capability, inspects the resulting `Jidoka.Trace`, and fails if the expected
+request, model, and workflow events are missing.
+
 Phoenix support app:
 
 ```bash
@@ -1263,8 +1274,8 @@ tests use real provider calls and are excluded from normal `mix test` runs.
 ANTHROPIC_API_KEY=... mix test --include llm_eval test/evals/support_agent_eval_test.exs
 ```
 
-The support evals load the consumer app support modules, use the local
-`jido_eval` checkout as the dataset/result harness, then run custom Jidoka
+The support evals load the consumer app support modules, use the pinned
+`agentjido/jido_eval` Git dependency as the dataset/result harness, then run custom Jidoka
 metrics for specialist routing and LLM-judged support quality. If the tag is
 included without a real key, the suite fails clearly instead of skipping.
 
@@ -1477,6 +1488,5 @@ The top-level helpers are:
 - Imported skills can resolve through `available_skills`, runtime `skill_paths`, or both.
 - The nested runtime module still uses `Jido.AI.Agent` underneath.
 - Internal beta development can use pinned Git refs for pre-release Jido
-  ecosystem packages and local paths for test-only fixtures such as `jido_eval`.
-  A public Hex beta should replace remaining local paths with Hex releases, Git
-  refs, or pinned tags.
+  ecosystem packages and test-only fixtures such as `jido_eval`. A public Hex
+  beta should replace remaining Git refs with Hex releases or pinned tags.

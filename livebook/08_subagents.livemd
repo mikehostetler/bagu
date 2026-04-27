@@ -1,6 +1,6 @@
 # Jidoka: Subagents
 
-[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmikehostetler%2Fjidoka%2Fmain%2Flivebook%2F08_subagents.livemd)
+[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fagentjido%2Fjidoka%2Fmain%2Flivebook%2F08_subagents.livemd)
 
 Subagents are specialist agents exposed to a parent as tool-like capabilities.
 The parent stays in control of the turn; the specialist handles a bounded task.
@@ -10,7 +10,7 @@ The parent stays in control of the turn; the specialist handles a bounded task.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/mikehostetler/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
     {:kino, "~> 0.19.0"}
   ],
   config: [

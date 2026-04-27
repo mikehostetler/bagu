@@ -1,6 +1,6 @@
 # Jidoka: Web Tools
 
-[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmikehostetler%2Fjidoka%2Fmain%2Flivebook%2F12_web_tools.livemd)
+[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fagentjido%2Fjidoka%2Fmain%2Flivebook%2F12_web_tools.livemd)
 
 Web access is a constrained capability. Jidoka exposes search and read-only
 page tools without exposing arbitrary browser control to the model.
@@ -10,7 +10,7 @@ page tools without exposing arbitrary browser control to the model.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/mikehostetler/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
     {:kino, "~> 0.19.0"}
   ],
   config: [

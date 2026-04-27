@@ -97,6 +97,35 @@ defmodule JidokaTest.MixTaskTest do
     assert Jidoka.Runtime.debug() == :off
   end
 
+  test "trace demo mix task verifies structured tracing without a provider" do
+    output =
+      capture_io(fn ->
+        Mix.Tasks.Jidoka.run(["trace", "--log-level", "trace", "--", "7"])
+      end)
+
+    assert output =~ "Jidoka trace smoke test"
+    assert output =~ "Trace request:"
+    assert output =~ "Trace categories:"
+    assert output =~ "request"
+    assert output =~ "model"
+    assert output =~ "workflow"
+    assert output =~ "Workflow output:"
+    assert output =~ "Trace verification: ok"
+    assert output =~ "Timeline:"
+    assert Jidoka.Runtime.debug() == :off
+  end
+
+  test "trace demo supports dry-run mode" do
+    output =
+      capture_io(fn ->
+        Mix.Tasks.Jidoka.run(["trace", "--dry-run"])
+      end)
+
+    assert output =~ "Jidoka trace smoke test"
+    assert output =~ "Dry run: trace smoke test not executed."
+    assert Jidoka.Runtime.debug() == :off
+  end
+
   test "chat demo enters the repl immediately with no scripted prompts" do
     output =
       capture_io("exit\n", fn ->

@@ -67,6 +67,17 @@ Source:
 
 This is the smallest deterministic workflow: add one, then double.
 
+## Trace Smoke Test
+
+```bash
+mix jidoka trace
+mix jidoka trace --log-level trace -- 7
+```
+
+This provider-free command verifies that Jidoka's structured trace collector is
+attached, that Jido.AI telemetry is ingested, and that Jidoka workflow events
+show up in `Jidoka.Trace`.
+
 ## Phoenix Support App
 
 ```bash

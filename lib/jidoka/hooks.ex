@@ -175,7 +175,7 @@ defmodule Jidoka.Hooks do
     params =
       params
       |> merge_default_context(default_context)
-      |> attach_runtime_context(self(), request_id)
+      |> attach_runtime_context(agent, self(), request_id)
 
     {request_hooks, params} = pop_request_hooks(params)
     hooks = combine(defaults, request_hooks)
@@ -307,16 +307,17 @@ defmodule Jidoka.Hooks do
     Map.put(params, :tool_context, merged_context)
   end
 
-  defp attach_runtime_context(params, server, request_id)
+  defp attach_runtime_context(params, agent, server, request_id)
        when is_map(params) and is_pid(server) and is_binary(request_id) do
     Map.update(params, :tool_context, %{}, fn context ->
       context
       |> Map.put(Jidoka.Subagent.server_key(), server)
       |> Map.put(Jidoka.Subagent.request_id_key(), request_id)
+      |> Map.put(Jidoka.Trace.agent_id_key(), Map.get(agent, :id))
     end)
   end
 
-  defp attach_runtime_context(params, _server, _request_id), do: params
+  defp attach_runtime_context(params, _agent, _server, _request_id), do: params
 
   defp pop_request_hooks(params) when is_map(params) do
     context = Map.get(params, :tool_context, %{}) || %{}
@@ -326,18 +327,25 @@ defmodule Jidoka.Hooks do
 
   defp run_before_turn(hooks, %BeforeTurn{} = input) do
     Enum.reduce_while(hooks, {:ok, input}, fn hook, {:ok, input_acc} ->
+      trace_hook(:before_turn, hook, :start, input_acc)
+
       case invoke_hook(hook, input_acc) do
         {:ok, overrides} ->
           with {:ok, input_acc} <- apply_before_turn_overrides(input_acc, overrides) do
+            trace_hook(:before_turn, hook, :stop, input_acc, %{outcome: :ok})
             {:cont, {:ok, input_acc}}
           else
-            {:error, reason} -> {:halt, {:error, reason}}
+            {:error, reason} ->
+              trace_hook(:before_turn, hook, :error, input_acc, %{error: Jidoka.format_error(reason)})
+              {:halt, {:error, reason}}
           end
 
         {:interrupt, interrupt} ->
+          trace_hook(:before_turn, hook, :interrupt, input_acc, %{outcome: :interrupt})
           {:halt, {:interrupt, normalize_interrupt(interrupt)}}
 
         {:error, reason} ->
+          trace_hook(:before_turn, hook, :error, input_acc, %{error: Jidoka.format_error(reason)})
           {:halt, {:error, reason}}
       end
     end)
@@ -347,20 +355,28 @@ defmodule Jidoka.Hooks do
     hooks
     |> Enum.reverse()
     |> Enum.reduce_while({:ok, input}, fn hook, {:ok, input_acc} ->
+      trace_hook(:after_turn, hook, :start, input_acc)
+
       case invoke_hook(hook, input_acc) do
         {:ok, {:ok, _} = outcome} ->
+          trace_hook(:after_turn, hook, :stop, input_acc, %{outcome: :ok})
           {:cont, {:ok, %{input_acc | outcome: outcome}}}
 
         {:ok, {:error, _} = outcome} ->
+          trace_hook(:after_turn, hook, :stop, input_acc, %{outcome: :error})
           {:cont, {:ok, %{input_acc | outcome: outcome}}}
 
         {:interrupt, interrupt} ->
+          trace_hook(:after_turn, hook, :interrupt, input_acc, %{outcome: :interrupt})
           {:halt, {:interrupt, normalize_interrupt(interrupt)}}
 
         {:error, reason} ->
+          trace_hook(:after_turn, hook, :error, input_acc, %{error: Jidoka.format_error(reason)})
           {:halt, {:error, reason}}
 
         other ->
+          trace_hook(:after_turn, hook, :error, input_acc, %{error: "invalid hook result"})
+
           {:halt,
            {:error,
             "after_turn hook must return {:ok, {:ok, result}}, {:ok, {:error, reason}}, {:interrupt, interrupt}, or {:error, reason}; got: #{inspect(other)}"}}
@@ -372,16 +388,22 @@ defmodule Jidoka.Hooks do
     hooks
     |> Enum.reverse()
     |> Enum.each(fn hook ->
+      trace_hook(:on_interrupt, hook, :start, input)
+
       case invoke_hook(hook, input) do
         :ok ->
+          trace_hook(:on_interrupt, hook, :stop, input, %{outcome: :ok})
           :ok
 
         {:error, reason} ->
+          trace_hook(:on_interrupt, hook, :error, input, %{error: Jidoka.format_error(reason)})
+
           Logger.warning(
             "Jidoka on_interrupt hook failed: #{Jidoka.format_error(normalize_hook_error(:on_interrupt, reason, input.agent, input.request_id))}"
           )
 
         other ->
+          trace_hook(:on_interrupt, hook, :error, input, %{error: "invalid hook result"})
           Logger.warning("Jidoka on_interrupt hook returned invalid result: #{inspect(other)}")
       end
     end)
@@ -679,4 +701,50 @@ defmodule Jidoka.Hooks do
       request_id: request_id
     )
   end
+
+  defp trace_hook(stage, hook, event, input, extra \\ %{}) do
+    Jidoka.Trace.emit(
+      :hook,
+      Map.merge(
+        %{
+          event: event,
+          phase: stage,
+          hook: hook_label(hook),
+          request_id: input.request_id,
+          agent_id: Map.get(input.agent, :id),
+          context_keys: context_keys(input.context),
+          allowed_tool_count: count_list(input.allowed_tools)
+        },
+        extra
+      )
+    )
+  end
+
+  defp hook_label(module) when is_atom(module) do
+    case Jidoka.Hook.hook_name(module) do
+      {:ok, name} -> name
+      {:error, _reason} -> inspect(module)
+    end
+  end
+
+  defp hook_label({module, function, args}), do: "#{inspect(module)}.#{function}/#{length(args) + 1}"
+  defp hook_label(fun) when is_function(fun, 1), do: "anonymous_hook"
+  defp hook_label(other), do: inspect(other)
+
+  defp count_list(values) when is_list(values), do: length(values)
+  defp count_list(_values), do: nil
+
+  defp context_keys(context) when is_map(context) do
+    context
+    |> Jidoka.Context.strip_internal()
+    |> Map.keys()
+    |> Enum.map(&key_to_string/1)
+    |> Enum.sort()
+  end
+
+  defp context_keys(_context), do: []
+
+  defp key_to_string(key) when is_atom(key), do: Atom.to_string(key)
+  defp key_to_string(key) when is_binary(key), do: key
+  defp key_to_string(key), do: inspect(key)
 end
