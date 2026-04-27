@@ -1,5 +1,7 @@
 # Jidoka: Kitchen Sink
 
+## Section
+
 [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmikehostetler%2Fjidoka%2Fmain%2Flivebook%2F20_kitchen_sink.livemd)
 
 Build one advanced support router that composes the main Jidoka primitives:
@@ -13,9 +15,16 @@ new to Jidoka.
 ## Setup
 
 ```elixir
+jidoka_dep =
+  if File.exists?(Path.expand("../mix.exs", __DIR__)) do
+    {:jidoka, path: Path.expand("..", __DIR__)}
+  else
+    {:jidoka, git: "https://github.com/mikehostetler/jidoka.git", branch: "main"}
+  end
+
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/mikehostetler/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    jidoka_dep,
     {:kino, "~> 0.19.0"}
   ],
   config: [
@@ -538,24 +547,25 @@ defmodule LivebookDemo.KitchenSink.Agent do
 end
 ```
 
+## Chapter 8: Agent Map And Inspection
+
+The compiled agent is easiest to reason about in two views: a capability map
+for the major relationships, then an inspection summary for the exact runtime
+surface Jidoka generated.
+
 ```elixir
-{:ok, definition} = Jidoka.inspect_agent(LivebookDemo.KitchenSink.Agent)
+{:ok, _diagram} = Jidoka.Kino.agent_diagram(LivebookDemo.KitchenSink.Agent)
 
-capability_rows = [
-  %{surface: "tools", names: Enum.join(definition.tool_names, ", ")},
-  %{surface: "plugins", names: Enum.join(LivebookDemo.KitchenSink.Agent.plugin_names(), ", ")},
-  %{surface: "skills", names: Enum.join(LivebookDemo.KitchenSink.Agent.skill_names(), ", ")},
-  %{surface: "workflows", names: Enum.join(LivebookDemo.KitchenSink.Agent.workflow_names(), ", ")},
-  %{surface: "subagents", names: Enum.join(LivebookDemo.KitchenSink.Agent.subagent_names(), ", ")},
-  %{surface: "handoffs", names: Enum.join(LivebookDemo.KitchenSink.Agent.handoff_names(), ", ")},
-  %{surface: "web", names: Enum.join(LivebookDemo.KitchenSink.Agent.web_tool_names(), ", ")},
-  %{surface: "ash", names: LivebookDemo.KitchenSink.Agent.ash_domain() |> inspect()}
-]
-
-Jidoka.Kino.table("Compiled capability surface", capability_rows)
+:ok
 ```
 
-## Chapter 8: Effective Prompt And Runtime Boundary
+```elixir
+{:ok, definition} = Jidoka.Kino.debug_agent(LivebookDemo.KitchenSink.Agent)
+
+:ok
+```
+
+## Chapter 9: Effective Prompt And Runtime Boundary
 
 The request transformer composes the character before the dynamic instructions.
 The runtime boundary applies context, hooks, skills, memory, guardrails, and MCP
@@ -606,6 +616,8 @@ runtime_agent = runtime.new(id: "livebook-kitchen-runtime")
      }}
   )
 
+Jidoka.Kino.context("Runtime context after lifecycle preparation", params.tool_context)
+
 %{
   rewritten_message: params.query,
   allowed_tools: Map.get(params, :allowed_tools, :not_narrowed),
@@ -619,7 +631,7 @@ runtime_agent = runtime.new(id: "livebook-kitchen-runtime")
 }
 ```
 
-## Chapter 9: Tool, Workflow, Subagent, And Handoff Calls
+## Chapter 10: Tool, Workflow, Subagent, And Handoff Calls
 
 Each advanced capability is still a normal generated tool module underneath.
 Calling them directly is the easiest way to prove behavior before involving a
@@ -693,7 +705,7 @@ Jidoka.Kino.table("Generated capability calls", [
 Jidoka.reset_handoff(conversation_id)
 ```
 
-## Chapter 10: Memory Across Turns
+## Chapter 11: Memory Across Turns
 
 Memory is opt-in and conversation-first. This simulates two turns without a
 provider call.
@@ -754,7 +766,7 @@ Jidoka.Kino.table("Retrieved memory", [
 ])
 ```
 
-## Chapter 11: Imported Agent Spec
+## Chapter 12: Imported Agent Spec
 
 Imported agents use explicit registries. This lets apps accept constrained
 JSON/YAML specs without letting the spec name arbitrary modules.
@@ -799,7 +811,7 @@ imported_spec = %{
 }
 ```
 
-## Chapter 12: AgentView And Eval Checks
+## Chapter 13: AgentView And Eval Checks
 
 `Jidoka.AgentView` is the application boundary for UI surfaces. It is not a
 Phoenix component; it projects runtime state into data a UI can render.
@@ -886,7 +898,7 @@ eval_cases = [
 Jidoka.Kino.table("Deterministic eval checks", eval_cases)
 ```
 
-## Chapter 13: Production Pre-Flight
+## Chapter 14: Production Pre-Flight
 
 Use a checklist before allowing advanced composition into a production path.
 
@@ -910,10 +922,13 @@ preflight_rows = [
 Jidoka.Kino.table("Kitchen-sink pre-flight", preflight_rows)
 ```
 
-## Optional Provider Turn
+## Optional Provider Chat And Debugging
 
-This cell uses the full router through a provider-backed chat call. Without
-`ANTHROPIC_API_KEY`, it returns a friendly missing-provider result.
+This cell runs the full router through a provider-backed chat call. The trace
+table captures runtime events, the result table reports whether the turn
+completed, interrupted, or handed off, and the inspection table shows the latest
+request state after the turn. Without `ANTHROPIC_API_KEY`, it returns a friendly
+missing-provider result.
 
 ```elixir
 Application.put_env(:jidoka, :mcp_sync_module, LivebookDemo.KitchenSink.FakeMCPSync)
@@ -923,20 +938,62 @@ Application.put_env(:jidoka, :mcp_sync_module, LivebookDemo.KitchenSink.FakeMCPS
     LivebookDemo.KitchenSink.Agent.start_link(id: "livebook-kitchen-sink-agent")
   end)
 
-Jidoka.Kino.chat("Kitchen-sink support router", fn ->
-  LivebookDemo.KitchenSink.Agent.chat(
-    pid,
-    "Use the support router capabilities to triage an urgent invoice dispute for an enterprise customer.",
-    context: %{
-      tenant: "acme",
-      channel: "livebook",
-      session: "kitchen-sink-provider",
-      account_tier: "enterprise",
-      actor: %{id: "agent-dev"},
-      notify_pid: self()
-    }
+runtime_context = %{
+  tenant: "acme",
+  channel: "livebook",
+  session: "kitchen-sink-provider",
+  account_tier: "enterprise",
+  actor: %{id: "agent-dev"},
+  notify_pid: self()
+}
+
+chat_prompts = %{
+  workflow:
+    "Call the ks_triage_ticket tool exactly once with topic \"shipping delay\" and priority \"urgent\". After the tool returns, summarize the case result for the enterprise customer. Do not transfer ownership.",
+  subagent:
+    "Ask the research specialist for a concise summary of why deterministic workflows are useful in support routers.",
+  handoff:
+    "Transfer this invoice dispute to the billing specialist and include a concise handoff summary."
+}
+
+prompt = chat_prompts.workflow
+
+result =
+  Jidoka.Kino.chat(
+    "Kitchen-sink support router",
+    fn ->
+      LivebookDemo.KitchenSink.Agent.chat(
+        pid,
+        prompt,
+        conversation: "kitchen-sink-provider",
+        context: runtime_context
+      )
+    end,
+    num_rows: 40
   )
-end)
+
+Jidoka.Kino.context("Provider runtime context", runtime_context)
+Jidoka.Kino.debug_agent(pid)
+
+result
+```
+
+To intentionally test ownership transfer, switch the prompt above to
+`chat_prompts.handoff`. A successful transfer is returned as `{:handoff,
+summary}` and should no longer show as an unformatted Livebook error.
+
+```elixir
+case Jidoka.handoff_owner("kitchen-sink-provider") do
+  nil ->
+    %{handoff_owner: :none}
+
+  owner ->
+    %{handoff_owner: Map.take(owner, [:agent, :agent_id])}
+end
+```
+
+```elixir
+Jidoka.reset_handoff("kitchen-sink-provider")
 ```
 
 ## What To Look For
@@ -948,4 +1005,7 @@ The advanced story is not "turn everything on." It is:
 * handoffs for ownership transfer
 * skills, characters, hooks, memory, and guardrails around the turn
 * AgentView as the UI boundary
+* Kino helpers for trace output, context inspection, diagrams, and request debug summaries
 * eval checks and pre-flight tables before provider-backed behavior
+
+<!-- livebook:{"offset":29520,"stamp":{"token":"XCP.gu0UmkB8S6fuRyUmgngwiSZuE7-yNl02iAuDUkw_QYbxqSHdUAcU9Se6DpUcKTrc1aBqTsK-sMRaYpZw3g2XLNThMaB-phCuFbiCCPw6vVL_UHpiT07099fFkVY","version":2}} -->

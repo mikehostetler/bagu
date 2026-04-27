@@ -22,18 +22,21 @@ defmodule Jidoka.Subagent.Runtime do
   def on_before_cmd(agent, action), do: {:ok, agent, action}
 
   @spec on_after_cmd(Jido.Agent.t(), term(), [term()]) :: {:ok, Jido.Agent.t(), [term()]}
-  def on_after_cmd(agent, {:ai_react_start, %{request_id: request_id}}, directives)
-      when is_binary(request_id) do
-    subagent_calls = drain_request_meta(self(), request_id)
+  def on_after_cmd(agent, action, directives) do
+    case request_id_from_action(action) do
+      request_id when is_binary(request_id) ->
+        subagent_calls = drain_request_meta(self(), request_id)
 
-    if subagent_calls == [] do
-      {:ok, agent, directives}
-    else
-      {:ok, put_request_meta(agent, request_id, %{calls: subagent_calls}), directives}
+        if subagent_calls == [] do
+          {:ok, agent, directives}
+        else
+          {:ok, put_request_meta(agent, request_id, %{calls: subagent_calls}), directives}
+        end
+
+      _ ->
+        {:ok, agent, directives}
     end
   end
-
-  def on_after_cmd(agent, _action, directives), do: {:ok, agent, directives}
 
   @spec run_subagent_tool(Jidoka.Subagent.t(), map(), map()) :: {:ok, map()} | {:error, term()}
   def run_subagent_tool(%Jidoka.Subagent{} = subagent, params, context)
@@ -554,6 +557,15 @@ defmodule Jidoka.Subagent.Runtime do
   end
 
   defp maybe_record_metadata(_context, _metadata), do: :ok
+
+  defp request_id_from_action({_action, params}), do: request_id_from_params(params)
+  defp request_id_from_action(_action), do: nil
+
+  defp request_id_from_params(%{request_id: request_id}) when is_binary(request_id), do: request_id
+  defp request_id_from_params(%{"request_id" => request_id}) when is_binary(request_id), do: request_id
+  defp request_id_from_params(%{event: event}), do: request_id_from_params(event)
+  defp request_id_from_params(%{"event" => event}), do: request_id_from_params(event)
+  defp request_id_from_params(_params), do: nil
 
   defp drain_request_meta(server, request_id) when is_pid(server) and is_binary(request_id) do
     Jidoka.Subagent.Metadata.drain(server, request_id)

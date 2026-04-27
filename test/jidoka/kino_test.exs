@@ -75,6 +75,70 @@ defmodule JidokaTest.KinoTest do
     end
   end
 
+  test "format_chat_result presents handoffs as notebook-friendly summaries" do
+    handoff =
+      Jidoka.Handoff.new(
+        id: "handoff-1",
+        conversation_id: "conversation-1",
+        from_agent: "router",
+        to_agent: JidokaTest.ChatAgent,
+        to_agent_id: "billing-agent",
+        name: "billing_agent",
+        message: "Billing should own the next turn.",
+        summary: "Invoice dispute.",
+        reason: "billing",
+        context: %{tenant: "acme"}
+      )
+
+    assert {:handoff, summary} = Jidoka.Kino.format_chat_result({:handoff, handoff})
+    assert summary.to_agent_id == "billing-agent"
+    assert summary.context_keys == ["tenant"]
+
+    assert {:handoff, nested_summary} = Jidoka.Kino.format_chat_result({:error, {:handoff, handoff}})
+    assert nested_summary.name == "billing_agent"
+  end
+
+  test "format_chat_result presents interrupts as notebook-friendly summaries" do
+    interrupt =
+      Jidoka.Interrupt.new(
+        id: "interrupt-1",
+        kind: :approval,
+        message: "Approve the large calculation.",
+        data: %{tool: "add_numbers"}
+      )
+
+    assert {:interrupt, summary} = Jidoka.Kino.format_chat_result({:interrupt, interrupt})
+    assert summary.kind == :approval
+    assert summary.data_keys == ["tool"]
+
+    assert {:interrupt, nested_summary} = Jidoka.Kino.format_chat_result({:error, {:interrupt, interrupt}})
+    assert nested_summary.message == "Approve the large calculation."
+  end
+
+  test "debug_agent renders and returns an inspection summary without Kino loaded" do
+    assert {:ok, inspection} = Jidoka.Kino.debug_agent(JidokaTest.ToolAgent)
+
+    assert inspection.kind == :agent_definition
+    assert inspection.tool_names == ["add_numbers"]
+  end
+
+  test "agent_diagram renders and returns Mermaid markdown without Kino loaded" do
+    assert {:ok, markdown} = Jidoka.Kino.agent_diagram(JidokaTest.ToolAgent)
+
+    assert markdown =~ "flowchart LR"
+    assert markdown =~ "tool_agent"
+    assert markdown =~ "add_numbers"
+  end
+
+  test "context renders public and internal runtime keys without Kino loaded" do
+    assert :ok =
+             Jidoka.Kino.context("runtime context", %{
+               Jidoka.Subagent.request_id_key() => "req-1",
+               "__tool_guardrail_callback__" => :callback,
+               tenant: "acme"
+             })
+  end
+
   defp restore_env(name, nil), do: System.delete_env(name)
   defp restore_env(name, value), do: System.put_env(name, value)
 end

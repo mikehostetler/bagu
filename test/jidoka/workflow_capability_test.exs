@@ -77,6 +77,49 @@ defmodule JidokaTest.WorkflowCapabilityTest do
     assert preview =~ "value"
   end
 
+  test "workflow metadata is retained from delegated ReAct worker events" do
+    runtime = MathAgent.runtime_module()
+    agent = new_runtime_agent(runtime)
+    request_id = "workflow-worker-#{System.unique_integer([:positive])}"
+
+    assert {:ok, agent, {:ai_react_start, params}} =
+             runtime.on_before_cmd(
+               agent,
+               {:ai_react_start,
+                %{
+                  query: "run math",
+                  request_id: request_id,
+                  tool_context: %{tenant: "worker-event"}
+                }}
+             )
+
+    tool = workflow_tool(MathAgent, "run_math")
+
+    assert {:ok, %{output: %{value: 12}}} =
+             tool.run(%{value: 5}, params.tool_context)
+
+    assert {:ok, updated_agent, []} =
+             runtime.on_after_cmd(
+               agent,
+               {:ai_react_worker_event, %{event: %{request_id: request_id, kind: :tool_completed}}},
+               []
+             )
+
+    assert [%{name: "run_math", outcome: :ok, output_preview: preview}] =
+             get_in(updated_agent.state, [
+               :requests,
+               request_id,
+               :meta,
+               :jidoka_workflows,
+               :calls
+             ])
+
+    assert preview =~ "value"
+
+    assert {:ok, %{workflows: [%{name: "run_math", outcome: :ok}]}} =
+             Jidoka.Debug.request_summary(updated_agent, request_id)
+  end
+
   test "workflow capability names conflict with other tool-like capabilities" do
     assert_raise Spark.Error.DslError, ~r/duplicate tool names.*workflow_capability_math/s, fn ->
       Code.compile_string("""
