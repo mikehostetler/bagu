@@ -217,7 +217,9 @@ The top-level `livebook/` folder contains runnable onboarding notebooks:
 See [LiveBook Template Notes](livebook/README.md) for notebook conventions and
 the full onboarding series, including diagnostics, hooks, memory, characters,
 subagents, handoffs, skills, MCP, web tools, plugins, Ash resources, evals, and
-production readiness.
+production readiness. The series ends with a
+[Kitchen Sink](livebook/20_kitchen_sink.livemd) capstone for advanced
+developers.
 
 ## Package Development
 

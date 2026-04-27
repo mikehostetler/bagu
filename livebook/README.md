@@ -55,6 +55,7 @@ dependency setup.
 | `17_evals.livemd` | Deterministic eval cases and optional provider-backed checks. |
 | `18_phoenix_liveview_consumer.livemd` | `Jidoka.AgentView` as the Phoenix LiveView boundary. |
 | `19_production_checklist.livemd` | Provider, runtime, context, guardrail, and inspection pre-flight checks. |
+| `20_kitchen_sink.livemd` | Advanced capstone that composes the main Jidoka features in one support-router scenario. |
 
 ## Acceptance Checklist
 
