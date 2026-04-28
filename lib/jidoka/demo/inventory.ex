@@ -89,6 +89,7 @@ defmodule Jidoka.Demo.Inventory do
     rows =
       [
         {"memory", format_memory(Map.get(definition, :memory))},
+        {"output", format_output(Map.get(definition, :output))},
         {"hooks", format_hooks(Map.get(definition, :hooks, %{}))},
         {"guardrails", format_guardrails(Map.get(definition, :guardrails, %{}))}
       ]
@@ -304,6 +305,37 @@ defmodule Jidoka.Demo.Inventory do
   defp format_memory_namespace(:shared), do: "namespace=shared"
   defp format_memory_namespace(nil), do: nil
   defp format_memory_namespace(other), do: "namespace=#{inspect(other)}"
+
+  defp format_output(nil), do: nil
+
+  defp format_output(%Jidoka.Output{} = output) do
+    [
+      "schema=#{format_output_schema(output.schema)}",
+      "retries=#{output.retries}",
+      "on_validation_error=#{output.on_validation_error}"
+    ]
+    |> Enum.join(", ")
+  end
+
+  defp format_output(other), do: inspect(other)
+
+  defp format_output_schema(%Zoi.Types.Map{fields: fields}) when is_list(fields) do
+    fields
+    |> Enum.map(fn {key, _schema} -> to_string(key) end)
+    |> Enum.sort()
+    |> Enum.join("|")
+  end
+
+  defp format_output_schema(%{} = schema) do
+    schema
+    |> Map.get("properties", Map.get(schema, :properties, %{}))
+    |> Map.keys()
+    |> Enum.map(&to_string/1)
+    |> Enum.sort()
+    |> Enum.join("|")
+  end
+
+  defp format_output_schema(_schema), do: "custom"
 
   defp format_hooks(hooks) when is_map(hooks) do
     [

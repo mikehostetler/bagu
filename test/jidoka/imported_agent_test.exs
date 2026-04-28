@@ -103,6 +103,64 @@ defmodule JidokaTest.ImportedAgentTest do
     assert encoded_json =~ "\"mcp_tools\""
   end
 
+  test "imports and runs structured output contracts from JSON Schema specs" do
+    output =
+      %{
+        "schema" => %{
+          "type" => "object",
+          "required" => ["category", "confidence", "summary"],
+          "properties" => %{
+            "category" => %{"type" => "string"},
+            "confidence" => %{"type" => "number"},
+            "summary" => %{"type" => "string"}
+          }
+        },
+        "retries" => 1,
+        "on_validation_error" => "repair"
+      }
+
+    assert {:ok, %ImportedAgent{} = agent} =
+             Jidoka.import_agent(
+               imported_spec("imported_output_agent",
+                 instructions: "Classify support tickets.",
+                 output: output
+               )
+             )
+
+    assert %Jidoka.Output{schema_kind: :json_schema, retries: 1, on_validation_error: :repair} = agent.spec.output
+
+    assert {:ok, encoded_json} = Jidoka.encode_agent(agent, format: :json)
+    assert encoded_json =~ "\"output\""
+    assert encoded_json =~ "\"on_validation_error\": \"repair\""
+
+    runtime = agent.runtime_module
+    request_id = "req-imported-output"
+
+    {:ok, runtime_agent, {:ai_react_start, params}} =
+      runtime.on_before_cmd(
+        new_runtime_agent(runtime),
+        {:ai_react_start,
+         %{
+           query: "Classify this",
+           request_id: request_id,
+           tool_context: %{}
+         }}
+      )
+
+    runtime_agent =
+      runtime_agent
+      |> Jido.AI.Request.start_request(request_id, "Classify this")
+      |> Jido.AI.Request.complete_request(
+        request_id,
+        ~s({"category":"billing","confidence":0.93,"summary":"Invoice question"})
+      )
+
+    assert {:ok, runtime_agent, []} = runtime.on_after_cmd(runtime_agent, {:ai_react_start, params}, [])
+
+    assert {:ok, %{"category" => "billing", "confidence" => 0.93, "summary" => "Invoice question"}} =
+             Jido.AI.Request.get_result(runtime_agent, request_id)
+  end
+
   test "imports inline character maps" do
     assert {:ok, %ImportedAgent{} = agent} =
              Jidoka.import_agent(
@@ -1249,7 +1307,10 @@ defmodule JidokaTest.ImportedAgentTest do
         |> Enum.reject(fn {_key, value} -> is_nil(value) end)
         |> Map.new(),
       "capabilities" => Keyword.get(opts, :capabilities, %{}),
-      "lifecycle" => Keyword.get(opts, :lifecycle, %{})
+      "lifecycle" => Keyword.get(opts, :lifecycle, %{}),
+      "output" => Keyword.get(opts, :output)
     }
+    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+    |> Map.new()
   end
 end

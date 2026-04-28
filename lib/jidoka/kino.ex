@@ -537,6 +537,7 @@ defmodule Jidoka.Kino do
   defp lifecycle_rows(definition) when is_map(definition) do
     [
       %{surface: "memory", summary: inspect_value(Map.get(definition, :memory))},
+      %{surface: "output", summary: inspect_value(Map.get(definition, :output))},
       %{surface: "hooks", summary: inspect_value(Map.get(definition, :hooks, %{}))},
       %{surface: "guardrails", summary: inspect_value(Map.get(definition, :guardrails, %{}))}
     ]
@@ -601,6 +602,8 @@ defmodule Jidoka.Kino do
       :guardrail,
       :hook,
       :namespace,
+      :output,
+      :schema_kind,
       :conversation_id,
       :child_request_id,
       :error
@@ -650,8 +653,8 @@ defmodule Jidoka.Kino do
   end
 
   defp trace_graph_event?(%Jidoka.Trace.Event{category: category, event: event})
-       when category in [:model, :tool, :workflow, :subagent, :handoff, :guardrail, :memory, :mcp] do
-    event in [:start, :stop, :complete, :completed, :error, :interrupt, :retrieve, :capture, :sync]
+       when category in [:model, :tool, :workflow, :subagent, :handoff, :guardrail, :memory, :mcp, :output] do
+    event in [:start, :stop, :complete, :completed, :validated, :repair, :error, :interrupt, :retrieve, :capture, :sync]
   end
 
   defp trace_graph_event?(_event), do: false
@@ -723,6 +726,7 @@ defmodule Jidoka.Kino do
   defp lifecycle_labels(definition) do
     [
       if_present(Map.get(definition, :memory), "memory"),
+      if_present(Map.get(definition, :output), "output"),
       if_present(Map.get(definition, :hooks), "hooks"),
       if_present(Map.get(definition, :guardrails), "guardrails")
     ]

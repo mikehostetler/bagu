@@ -26,6 +26,32 @@ defmodule Jidoka.Agent.Dsl do
     Workflow
   }
 
+  @output_section %Spark.Dsl.Section{
+    name: :output,
+    describe: """
+    Configure the final structured output contract for this agent.
+    """,
+    schema: [
+      schema: [
+        type: :any,
+        required: true,
+        doc: "A Zoi object/map schema for the final agent response."
+      ],
+      retries: [
+        type: :integer,
+        required: false,
+        default: 1,
+        doc: "Number of final-output repair attempts. Values above 3 are capped."
+      ],
+      on_validation_error: [
+        type: {:in, [:repair, :error]},
+        required: false,
+        default: :repair,
+        doc: "Whether invalid model output should be repaired once or returned as an error."
+      ]
+    ]
+  }
+
   @agent_section %Spark.Dsl.Section{
     name: :agent,
     describe: """
@@ -61,7 +87,8 @@ defmodule Jidoka.Agent.Dsl do
         Defaults declared in the schema become the agent's default context.
         """
       ]
-    ]
+    ],
+    sections: [@output_section]
   }
 
   @defaults_section %Spark.Dsl.Section{

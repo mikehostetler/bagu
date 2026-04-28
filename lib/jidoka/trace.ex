@@ -4,7 +4,8 @@ defmodule Jidoka.Trace do
 
   Jidoka trace data is a bounded in-memory projection over Jido/Jido.AI
   telemetry, enriched with Jidoka-specific lifecycle events for hooks,
-  guardrails, memory, workflows, subagents, handoffs, and MCP.
+  guardrails, memory, workflows, subagents, handoffs, MCP, and structured
+  output.
   """
 
   alias Jidoka.Trace.{Collector, Event}

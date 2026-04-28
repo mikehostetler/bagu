@@ -136,6 +136,51 @@ defmodule JidokaTest.DslValidationTest do
     """)
   end
 
+  test "validates structured output contracts" do
+    assert_dsl_error(~r/output schema must be a Zoi object\/map schema/, """
+    agent do
+      id :invalid_output_schema_agent
+
+      output do
+        schema Zoi.string()
+      end
+    end
+
+    defaults do
+      instructions "This should fail."
+    end
+    """)
+
+    assert_dsl_error(~r/output retries must be a non-negative integer/, """
+    agent do
+      id :invalid_output_retries_agent
+
+      output do
+        schema Zoi.object(%{summary: Zoi.string()})
+        retries -1
+      end
+    end
+
+    defaults do
+      instructions "This should fail."
+    end
+    """)
+
+    assert_dsl_error(~r/Zoi object\/map schema in the Elixir DSL/, """
+    agent do
+      id :json_schema_output_agent
+
+      output do
+        schema %{"type" => "object", "properties" => %{"summary" => %{"type" => "string"}}}
+      end
+    end
+
+    defaults do
+      instructions "This should fail."
+    end
+    """)
+  end
+
   test "validates memory lifecycle configuration" do
     assert_dsl_error(~r/memory namespace must be :per_agent, :shared with shared_namespace/, """
     agent do

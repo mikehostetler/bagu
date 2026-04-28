@@ -8,7 +8,8 @@ defmodule Jidoka.Agent.Chat do
          {:ok, context} <- normalize_request_context(opts, %{}, nil),
          {:ok, context} <- attach_conversation(opts, context),
          {:ok, context} <- attach_runtime_character(opts, context),
-         {:ok, context} <- attach_runtime_extensions(opts, context) do
+         {:ok, context} <- attach_runtime_extensions(opts, context),
+         {:ok, context} <- attach_runtime_output(opts, context) do
       {:ok, finalize_chat_opts(opts, context)}
     end
   end
@@ -23,6 +24,7 @@ defmodule Jidoka.Agent.Chat do
          {:ok, context} <- attach_conversation(opts, context),
          {:ok, context} <- attach_runtime_character(opts, context),
          {:ok, context} <- attach_runtime_extensions(opts, context),
+         {:ok, context} <- attach_runtime_output(opts, context),
          {:ok, context} <- maybe_prepare_ash_context(context, ash_tool_config) do
       {:ok, finalize_chat_opts(opts, context)}
     end
@@ -106,9 +108,13 @@ defmodule Jidoka.Agent.Chat do
     end
   end
 
+  defp attach_runtime_output(opts, context) do
+    {:ok, Jidoka.Output.attach_request_option(context, Keyword.get(opts, :output))}
+  end
+
   defp finalize_chat_opts(opts, context) do
     opts
-    |> Keyword.drop([:context, :character, :conversation, :hooks, :guardrails])
+    |> Keyword.drop([:context, :character, :conversation, :hooks, :guardrails, :output])
     |> Keyword.put(:tool_context, context)
   end
 

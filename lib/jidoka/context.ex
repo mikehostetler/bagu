@@ -6,6 +6,7 @@ defmodule Jidoka.Context do
     "__jidoka_guardrails__",
     "__jidoka_memory__",
     "__jidoka_skills__",
+    "__jidoka_output__",
     "__tool_guardrail_callback__",
     "__jidoka_request_id__",
     "__jidoka_server__",

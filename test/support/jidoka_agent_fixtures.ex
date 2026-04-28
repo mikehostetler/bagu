@@ -52,6 +52,76 @@ defmodule JidokaTest.RequiredContextAgent do
   end
 end
 
+defmodule JidokaTest.StructuredOutputGuardrail do
+  use Jidoka.Guardrail, name: "structured_output_guardrail"
+
+  @impl true
+  def call(%Jidoka.Guardrails.Output{outcome: {:ok, %{category: _category}} = outcome, context: context}) do
+    case Map.get(context, :notify_pid) do
+      pid when is_pid(pid) -> send(pid, {:structured_output_guardrail, outcome})
+      _other -> :ok
+    end
+
+    :ok
+  end
+
+  def call(_input), do: {:error, :expected_structured_output}
+end
+
+defmodule JidokaTest.StructuredOutputAgent do
+  use Jidoka.Agent
+
+  @output_schema Zoi.object(%{
+                   category: Zoi.enum([:billing, :technical, :account]),
+                   confidence: Zoi.float(),
+                   summary: Zoi.string()
+                 })
+
+  agent do
+    id :structured_output_agent
+
+    output do
+      schema @output_schema
+      retries(1)
+      on_validation_error(:repair)
+    end
+  end
+
+  defaults do
+    model :fast
+    instructions "Classify the ticket and return the configured object."
+  end
+
+  lifecycle do
+    output_guardrail JidokaTest.StructuredOutputGuardrail
+  end
+end
+
+defmodule JidokaTest.StructuredOutputPlainAgent do
+  use Jidoka.Agent
+
+  @output_schema Zoi.object(%{
+                   category: Zoi.enum([:billing, :technical, :account]),
+                   confidence: Zoi.float(),
+                   summary: Zoi.string()
+                 })
+
+  agent do
+    id :structured_output_plain_agent
+
+    output do
+      schema @output_schema
+      retries(1)
+      on_validation_error(:repair)
+    end
+  end
+
+  defaults do
+    model :fast
+    instructions "Classify the ticket and return the configured object."
+  end
+end
+
 defmodule JidokaTest.StringModelAgent do
   use Jidoka.Agent
 

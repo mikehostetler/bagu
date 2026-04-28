@@ -30,6 +30,7 @@ defmodule Jidoka.Agent.Codegen do
             definition.context,
             definition.guardrails,
             definition.memory,
+            definition.output,
             definition.skills,
             definition.mcp_tools
           )
@@ -184,6 +185,18 @@ defmodule Jidoka.Agent.Codegen do
       """
       @spec context() :: map()
       def context, do: unquote(Macro.escape(definition.context))
+
+      @doc """
+      Returns the configured structured output contract, if any.
+      """
+      @spec output() :: Jidoka.Output.t() | nil
+      def output, do: unquote(Macro.escape(definition.output))
+
+      @doc """
+      Returns the configured structured output schema, if any.
+      """
+      @spec output_schema() :: Zoi.schema() | map() | nil
+      def output_schema, do: unquote(Macro.escape(output_schema(definition.output)))
 
       @doc """
       Returns the configured memory settings for this agent, if any.
@@ -348,4 +361,7 @@ defmodule Jidoka.Agent.Codegen do
       def requires_actor?, do: unquote(definition.requires_actor?)
     end
   end
+
+  defp output_schema(%Jidoka.Output{schema: schema}), do: schema
+  defp output_schema(_output), do: nil
 end

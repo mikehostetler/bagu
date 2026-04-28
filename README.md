@@ -94,6 +94,51 @@ Or use the top-level facade:
 {:ok, reply} = Jidoka.chat(pid, "Write one sentence about Jido.")
 ```
 
+## Return Typed Output
+
+For classification and extraction tasks, put the response shape directly on the
+agent. Jidoka will ask the model for a JSON object, parse it, validate it with
+Zoi, and return the parsed map from normal `chat/3`.
+
+```elixir
+defmodule MyApp.TicketClassifier do
+  use Jidoka.Agent
+
+  agent do
+    id :ticket_classifier
+
+    output do
+      schema Zoi.object(%{
+        category: Zoi.enum([:billing, :technical, :account]),
+        confidence: Zoi.float(),
+        summary: Zoi.string()
+      })
+
+      retries 1
+      on_validation_error :repair
+    end
+  end
+
+  defaults do
+    model :fast
+    instructions "Classify support tickets for routing."
+  end
+end
+```
+
+```elixir
+{:ok, pid} = MyApp.TicketClassifier.start_link(id: "ticket-classifier-1")
+
+{:ok, ticket} =
+  MyApp.TicketClassifier.chat(pid, "I was double charged for my last invoice.")
+
+# ticket =>
+# %{category: :billing, confidence: 0.92, summary: "Customer reports a duplicate invoice charge."}
+```
+
+Use `output: :raw` during debugging when you want to inspect the model's
+unparsed final answer.
+
 Handle errors with Jidoka's formatter at user-facing boundaries:
 
 ```elixir
@@ -154,6 +199,7 @@ Now the model can call `add_numbers` during a turn.
 Jidoka keeps agent authoring deliberately sectioned:
 
 - `agent do`: required `id`, optional `description`, optional Zoi `schema`
+  and optional nested `output do`
 - `defaults do`: required `instructions`, optional `model`, optional `character`
 - `capabilities do`: `tool`, `ash_resource`, `mcp_tools`, `web`, `skill`,
   `load_path`, `plugin`, `subagent`, `workflow`, and `handoff`
@@ -168,6 +214,7 @@ Jidoka currently gives you:
 - a small Spark DSL via `use Jidoka.Agent`
 - Jidoka-owned model aliases like `:fast`
 - static and dynamic instructions
+- Zoi-backed structured final output through `agent.output`
 - Zoi-backed tools through `use Jidoka.Tool`
 - Ash resource tools through `ash_resource`
 - MCP tool sync through `mcp_tools`
@@ -216,9 +263,10 @@ The top-level `livebook/` folder contains runnable onboarding notebooks:
 
 See [LiveBook Template Notes](livebook/README.md) for notebook conventions and
 the full onboarding series, including diagnostics, hooks, memory, characters,
-subagents, handoffs, skills, MCP, web tools, plugins, Ash resources, evals, and
-production readiness. The series ends with a
-[Kitchen Sink](livebook/20_kitchen_sink.livemd) capstone for advanced
+subagents, handoffs, skills, MCP, web tools, plugins, Ash resources, evals,
+production readiness, and
+[Structured Output](livebook/21_structured_output.livemd). The series includes
+a [Kitchen Sink](livebook/20_kitchen_sink.livemd) capstone for advanced
 developers.
 
 ## Package Development

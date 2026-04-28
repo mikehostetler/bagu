@@ -56,6 +56,7 @@ dependency setup.
 | `18_phoenix_liveview_consumer.livemd` | `Jidoka.AgentView` as the Phoenix LiveView boundary. |
 | `19_production_checklist.livemd` | Provider, runtime, context, guardrail, and inspection pre-flight checks. |
 | `20_kitchen_sink.livemd` | Advanced capstone that composes the main Jidoka features in one support-router scenario. |
+| `21_structured_output.livemd` | Agent-level typed output, validation, repair, imported specs, and optional provider chat. |
 
 ## Acceptance Checklist
 

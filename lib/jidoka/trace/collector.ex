@@ -36,65 +36,9 @@ defmodule Jidoka.Trace.Collector do
     [:jidoka, :workflow, :event],
     [:jidoka, :subagent, :event],
     [:jidoka, :handoff, :event],
-    [:jidoka, :mcp, :event]
+    [:jidoka, :mcp, :event],
+    [:jidoka, :output, :event]
   ]
-
-  @large_keys MapSet.new([
-                :arguments,
-                :context,
-                :data,
-                :llm_opts,
-                :messages,
-                :prompt,
-                :query,
-                :raw,
-                :raw_request,
-                :raw_response,
-                :request,
-                :request_opts,
-                :response,
-                :result,
-                :stacktrace,
-                :state,
-                "arguments",
-                "context",
-                "data",
-                "llm_opts",
-                "messages",
-                "prompt",
-                "query",
-                "raw",
-                "raw_request",
-                "raw_response",
-                "request",
-                "request_opts",
-                "response",
-                "result",
-                "stacktrace",
-                "state"
-              ])
-
-  @sensitive_exact MapSet.new([
-                     "api_key",
-                     "apikey",
-                     "password",
-                     "secret",
-                     "token",
-                     "auth_token",
-                     "authtoken",
-                     "private_key",
-                     "privatekey",
-                     "access_key",
-                     "accesskey",
-                     "bearer",
-                     "api_secret",
-                     "apisecret",
-                     "client_secret",
-                     "clientsecret"
-                   ])
-
-  @sensitive_contains ["secret_"]
-  @sensitive_suffixes ["_secret", "_key", "_token", "_password"]
 
   defstruct enabled?: true,
             max_traces: @default_max_traces,
@@ -249,8 +193,8 @@ defmodule Jidoka.Trace.Collector do
 
   defp normalize_event(seq, event_name, measurements, metadata) do
     with {:ok, source, category, event} <- event_shape(event_name, metadata) do
-      sanitized_measurements = sanitize_payload(measurements)
-      sanitized_metadata = sanitize_payload(metadata)
+      sanitized_measurements = Jidoka.Sanitize.payload(measurements)
+      sanitized_metadata = Jidoka.Sanitize.payload(metadata)
       request_id = string_value(metadata, :request_id)
       run_id = string_value(metadata, :run_id) || request_id
       trace_id = string_value(metadata, :jido_trace_id) || string_value(metadata, :trace_id) || run_id || request_id
@@ -324,6 +268,7 @@ defmodule Jidoka.Trace.Collector do
   defp event_name_label(:hook, metadata), do: string_value(metadata, :hook) || string_value(metadata, :label)
   defp event_name_label(:memory, metadata), do: string_value(metadata, :namespace)
   defp event_name_label(:mcp, metadata), do: string_value(metadata, :endpoint)
+  defp event_name_label(:output, metadata), do: string_value(metadata, :output) || string_value(metadata, :name)
   defp event_name_label(_category, metadata), do: string_value(metadata, :name)
 
   defp event_status(:request, :start, _metadata), do: :running
@@ -403,6 +348,7 @@ defmodule Jidoka.Trace.Collector do
       handoff_events: count_category(events, :handoff),
       guardrail_events: count_category(events, :guardrail),
       memory_events: count_category(events, :memory),
+      output_events: count_category(events, :output),
       error_events: Enum.count(events, &(&1.status == :failed))
     }
   end
@@ -485,38 +431,6 @@ defmodule Jidoka.Trace.Collector do
   defp maybe_limit(values, nil), do: values
   defp maybe_limit(values, limit) when is_integer(limit) and limit >= 0, do: Enum.take(values, limit)
   defp maybe_limit(values, _limit), do: values
-
-  defp sanitize_payload(%{} = map) do
-    Map.new(map, fn {key, value} ->
-      cond do
-        MapSet.member?(@large_keys, key) ->
-          {key, "[OMITTED]"}
-
-        sensitive_key?(key) ->
-          {key, "[REDACTED]"}
-
-        true ->
-          {key, sanitize_payload(value)}
-      end
-    end)
-  end
-
-  defp sanitize_payload(values) when is_list(values), do: Enum.map(values, &sanitize_payload/1)
-  defp sanitize_payload(value) when is_pid(value), do: inspect(value)
-  defp sanitize_payload(value) when is_function(value), do: inspect(value)
-  defp sanitize_payload(value), do: value
-
-  defp sensitive_key?(key) when is_atom(key), do: key |> Atom.to_string() |> sensitive_key?()
-
-  defp sensitive_key?(key) when is_binary(key) do
-    key = String.downcase(key)
-
-    MapSet.member?(@sensitive_exact, key) or
-      Enum.any?(@sensitive_contains, &String.contains?(key, &1)) or
-      Enum.any?(@sensitive_suffixes, &String.ends_with?(key, &1))
-  end
-
-  defp sensitive_key?(_key), do: false
 
   defp get_value(map, key) when is_map(map) do
     Map.get(map, key) || Map.get(map, Atom.to_string(key))

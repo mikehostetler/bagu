@@ -464,6 +464,7 @@ defmodule Jidoka.ImportedAgent do
             spec.context,
             guardrail_modules,
             spec.memory,
+            spec.output,
             skill_config,
             mcp_tools
           )
@@ -594,6 +595,7 @@ defmodule Jidoka.ImportedAgent do
       model: Jidoka.model(spec.model),
       context_schema: nil,
       context: spec.context,
+      output: spec.output,
       memory: spec.memory,
       skills: %{refs: skill_refs, load_paths: spec.skill_paths},
       tools: tool_modules,

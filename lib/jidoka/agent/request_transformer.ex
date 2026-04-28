@@ -70,7 +70,8 @@ defmodule Jidoka.Agent.RequestTransformer do
         normalize_prompt(character_prompt),
         normalize_prompt(prompt),
         skills_prompt(skills_config, runtime_context),
-        Jidoka.Memory.prompt_text(runtime_context)
+        Jidoka.Memory.prompt_text(runtime_context),
+        Jidoka.Output.instructions(runtime_context)
       ]
       |> Enum.reject(&is_nil/1)
 

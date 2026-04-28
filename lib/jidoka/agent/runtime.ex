@@ -6,6 +6,7 @@ defmodule Jidoka.Agent.Runtime do
           map(),
           Jidoka.Guardrails.stage_map(),
           Jidoka.Memory.config() | nil,
+          Jidoka.Output.t() | nil,
           Jidoka.Skill.config() | nil,
           Jidoka.MCP.config()
         ) :: Macro.t()
@@ -14,6 +15,7 @@ defmodule Jidoka.Agent.Runtime do
         default_context \\ %{},
         default_guardrails \\ Jidoka.Guardrails.default_stage_map(),
         default_memory \\ nil,
+        default_output \\ nil,
         default_skills \\ nil,
         default_mcp_tools \\ []
       ) do
@@ -22,6 +24,7 @@ defmodule Jidoka.Agent.Runtime do
       @jidoka_context_defaults unquote(Macro.escape(default_context))
       @jidoka_guardrail_defaults unquote(Macro.escape(default_guardrails))
       @jidoka_memory_defaults unquote(Macro.escape(default_memory))
+      @jidoka_output_defaults unquote(Macro.escape(default_output))
       @jidoka_skill_defaults unquote(Macro.escape(default_skills))
       @jidoka_mcp_defaults unquote(Macro.escape(default_mcp_tools))
 
@@ -44,6 +47,8 @@ defmodule Jidoka.Agent.Runtime do
                  @jidoka_context_defaults
                ),
              {:ok, agent, action} <-
+               Jidoka.Output.on_before_cmd(agent, action, @jidoka_output_defaults),
+             {:ok, agent, action} <-
                Jidoka.Skill.on_before_cmd(agent, action, @jidoka_skill_defaults),
              {:ok, agent, action} <-
                Jidoka.Guardrails.on_before_cmd(agent, action, @jidoka_guardrail_defaults),
@@ -59,6 +64,8 @@ defmodule Jidoka.Agent.Runtime do
         with {:ok, agent, directives} <- super(agent, action, directives),
              {:ok, agent, directives} <-
                Jidoka.Hooks.on_after_cmd(__MODULE__, agent, action, directives, @jidoka_hook_defaults),
+             {:ok, agent, directives} <-
+               Jidoka.Output.on_after_cmd(agent, action, directives, @jidoka_output_defaults),
              {:ok, agent, directives} <-
                Jidoka.Guardrails.on_after_cmd(agent, action, directives, @jidoka_guardrail_defaults),
              {:ok, agent, directives} <-

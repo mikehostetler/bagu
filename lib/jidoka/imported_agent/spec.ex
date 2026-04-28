@@ -126,6 +126,7 @@ defmodule Jidoka.ImportedAgent.Spec do
   @default_skills []
   @default_skill_paths []
   @default_mcp_tools []
+  @default_output nil
 
   @model_map_schema Zoi.object(
                       %{
@@ -336,6 +337,20 @@ defmodule Jidoka.ImportedAgent.Spec do
                   @model_map_schema
                 ])
 
+  @output_schema Zoi.object(
+                   %{
+                     schema: Zoi.map(),
+                     retries: Zoi.integer() |> Zoi.default(1),
+                     on_validation_error:
+                       Zoi.string()
+                       |> Zoi.trim()
+                       |> Zoi.min(1)
+                       |> Zoi.default("repair")
+                   },
+                   coerce: true,
+                   unrecognized_keys: :error
+                 )
+
   @agent_schema Zoi.object(
                   %{
                     id: hd(@id_schema),
@@ -392,7 +407,8 @@ defmodule Jidoka.ImportedAgent.Spec do
               agent: @agent_schema,
               defaults: @defaults_schema,
               capabilities: @capabilities_schema |> Zoi.default(%{}),
-              lifecycle: @lifecycle_schema |> Zoi.default(%{})
+              lifecycle: @lifecycle_schema |> Zoi.default(%{}),
+              output: Zoi.union([@output_schema, Zoi.literal(nil)]) |> Zoi.default(nil)
             },
             coerce: true,
             unrecognized_keys: :error
@@ -413,6 +429,7 @@ defmodule Jidoka.ImportedAgent.Spec do
           character: String.t() | map() | nil,
           model: model_input(),
           context: map(),
+          output: Jidoka.Output.t() | nil,
           memory: Jidoka.Memory.config() | nil,
           tools: [String.t()],
           skills: [String.t()],
@@ -443,6 +460,7 @@ defmodule Jidoka.ImportedAgent.Spec do
     :character,
     :model,
     context: %{},
+    output: @default_output,
     memory: @default_memory,
     tools: [],
     skills: @default_skills,
@@ -463,6 +481,7 @@ defmodule Jidoka.ImportedAgent.Spec do
   @spec new(map() | t(), keyword()) :: {:ok, t()} | {:error, term()}
   def new(%__MODULE__{} = spec, opts) do
     with :ok <- validate_context(spec.context),
+         {:ok, normalized_output} <- normalize_output(spec.output),
          {:ok, normalized_memory} <- Jidoka.Memory.normalize_imported(spec.memory),
          {:ok, _character_spec} <- validate_character(spec.character, Keyword.get(opts, :available_characters, %{})),
          {:ok, normalized_skills} <- Jidoka.Skill.normalize_imported(spec.skills, spec.skill_paths),
@@ -479,6 +498,7 @@ defmodule Jidoka.ImportedAgent.Spec do
         %{
           spec
           | memory: normalized_memory,
+            output: normalized_output,
             skills: (normalized_skills && normalized_skills.refs) || [],
             skill_paths: (normalized_skills && normalized_skills.load_paths) || [],
             mcp_tools: normalized_mcp_tools
@@ -494,6 +514,7 @@ defmodule Jidoka.ImportedAgent.Spec do
          {:ok, normalized_model} <- normalize_model(spec.model),
          :ok <- validate_model(normalized_model),
          :ok <- validate_context(spec.context),
+         {:ok, normalized_output} <- normalize_output(spec.output),
          {:ok, normalized_memory} <- Jidoka.Memory.normalize_imported(spec.memory),
          {:ok, _character_spec} <- validate_character(spec.character, Keyword.get(opts, :available_characters, %{})),
          {:ok, normalized_skills} <- Jidoka.Skill.normalize_imported(spec.skills, spec.skill_paths),
@@ -503,6 +524,7 @@ defmodule Jidoka.ImportedAgent.Spec do
              %{
                spec
                | model: normalized_model,
+                 output: normalized_output,
                  memory: normalized_memory,
                  skills: (normalized_skills && normalized_skills.refs) || [],
                  skill_paths: (normalized_skills && normalized_skills.load_paths) || [],
@@ -593,8 +615,11 @@ defmodule Jidoka.ImportedAgent.Spec do
         "memory" => externalize_memory(spec.memory),
         "hooks" => spec.hooks,
         "guardrails" => spec.guardrails
-      }
+      },
+      "output" => externalize_output(spec.output)
     }
+    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+    |> Map.new()
   end
 
   @spec fingerprint(t()) :: String.t()
@@ -619,6 +644,7 @@ defmodule Jidoka.ImportedAgent.Spec do
       character: Map.get(defaults, :character),
       model: Map.get(defaults, :model, "fast"),
       context: Map.get(agent, :context, %{}),
+      output: Map.get(attrs, :output, @default_output),
       memory: Map.get(lifecycle, :memory),
       tools: Map.get(capabilities, :tools, []),
       skills: Map.get(capabilities, :skills, @default_skills),
@@ -685,6 +711,26 @@ defmodule Jidoka.ImportedAgent.Spec do
     end
   end
 
+  defp normalize_output(nil), do: {:ok, nil}
+
+  defp normalize_output(%Jidoka.Output{} = output), do: {:ok, output}
+
+  defp normalize_output(%{} = output) do
+    case Jidoka.Output.new(output) do
+      {:ok, %Jidoka.Output{schema_kind: :json_schema} = normalized} ->
+        {:ok, normalized}
+
+      {:ok, %Jidoka.Output{schema_kind: :zoi}} ->
+        {:error, "imported output schema must be an object-shaped JSON Schema map"}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp normalize_output(other),
+    do: {:error, "output must be a map with an object-shaped JSON Schema, got: #{inspect(other)}"}
+
   defp validate_character(nil, _available_characters), do: {:ok, nil}
 
   defp validate_character(character, _available_characters) when is_map(character) do
@@ -717,6 +763,18 @@ defmodule Jidoka.ImportedAgent.Spec do
 
   defp externalize_model(model) when is_atom(model), do: Atom.to_string(model)
   defp externalize_model(model), do: model
+
+  defp externalize_output(nil), do: nil
+
+  defp externalize_output(%Jidoka.Output{} = output) do
+    %{
+      "schema" => output.schema,
+      "retries" => output.retries,
+      "on_validation_error" => Atom.to_string(output.on_validation_error)
+    }
+  end
+
+  defp externalize_output(%{} = output), do: output
 
   defp externalize_memory(nil), do: nil
 

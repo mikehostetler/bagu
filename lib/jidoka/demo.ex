@@ -8,6 +8,7 @@ defmodule Jidoka.Demo do
     "imported" => %{loader: :chat, module: Jidoka.Examples.Chat.ImportedDemo},
     "trace" => %{loader: :trace, module: Jidoka.Examples.Trace.Demo},
     "workflow" => %{loader: :workflow, module: Jidoka.Examples.Workflow.Demo},
+    "structured_output" => %{loader: :structured_output, module: Jidoka.Examples.StructuredOutput.Demo},
     "orchestrator" => %{loader: :orchestrator, module: Jidoka.Examples.Orchestrator.Demo},
     "kitchen_sink" => %{loader: :kitchen_sink, module: Jidoka.Examples.KitchenSink.Demo}
   }
