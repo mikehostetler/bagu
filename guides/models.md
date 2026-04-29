@@ -31,7 +31,8 @@ If `defaults.model` is omitted, Jidoka uses `:fast`.
 - alias atoms: `:fast`, `:smart`, or any key you register.
 - direct strings: `"anthropic:claude-haiku-4-5"`, `"openai:gpt-4o-mini"`.
 - inline maps: `%{provider: :anthropic, id: "claude-haiku-4-5"}`.
-- `%LLMDB.Model{}` structs returned by `LLMDB.get_model/1` and friends.
+- `%LLMDB.Model{}` structs returned by `LLMDB.model/1`, `LLMDB.model/2`,
+  and friends.
 
 Jidoka resolves the value at compile time so that `MyApp.SupportAgent.model/0`
 returns the resolved struct.

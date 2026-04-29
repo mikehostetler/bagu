@@ -12,7 +12,8 @@ alphabetized list.
 
 ## Built-in demos
 
-Built-in demos are the curated entry points wired up in `Jidoka.Demo`:
+Built-in demos are curated entry points wired into the internal demo
+dispatcher:
 
 | Command | What it shows |
 | ------- | ------------- |

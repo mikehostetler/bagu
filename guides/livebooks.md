@@ -5,10 +5,11 @@ written guides. Each notebook teaches one capability through a small, complete
 example you can run in a fresh Livebook session, without a local checkout of
 the repo. If the guides explain a feature, a notebook exercises it.
 
-The series lives under [`livebook/`](../livebook/) in the repo and is
-numbered `01` through `21`. Notebook numbers are roughly chronological by
-feature addition, not strict guide tier order: see the index below for the
-mapping.
+The series lives under the
+[`livebook/`](https://github.com/agentjido/jidoka/tree/main/livebook)
+directory in the repo and is numbered `01` through `21`. Notebook numbers are
+roughly chronological by feature addition, not strict guide tier order: see the
+index below for the mapping.
 
 ## Setup
 
@@ -112,7 +113,7 @@ want to run one. See [`mix-tasks.md`](mix-tasks.md) for the demo catalog.
 ## Imported agents
 
 Imported JSON/YAML agents are first-class in the Livebook series: notebook
-[`15_imported_agents_deep_dive.livemd`](../livebook/15_imported_agents_deep_dive.livemd)
+[`15_imported_agents_deep_dive.livemd`](https://github.com/agentjido/jidoka/blob/main/livebook/15_imported_agents_deep_dive.livemd)
 covers explicit registries, provider rebinding, and capability parity with the
 Elixir DSL. See [`imported-agents.md`](imported-agents.md) for the written
 companion.

@@ -123,6 +123,7 @@ defmodule Jidoka.MixProject do
         "guides",
         "mix.exs",
         "README.md",
+        "ROADMAP.md",
         "CHANGELOG.md",
         "CONTRIBUTING.md",
         "LICENSE",
@@ -149,8 +150,10 @@ defmodule Jidoka.MixProject do
         ] ++
           guide_extras() ++
           [
+            "ROADMAP.md",
             "CHANGELOG.md",
             "CONTRIBUTING.md",
+            "LICENSE",
             "usage-rules.md"
           ],
       groups_for_extras: [
@@ -202,12 +205,15 @@ defmodule Jidoka.MixProject do
         Reference: [
           "usage-rules.md",
           "CHANGELOG.md",
-          "CONTRIBUTING.md"
+          "CONTRIBUTING.md",
+          "ROADMAP.md",
+          "LICENSE"
         ]
       ],
       groups_for_modules: [
         Agents: [
           Jidoka.Agent,
+          Jidoka.Agent.SystemPrompt,
           Jidoka.AgentView,
           Jidoka.Agent.View,
           Jidoka.ImportedAgent,

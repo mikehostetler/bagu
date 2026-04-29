@@ -1,11 +1,16 @@
 defmodule Jidoka.Agent.SystemPrompt do
-  @moduledoc false
+  @moduledoc """
+  Callback contract for dynamic `defaults.instructions` resolvers.
+
+  Implement this behaviour when compiled agents need to derive their system
+  prompt from the current request, state, config, or parsed runtime context.
+  """
 
   alias Jido.AI.Reasoning.ReAct.{Config, State}
 
-  @callback resolve_system_prompt(input()) :: String.t() | {:ok, String.t()} | {:error, term()}
-
-  @typedoc false
+  @typedoc """
+  Input passed to dynamic instruction resolvers.
+  """
   @type input :: %{
           required(:request) => map(),
           required(:state) => State.t(),
@@ -16,6 +21,14 @@ defmodule Jidoka.Agent.SystemPrompt do
   @typedoc false
   @type spec :: String.t() | module() | {module(), atom(), [term()]}
 
+  @doc """
+  Resolves the system prompt for one chat turn.
+
+  Return a non-empty string, `{:ok, string}`, or `{:error, reason}`.
+  """
+  @callback resolve_system_prompt(input()) :: String.t() | {:ok, String.t()} | {:error, term()}
+
+  @doc false
   @spec normalize(module(), term(), keyword()) ::
           {:ok, {:static, String.t()} | {:dynamic, spec()}} | {:error, String.t()}
   def normalize(owner_module, system_prompt, opts \\ [])
@@ -68,6 +81,7 @@ defmodule Jidoka.Agent.SystemPrompt do
      "#{label(opts)} must be a string, a module implementing resolve_system_prompt/1, or an MFA tuple, got: #{inspect(other)}"}
   end
 
+  @doc false
   @spec transform_request(spec(), map(), State.t(), Config.t(), map()) ::
           {:ok, %{messages: [map()]}} | {:error, term()}
   def transform_request(spec, request, %State{} = state, %Config{} = config, runtime_context)
@@ -84,6 +98,7 @@ defmodule Jidoka.Agent.SystemPrompt do
     end
   end
 
+  @doc false
   @spec resolve(spec(), input()) :: {:ok, String.t()} | {:error, term()}
   def resolve(spec, input)
 
@@ -129,6 +144,7 @@ defmodule Jidoka.Agent.SystemPrompt do
 
   defp label(opts), do: Keyword.get(opts, :label, "system_prompt")
 
+  @doc false
   @spec put_system_prompt([map()], String.t()) :: [map()]
   def put_system_prompt(messages, prompt) when is_list(messages) and is_binary(prompt) do
     system_message = %{role: :system, content: prompt}
@@ -142,6 +158,7 @@ defmodule Jidoka.Agent.SystemPrompt do
     end
   end
 
+  @doc false
   @spec extract_system_prompt([map()]) :: String.t() | nil
   def extract_system_prompt([%{role: role, content: content} | _rest])
       when role in [:system, "system"] and is_binary(content) do
