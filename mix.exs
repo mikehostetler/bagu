@@ -123,7 +123,6 @@ defmodule Jidoka.MixProject do
         "guides",
         "mix.exs",
         "README.md",
-        "ROADMAP.md",
         "CHANGELOG.md",
         "CONTRIBUTING.md",
         "LICENSE",
@@ -150,7 +149,6 @@ defmodule Jidoka.MixProject do
         ] ++
           guide_extras() ++
           [
-            "ROADMAP.md",
             "CHANGELOG.md",
             "CONTRIBUTING.md",
             "LICENSE",
@@ -206,7 +204,6 @@ defmodule Jidoka.MixProject do
           "usage-rules.md",
           "CHANGELOG.md",
           "CONTRIBUTING.md",
-          "ROADMAP.md",
           "LICENSE"
         ]
       ],

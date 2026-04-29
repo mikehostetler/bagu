@@ -325,7 +325,8 @@ Jidoka is currently alpha. The beta surface (agents, tools, workflows,
 imports, structured errors, and the Phoenix LiveView consumer) is being
 stabilized. Pin a commit ref when consuming Jidoka from another app and expect
 small breaking changes during the alpha-to-beta window. See
-[ROADMAP.md](ROADMAP.md) for the current state.
+[ROADMAP.md](https://github.com/agentjido/jidoka/blob/main/ROADMAP.md) for the
+current state.
 
 ## Try the demos and develop locally
 
