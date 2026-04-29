@@ -240,6 +240,18 @@ is the low-level projection. `Jidoka.inspect_request/1` is for request-level
 diagnostics such as hooks, guardrails, memory, subagents, workflows, handoffs,
 usage, and errors.
 
+For surfacing agent state in a UI panel, see [Inspection](inspection.html). To
+attach a run trace panel to a LiveView (per-request events from
+`Jidoka.Trace.for_request/3` and `Jidoka.Trace.latest/2`), see
+[Tracing](tracing.html).
+
+## Imported Agents
+
+Imported JSON/YAML agents have parity here: the AgentView contract works
+against any value the Jidoka facade accepts, so a LiveView can mount a runtime
+started from `Jidoka.import_agent/2` exactly the same way. See
+[Imported Agents](imported-agents.html).
+
 ## Design Direction
 
 The Jidoka-level abstraction is not a Phoenix-specific component. It is an

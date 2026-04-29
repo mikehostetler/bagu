@@ -109,6 +109,7 @@ end
 ```
 
 When the agent has a schema, Jidoka validates that `key` exists in the schema.
+See [Context](context.html) for how the compiled context schema is declared.
 
 ## Injection Modes
 
@@ -133,9 +134,11 @@ fails.
 
 Use `Jidoka.inspect_request/1` when debugging memory behavior in a live turn.
 
-## Imported Specs
+## Imported Agents
 
-Imported JSON/YAML agents use the same constrained memory shape:
+Imported JSON/YAML agents have parity here: they configure the same memory
+behavior through the constrained `lifecycle.memory` block. See
+[Imported Agents](imported-agents.html) for the full spec.
 
 ```json
 {

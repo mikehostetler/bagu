@@ -33,6 +33,8 @@ end
 
 Jidoka renders the character before `defaults.instructions`. That means the
 character shapes voice and persona, while instructions still define the task.
+See [Instructions](instructions.html) for how the rendered instruction string
+composes with characters into the effective system prompt.
 
 ## Runtime Override
 
@@ -62,7 +64,10 @@ Modules are better when a character should be reused across compiled agents.
 
 ## Imported Agents
 
-Imported specs support inline character maps:
+Imported JSON/YAML agents have parity here: they support inline character maps
+and can reference compiled characters by name through the
+`available_characters:` registry. See [Imported Agents](imported-agents.html)
+for the full spec.
 
 ```json
 {
@@ -78,7 +83,7 @@ Imported specs support inline character maps:
 ```
 
 They can also reference string character names when the importing application
-provides `available_characters`.
+provides the `available_characters:` registry.
 
 ```elixir
 Jidoka.import_agent(json,

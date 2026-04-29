@@ -3,6 +3,9 @@
 Evals give you confidence that an agent behaves correctly in context. In Jidoka,
 split evals into deterministic tests and live LLM evals.
 
+The Jidoka facade accepts compiled agents and imported agents the same way, so
+both eval styles work against either authoring path.
+
 ## Deterministic Tests First
 
 Before calling a model, test the pieces the application owns:
@@ -14,6 +17,10 @@ Before calling a model, test the pieces the application owns:
 - context schema failures
 - imported spec resolution
 - workflow and handoff capability wiring
+
+Each canonical example also ships with a `--verify` mode that exercises tool
+and output contracts without calling a provider. See
+[Mix Tasks](mix-tasks.html) for the canonical `--verify` flag documentation.
 
 Example workflow test:
 
@@ -58,6 +65,10 @@ ANTHROPIC_API_KEY=... mix test --include llm_eval test/evals/support_agent_eval_
 
 If the tag is included without a key, fail clearly. Do not silently skip live
 evals when the user explicitly asked for them.
+
+For live LLM eval observability, attach to the run trace through
+[Tracing](tracing.html) and read events with `Jidoka.Trace.latest/2` or
+`Jidoka.Trace.for_request/3`.
 
 ## What To Evaluate
 

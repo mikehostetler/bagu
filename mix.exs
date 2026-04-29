@@ -154,7 +154,51 @@ defmodule Jidoka.MixProject do
             "usage-rules.md"
           ],
       groups_for_extras: [
-        Guides: guide_extras(),
+        Orientation: [
+          "guides/overview.md",
+          "guides/getting-started.md"
+        ],
+        "Agent Fundamentals": [
+          "guides/agents.md",
+          "guides/models.md",
+          "guides/instructions.md",
+          "guides/context.md",
+          "guides/structured-output.md",
+          "guides/chat-turn.md"
+        ],
+        Capabilities: [
+          "guides/tools.md",
+          "guides/ash-resources.md",
+          "guides/mcp-tools.md",
+          "guides/web-access.md",
+          "guides/skills.md",
+          "guides/plugins.md"
+        ],
+        Orchestration: [
+          "guides/subagents.md",
+          "guides/workflows.md",
+          "guides/handoffs.md"
+        ],
+        Lifecycle: [
+          "guides/memory.md",
+          "guides/characters.md",
+          "guides/hooks.md",
+          "guides/guardrails.md"
+        ],
+        Imports: [
+          "guides/imported-agents.md"
+        ],
+        Operations: [
+          "guides/errors.md",
+          "guides/inspection.md",
+          "guides/tracing.md",
+          "guides/evals.md",
+          "guides/mix-tasks.md",
+          "guides/livebooks.md",
+          "guides/phoenix-liveview.md",
+          "guides/examples.md",
+          "guides/production.md"
+        ],
         Reference: [
           "usage-rules.md",
           "CHANGELOG.md",
@@ -201,19 +245,43 @@ defmodule Jidoka.MixProject do
 
   defp guide_extras do
     [
+      # Orientation
       "guides/overview.md",
       "guides/getting-started.md",
+      # Agent fundamentals
       "guides/agents.md",
-      "guides/context-and-schema.md",
-      "guides/tools-and-capabilities.md",
-      "guides/subagents-workflows-handoffs.md",
+      "guides/models.md",
+      "guides/instructions.md",
+      "guides/context.md",
+      "guides/structured-output.md",
+      "guides/chat-turn.md",
+      # Capabilities
+      "guides/tools.md",
+      "guides/ash-resources.md",
+      "guides/mcp-tools.md",
+      "guides/web-access.md",
+      "guides/skills.md",
+      "guides/plugins.md",
+      # Orchestration
+      "guides/subagents.md",
+      "guides/workflows.md",
+      "guides/handoffs.md",
+      # Lifecycle
       "guides/memory.md",
       "guides/characters.md",
+      "guides/hooks.md",
+      "guides/guardrails.md",
+      # Imports
       "guides/imported-agents.md",
-      "guides/errors-and-debugging.md",
+      # Operations
+      "guides/errors.md",
+      "guides/inspection.md",
+      "guides/tracing.md",
       "guides/evals.md",
-      "guides/examples.md",
+      "guides/mix-tasks.md",
+      "guides/livebooks.md",
       "guides/phoenix-liveview.md",
+      "guides/examples.md",
       "guides/production.md"
     ]
   end

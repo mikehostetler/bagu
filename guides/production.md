@@ -40,48 +40,16 @@ temporary workers.
 
 ## Provider Configuration
 
-Configure provider credentials through environment variables or runtime config.
-In this repo, `.env` is loaded by `dotenvy`, and `ANTHROPIC_API_KEY` is used by
-the examples.
-
-Use model aliases for application defaults:
-
-```elixir
-config :jidoka, :model_aliases,
-  fast: "anthropic:claude-haiku-4-5"
-```
-
-Then reference aliases in agents:
-
-```elixir
-defaults do
-  model :fast
-  instructions "You help support users."
-end
-```
+Set provider credentials through environment variables or runtime config, and
+declare model aliases under `config :jidoka, :model_aliases`. See
+[Models](models.html) and the README "Install and configure" section for the
+canonical setup.
 
 ## Error Boundaries
 
-At HTTP, CLI, job, and test boundaries, handle all public return shapes:
-
-```elixir
-case Jidoka.chat(pid, message, context: context, conversation: conversation_id) do
-  {:ok, reply} ->
-    {:ok, reply}
-
-  {:interrupt, interrupt} ->
-    {:interrupt, interrupt}
-
-  {:handoff, handoff} ->
-    {:handoff, handoff}
-
-  {:error, reason} ->
-    {:error, Jidoka.format_error(reason)}
-end
-```
-
-Keep raw `reason.details.cause` for logs and observability. Do not expose it
-directly to end users unless your application sanitizes it.
+At HTTP, CLI, job, and test boundaries, handle all four public return shapes
+(`{:ok, _}`, `{:interrupt, _}`, `{:handoff, _}`, `{:error, _}`) and call
+`Jidoka.format_error/1` for user-facing strings. See [Errors](errors.html).
 
 ## Context Security
 
@@ -100,9 +68,11 @@ Good context values:
 Do not forward secrets to subagents, workflows, or handoffs. Use
 `forward_context: {:only, keys}` for most production delegation.
 
-## Imported Spec Safety
+## Imported Agents
 
-Imported agents must resolve executable pieces through registries:
+The production checklist applies identically to imported JSON/YAML agents.
+The hardening posture is the `available_*` registries: imported specs must
+resolve executable pieces through explicit allowlists.
 
 ```elixir
 Jidoka.import_agent_file(path,
@@ -113,7 +83,7 @@ Jidoka.import_agent_file(path,
 ```
 
 Do not let user-authored JSON/YAML select arbitrary modules. Keep raw module
-strings invalid.
+strings invalid. See [Imported Agents](imported-agents.html).
 
 ## Memory Storage
 
@@ -155,24 +125,10 @@ Jidoka.reset_handoff("support-123")
 
 ## Observability
 
-Use Jidoka inspection APIs in debug tooling:
-
-```elixir
-Jidoka.inspect_agent(MyApp.SupportAgent)
-Jidoka.inspect_agent(pid)
-Jidoka.inspect_request(pid)
-Jidoka.inspect_workflow(MyApp.Workflows.RefundReview)
-```
-
-Use package demos and the Phoenix consumer app when learning behavior:
-
-```bash
-mix jidoka orchestrator --log-level trace --dry-run
-cd dev/jidoka_consumer && PORT=4002 mix phx.server
-```
-
-For application observability, log request ids, agent ids, workflow ids, tool
-names, and formatted Jidoka errors.
+Use [Inspection](inspection.html) for stable views of agents, requests, and
+workflows. Use [Tracing](tracing.html) for structured run traces through
+`Jidoka.Trace`. Log request ids, agent ids, workflow ids, tool names, and
+formatted Jidoka errors.
 
 ## Dependency Posture
 

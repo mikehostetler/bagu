@@ -1,12 +1,15 @@
 # Agents
 
-Agents are the center of Jidoka's public API. A Jidoka agent is a compiled Elixir
-module that generates a Jido.AI runtime with a smaller, validated authoring
-surface.
+A Jidoka agent is a compiled Elixir module that generates a Jido.AI runtime with
+a smaller, validated authoring surface. This guide covers the four-section DSL
+shape and the compile-time checks that keep agent modules consistent. For
+runtime topics (instructions, models, the chat turn) see the linked guides
+below.
 
 ## DSL Shape
 
-The beta DSL has four sections:
+The DSL has four top-level sections: `agent`, `defaults`, `capabilities`, and
+`lifecycle`. Only `agent.id` and `defaults.instructions` are required.
 
 ```elixir
 defmodule MyApp.SupportAgent do
@@ -37,19 +40,26 @@ defmodule MyApp.SupportAgent do
 end
 ```
 
-`agent do` contains stable identity and compile-time context schema:
+### `agent do`
 
-- `id` is required and must be lower snake case.
-- `description` is optional.
-- `schema` is an optional compiled Zoi map/object schema for runtime context.
+Stable identity and compile-time context schema:
 
-`defaults do` contains runtime defaults:
+- `id`: required, lower snake case atom.
+- `description`: optional, free text.
+- `schema`: optional compiled Zoi map/object schema for runtime context.
+- `output do ... end`: optional structured output declaration.
 
-- `instructions` is required.
-- `model` is optional and defaults to `:fast`.
-- `character` is optional structured persona data.
+### `defaults do`
 
-`capabilities do` contains model-visible or model-reachable features:
+Runtime defaults for every chat turn:
+
+- `instructions`: required.
+- `model`: optional, defaults to `:fast`.
+- `character`: optional structured persona data.
+
+### `capabilities do`
+
+Model-visible or model-reachable features:
 
 - `tool`
 - `ash_resource`
@@ -62,7 +72,9 @@ end
 - `workflow`
 - `handoff`
 
-`lifecycle do` contains non-capability runtime policy:
+### `lifecycle do`
+
+Non-capability runtime policy:
 
 - `memory`
 - `before_turn`
@@ -72,66 +84,32 @@ end
 - `output_guardrail`
 - `tool_guardrail`
 
-## Instructions
+## Compile-Time Feedback
 
-`defaults.instructions` is what Jidoka maps to the underlying Jido.AI system
-prompt machinery.
+Jidoka rejects legacy or ambiguous placements at compile time so production
+agents stay easy to inspect and import or export later. Examples:
 
-Static string:
+- `agent.model` must move to `defaults.model`.
+- `agent.system_prompt` must be renamed to `defaults.instructions`.
+- top-level `tools`, `skills`, `plugins`, `subagents`, `hooks`, `guardrails`,
+  and `memory` must move into `capabilities` or `lifecycle`.
+- capability names must be unique across direct tools, Ash-generated tools, MCP
+  tools, skill tools, plugin tools, web tools, subagents, workflows, and
+  handoffs.
 
-```elixir
-defaults do
-  instructions "You are concise and direct."
-end
-```
-
-Module resolver:
-
-```elixir
-defmodule MyApp.SupportPrompt do
-  @behaviour Jidoka.Agent.SystemPrompt
-
-  @impl true
-  def resolve_system_prompt(%{context: context}) do
-    tenant = Map.get(context, :tenant, "unknown")
-    "You help support users for tenant #{tenant}."
-  end
-end
-
-defaults do
-  instructions MyApp.SupportPrompt
-end
-```
-
-MFA resolver:
-
-```elixir
-defaults do
-  instructions {MyApp.SupportPrompts, :build, ["Support tenant"]}
-end
-```
-
-Dynamic instructions resolve once per turn using the current runtime context.
-
-## Models
-
-`defaults.model` accepts Jidoka/Jido.AI model inputs:
-
-- alias atoms such as `:fast`
-- direct strings such as `"anthropic:claude-haiku-4-5"`
-- inline maps such as `%{provider: :anthropic, id: "claude-haiku-4-5"}`
-- `%LLMDB.Model{}` structs
-
-Use aliases for application defaults and direct strings when an agent needs an
-explicit provider/model pair.
+Treat these errors as structural feedback rather than friction. Verifiers cover
+tools, Ash resources, skills, plugins, subagents, hooks, guardrails, memory,
+and model resolution.
 
 ## Generated Functions
 
-Compiled agents expose stable beta helpers:
+Each compiled agent module exposes a small set of stable helpers that mirror
+the DSL. Use these for runtime introspection and for starting the agent:
 
 ```elixir
 MyApp.SupportAgent.start_link(id: "support-1")
 MyApp.SupportAgent.chat(pid, "Hello")
+
 MyApp.SupportAgent.id()
 MyApp.SupportAgent.name()
 MyApp.SupportAgent.instructions()
@@ -148,36 +126,23 @@ MyApp.SupportAgent.hooks()
 MyApp.SupportAgent.guardrails()
 ```
 
-Prefer public helpers and `Jidoka.inspect_agent/1` over internal generated data
-functions.
+Prefer these helpers and `Jidoka.inspect_agent/1` over reaching into private
+internals. See [inspection.md](inspection.md) for richer surfaces and shared
+helpers like `Jidoka.inspect_request/1`.
 
-## Chat Turn Lifecycle
+## See also
 
-A typical `Jidoka.chat/3` call does this:
+- [instructions.md](instructions.md): static, module, MFA, and dynamic prompts.
+- [models.md](models.md): aliases, direct strings, inline maps, runtime resolution.
+- [context.md](context.md): defining and parsing per-turn context.
+- [chat-turn.md](chat-turn.md): the lifecycle of a single `Jidoka.chat/3` call.
+- [overview.md](overview.md) and [tools.md](tools.md): the capability index and
+  the most common capability.
 
-1. Validate public options, including `context:` and `conversation:`.
-2. Route to the current handoff owner when a `conversation:` has one.
-3. Resolve the target agent server.
-4. Parse and merge runtime context.
-5. Apply runtime character, hooks, guardrails, memory, MCP sync, and generated
-   tool context.
-6. Send the request through Jido.AI.
-7. Normalize interruptions, handoffs, and errors into public Jidoka return shapes.
+## Imported agents
 
-The model sees only what instructions, memory, skills, and tools expose. Raw
-runtime `context:` is application data, not automatically prompt-visible text.
-
-## Compile-Time Feedback
-
-Jidoka intentionally rejects legacy or ambiguous placements. Examples:
-
-- `agent.model` must move to `defaults.model`.
-- `agent.system_prompt` must be renamed to `defaults.instructions`.
-- top-level `tools`, `skills`, `plugins`, `subagents`, `hooks`, `guardrails`,
-  and `memory` must move into `capabilities` or `lifecycle`.
-- capability names must be unique across direct tools, Ash-generated tools, MCP
-  tools, skill tools, plugin tools, web tools, subagents, workflows, and
-  handoffs.
-
-Use these errors as structure feedback. The DSL is strict so production agents
-are easier to inspect and import/export later.
+Imported JSON or YAML agents share the same four-section conceptual shape and
+are loaded at runtime through `Jidoka.import_agent/2` and
+`Jidoka.import_agent_file/2`. They expose the same return shapes through
+`Jidoka.chat/3`. See [imported-agents.md](imported-agents.md) for the
+constrained spec format and the small set of features that are compile-only.

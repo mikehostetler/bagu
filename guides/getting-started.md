@@ -49,7 +49,6 @@ defmodule MyApp.AssistantAgent do
 
   agent do
     id :assistant_agent
-    description "A small general-purpose assistant."
   end
 
   defaults do
@@ -59,7 +58,7 @@ defmodule MyApp.AssistantAgent do
 end
 ```
 
-The required shape is:
+The DSL has four sections:
 
 - `agent do`: stable identity and optional context schema
 - `defaults do`: model and required instructions
@@ -149,7 +148,9 @@ cd dev/jidoka_consumer
 PORT=4002 mix phx.server
 ```
 
-## Next Step
+## Next Steps
 
-Read [Agents](agents.html) to understand the DSL sections and generated
-functions before adding tools or orchestration.
+- [Agents](agents.html): the full DSL sections and generated functions.
+- [Structured Output](structured-output.html): return typed maps validated by Zoi instead of free text.
+- [Tools](tools.html): give the agent deterministic capabilities to call mid-turn.
+- [Chat Turn](chat-turn.html): per-turn options, return shapes, and how to opt out of structured parsing with `output: :raw`.

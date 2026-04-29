@@ -3,6 +3,10 @@
 Jidoka includes examples under `examples/` and exposes them through `mix jidoka`.
 Use dry-runs first to inspect the configuration without provider calls.
 
+See [Mix Tasks](mix-tasks.html) for the canonical flag reference (`--dry-run`,
+`--verify`, `--log-level`). Many of these examples also have notebook
+equivalents under `livebook/`, indexed in [Livebooks](livebooks.html).
+
 ## Chat
 
 ```bash

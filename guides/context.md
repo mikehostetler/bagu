@@ -1,4 +1,4 @@
-# Context And Schema
+# Context
 
 Jidoka uses `context:` for request-scoped application data. Context is available
 to hooks, dynamic instructions, tools, Ash resources, memory namespaces,
@@ -10,7 +10,7 @@ see it.
 
 ## Define Context Schema
 
-Compiled agents can define a Zoi map/object schema inside `agent do`:
+Compiled agents can declare a Zoi map/object schema inside `agent do`:
 
 ```elixir
 defmodule MyApp.BillingAgent do
@@ -34,7 +34,7 @@ end
 ```
 
 The schema is compiled with the agent. Jidoka validates it at compile time and
-uses it at runtime before the LLM call starts.
+parses runtime context with it before the LLM call starts.
 
 ## Defaults With Required Fields
 
@@ -64,7 +64,7 @@ Pass required values with `context:`:
 
 ## Per-Turn Context
 
-Per-turn context is parsed through the schema:
+Per-turn context is parsed through the schema and merged with schema defaults:
 
 ```elixir
 MyApp.BillingAgent.chat(pid, "Help with this invoice.",
@@ -75,9 +75,9 @@ MyApp.BillingAgent.chat(pid, "Help with this invoice.",
 )
 ```
 
-For compiled agents with a schema, runtime context is parsed by Zoi and merged
-with schema defaults. For imported agents, `agent.context` is a plain default
-map and per-turn `context:` merges over it.
+For compiled agents with a schema, runtime context is parsed by Zoi. For
+imported agents, `agent.context` is a plain default map and per-turn `context:`
+merges over it.
 
 ## Invalid Context Type
 
@@ -97,24 +97,6 @@ plumbing:
 Jidoka.format_error(reason)
 #=> "Invalid option: use `context:` for request-scoped data; `tool_context:` is internal."
 ```
-
-## Dynamic Instructions
-
-Dynamic instructions receive parsed context:
-
-```elixir
-defmodule MyApp.SupportPrompt do
-  @behaviour Jidoka.Agent.SystemPrompt
-
-  @impl true
-  def resolve_system_prompt(%{context: context}) do
-    account_id = Map.get(context, :account_id, "unknown")
-    "You help the support team with account #{account_id}."
-  end
-end
-```
-
-This is the most direct way to make selected context visible to the model.
 
 ## Context In Tools
 
@@ -165,20 +147,24 @@ Jidoka strips internal runtime keys before forwarding context.
 
 ## Context For Memory Namespaces
 
-Memory can use a context key as its namespace:
+Memory can use a context key as its namespace (for example,
+`namespace {:context, :session}`). When an agent has a compiled schema, Jidoka
+validates that the namespace key is declared in the schema, catching memory
+partitioning mistakes at compile time. See [memory.md](memory.md) for the full
+DSL.
 
-```elixir
-lifecycle do
-  memory do
-    mode :conversation
-    namespace {:context, :session}
-    capture :conversation
-    retrieve limit: 5
-    inject :instructions
-  end
-end
-```
+## See also
 
-When an agent has a compiled schema, Jidoka validates that the namespace key is
-declared in the schema. This catches memory partitioning mistakes at compile
-time.
+- [agents.md](agents.md)
+- [instructions.md](instructions.md)
+- [tools.md](tools.md)
+- [memory.md](memory.md)
+- [subagents.md](subagents.md)
+
+## Imported agents
+
+Imported JSON/YAML agents support a default `agent.context` map only. There is
+no portable Zoi schema for context yet, so compile-time defaults and Zoi
+validation are not available for imported specs. Per-turn `context:` still
+merges over the imported defaults the same way it does for compiled agents.
+See [imported-agents.md](imported-agents.md).
