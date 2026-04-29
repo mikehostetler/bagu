@@ -7,7 +7,7 @@ defmodule Jidoka.ImportedAgent do
   still documented because public Jidoka APIs return it.
   """
 
-  alias Jidoka.ImportedAgent.{Codec, Registries, Spec}
+  alias Jidoka.ImportedAgent.{Codec, Definition, Registries, RuntimeCompiler, Spec}
 
   @enforce_keys [
     :spec,
@@ -106,7 +106,7 @@ defmodule Jidoka.ImportedAgent do
 
   @spec definition(t()) :: map()
   def definition(%__MODULE__{} = agent) do
-    definition_map(
+    Definition.map(
       agent.spec,
       agent.runtime_module,
       agent.character_spec,
@@ -120,7 +120,7 @@ defmodule Jidoka.ImportedAgent do
       agent.plugin_modules,
       agent.hook_modules,
       agent.guardrail_modules,
-      request_transformer(agent.spec, agent.runtime_module)
+      RuntimeCompiler.request_transformer(agent.spec, agent.runtime_module)
     )
   end
 
@@ -164,23 +164,25 @@ defmodule Jidoka.ImportedAgent do
            Jidoka.Tool.action_names(
              direct_tool_modules ++ skill_tool_modules ++ plugin_tool_modules ++ web_tool_modules
            ),
+         tool_module_base =
+           RuntimeCompiler.generated_tool_module_base(spec, resolved_subagents, resolved_workflows, resolved_handoffs),
          subagent_tool_modules <-
            resolved_subagents
            |> Enum.with_index()
            |> Enum.map(fn {subagent, index} ->
-             Jidoka.Subagent.tool_module(generated_module_base(spec), subagent, index)
+             Jidoka.Subagent.tool_module(tool_module_base, subagent, index)
            end),
          workflow_tool_modules <-
            resolved_workflows
            |> Enum.with_index()
            |> Enum.map(fn {workflow, index} ->
-             Jidoka.Workflow.Capability.tool_module(generated_module_base(spec), workflow, index)
+             Jidoka.Workflow.Capability.tool_module(tool_module_base, workflow, index)
            end),
          handoff_tool_modules <-
            resolved_handoffs
            |> Enum.with_index()
            |> Enum.map(fn {handoff, index} ->
-             Jidoka.Handoff.Capability.tool_module(generated_module_base(spec), handoff, index)
+             Jidoka.Handoff.Capability.tool_module(tool_module_base, handoff, index)
            end),
          {:ok, hook_modules} <- Registries.resolve_hooks(spec.hooks, hook_registry),
          {:ok, guardrail_modules} <-
@@ -198,7 +200,7 @@ defmodule Jidoka.ImportedAgent do
                Enum.map(resolved_handoffs, & &1.name)
            ),
          {:ok, runtime_module} <-
-           ensure_runtime_module(
+           RuntimeCompiler.ensure_runtime_module(
              spec,
              character_spec,
              tool_modules,
@@ -246,310 +248,6 @@ defmodule Jidoka.ImportedAgent do
     end
   end
 
-  defp ensure_runtime_module(
-         %Spec{} = spec,
-         character_spec,
-         tool_modules,
-         skill_refs,
-         mcp_tools,
-         subagents,
-         workflows,
-         handoffs,
-         web,
-         plugin_modules,
-         hook_modules,
-         guardrail_modules
-       ) do
-    runtime_plugins = runtime_plugins(plugin_modules, spec.memory)
-
-    runtime_module =
-      generated_module(
-        spec,
-        character_spec,
-        tool_modules,
-        skill_refs,
-        mcp_tools,
-        subagents,
-        workflows,
-        handoffs,
-        web,
-        runtime_plugins,
-        hook_modules,
-        guardrail_modules
-      )
-
-    if Code.ensure_loaded?(runtime_module) do
-      {:ok, runtime_module}
-    else
-      create_runtime_module(
-        runtime_module,
-        spec,
-        character_spec,
-        tool_modules,
-        skill_refs,
-        mcp_tools,
-        subagents,
-        workflows,
-        handoffs,
-        web,
-        plugin_modules,
-        runtime_plugins,
-        hook_modules,
-        guardrail_modules
-      )
-    end
-  end
-
-  defp generated_module(
-         %Spec{} = spec,
-         character_spec,
-         tool_modules,
-         skill_refs,
-         mcp_tools,
-         subagents,
-         workflows,
-         handoffs,
-         web,
-         runtime_plugins,
-         hook_modules,
-         guardrail_modules
-       ) do
-    suffix =
-      %{
-        spec: Spec.to_external_map(spec),
-        character: inspect(character_spec),
-        tools: Enum.map(tool_modules, &inspect/1),
-        skills:
-          Enum.map(skill_refs, fn
-            module when is_atom(module) -> inspect(module)
-            name when is_binary(name) -> name
-          end),
-        mcp_tools: mcp_tools,
-        subagents:
-          Enum.map(subagents, fn subagent ->
-            %{
-              name: subagent.name,
-              agent: inspect(subagent.agent),
-              target: externalize_subagent_target(subagent.target)
-            }
-          end),
-        workflows:
-          Enum.map(workflows, fn workflow ->
-            %{
-              name: workflow.name,
-              workflow: inspect(workflow.workflow)
-            }
-          end),
-        handoffs:
-          Enum.map(handoffs, fn handoff ->
-            %{
-              name: handoff.name,
-              agent: inspect(handoff.agent),
-              target: externalize_handoff_target(handoff.target)
-            }
-          end),
-        web:
-          Enum.map(web, fn capability ->
-            %{
-              mode: capability.mode,
-              tools: Enum.map(capability.tools, &inspect/1)
-            }
-          end),
-        plugins: Enum.map(runtime_plugins, &inspect/1),
-        hooks:
-          Enum.into(hook_modules, %{}, fn {stage, modules} ->
-            {stage, Enum.map(modules, &inspect/1)}
-          end),
-        guardrails:
-          Enum.into(guardrail_modules, %{}, fn {stage, modules} ->
-            {stage, Enum.map(modules, &inspect/1)}
-          end)
-      }
-      |> Jason.encode!()
-      |> then(&:crypto.hash(:sha256, &1))
-      |> Base.encode16(case: :lower)
-      |> String.slice(0, 16)
-      |> String.upcase()
-
-    Module.concat([__MODULE__, Generated, "Runtime#{suffix}"])
-  end
-
-  defp create_runtime_module(
-         runtime_module,
-         %Spec{} = spec,
-         character_spec,
-         tool_modules,
-         skill_refs,
-         mcp_tools,
-         subagents,
-         workflows,
-         handoffs,
-         web,
-         plugin_modules,
-         runtime_plugins,
-         hook_modules,
-         guardrail_modules
-       ) do
-    request_transformer_module = Module.concat(runtime_module, RequestTransformer)
-    skill_config = %{refs: skill_refs, load_paths: spec.skill_paths}
-
-    effective_request_transformer = request_transformer_module
-
-    subagent_tool_modules =
-      subagents
-      |> Enum.with_index()
-      |> Enum.map(fn {subagent, index} ->
-        tool_module = Jidoka.Subagent.tool_module(generated_module_base(spec), subagent, index)
-        Jidoka.Subagent.tool_module_ast(tool_module, subagent)
-      end)
-
-    workflow_tool_modules =
-      workflows
-      |> Enum.with_index()
-      |> Enum.map(fn {workflow, index} ->
-        tool_module = Jidoka.Workflow.Capability.tool_module(generated_module_base(spec), workflow, index)
-        Jidoka.Workflow.Capability.tool_module_ast(tool_module, workflow)
-      end)
-
-    handoff_tool_modules =
-      handoffs
-      |> Enum.with_index()
-      |> Enum.map(fn {handoff, index} ->
-        tool_module = Jidoka.Handoff.Capability.tool_module(generated_module_base(spec), handoff, index)
-        Jidoka.Handoff.Capability.tool_module_ast(tool_module, handoff)
-      end)
-
-    generated_tool_modules = subagent_tool_modules ++ workflow_tool_modules ++ handoff_tool_modules
-
-    quoted =
-      quote location: :keep do
-        if unquote(Macro.escape(effective_request_transformer)) do
-          defmodule unquote(request_transformer_module) do
-            @moduledoc false
-            @behaviour Jido.AI.Reasoning.ReAct.RequestTransformer
-
-            @system_prompt_spec unquote(Macro.escape(spec.instructions))
-            @character_spec unquote(Macro.escape(character_spec))
-            @skills_config unquote(Macro.escape(skill_config))
-
-            @impl true
-            def transform_request(request, state, config, runtime_context) do
-              Jidoka.Agent.RequestTransformer.transform_request(
-                @system_prompt_spec,
-                @character_spec,
-                @skills_config,
-                request,
-                state,
-                config,
-                runtime_context
-              )
-            end
-          end
-        end
-
-        unquote_splicing(generated_tool_modules)
-
-        use Jido.AI.Agent,
-          name: unquote(spec.id),
-          system_prompt: unquote(spec.instructions),
-          model: unquote(Macro.escape(spec.model)),
-          tools: unquote(Macro.escape(tool_modules)),
-          plugins: unquote(Macro.escape(runtime_plugins)),
-          default_plugins: unquote(Macro.escape(Jidoka.Memory.default_plugins(spec.memory))),
-          request_transformer: unquote(Macro.escape(effective_request_transformer))
-
-        unquote(
-          Jidoka.Agent.Runtime.hook_runtime_ast(
-            hook_modules,
-            spec.context,
-            guardrail_modules,
-            spec.memory,
-            spec.output,
-            skill_config,
-            mcp_tools
-          )
-        )
-
-        @doc false
-        @spec __jidoka_owner_module__() :: nil
-        def __jidoka_owner_module__, do: nil
-
-        @doc false
-        @spec __jidoka_definition__() :: map()
-
-        def __jidoka_definition__ do
-          unquote(
-            Macro.escape(
-              definition_map(
-                spec,
-                runtime_module,
-                character_spec,
-                tool_modules,
-                skill_refs,
-                mcp_tools,
-                subagents,
-                workflows,
-                handoffs,
-                web,
-                plugin_modules,
-                hook_modules,
-                guardrail_modules,
-                effective_request_transformer
-              )
-            )
-          )
-        end
-      end
-
-    {:module, ^runtime_module, _binary, _term} =
-      Module.create(runtime_module, quoted, Macro.Env.location(__ENV__))
-
-    {:ok, runtime_module}
-  rescue
-    error in [ArgumentError] ->
-      if Code.ensure_loaded?(runtime_module) do
-        {:ok, runtime_module}
-      else
-        {:error, error}
-      end
-  end
-
-  defp generated_module_base(%Spec{} = spec) do
-    suffix =
-      spec
-      |> Spec.fingerprint()
-      |> String.slice(0, 12)
-      |> String.upcase()
-
-    Module.concat([__MODULE__, Generated, "Runtime#{suffix}"])
-  end
-
-  defp externalize_subagent_target(:ephemeral), do: %{"target" => "ephemeral"}
-
-  defp externalize_subagent_target({:peer, peer_id}) when is_binary(peer_id) do
-    %{"target" => "peer", "peer_id" => peer_id}
-  end
-
-  defp externalize_subagent_target({:peer, {:context, key}}) do
-    %{"target" => "peer", "peer_id_context_key" => to_string(key)}
-  end
-
-  defp externalize_handoff_target(:auto), do: %{"target" => "auto"}
-
-  defp externalize_handoff_target({:peer, peer_id}) when is_binary(peer_id) do
-    %{"target" => "peer", "peer_id" => peer_id}
-  end
-
-  defp externalize_handoff_target({:peer, {:context, key}}) do
-    %{"target" => "peer", "peer_id_context_key" => to_string(key)}
-  end
-
-  defp runtime_plugins(plugin_modules, _memory_config), do: [Jidoka.Plugins.RuntimeCompat | plugin_modules]
-
-  defp request_transformer(%Spec{}, runtime_module) do
-    Module.concat(runtime_module, RequestTransformer)
-  end
-
   defp resolve_character(nil, _character_registry), do: {:ok, nil}
 
   defp resolve_character(character, _character_registry) when is_map(character) do
@@ -559,86 +257,6 @@ defmodule Jidoka.ImportedAgent do
   defp resolve_character(character, character_registry) when is_binary(character) do
     with {:ok, source} <- Jidoka.Character.resolve_character_name(character, character_registry) do
       Jidoka.Character.normalize(nil, source, label: "character #{inspect(character)}")
-    end
-  end
-
-  defp definition_map(
-         %Spec{} = spec,
-         runtime_module,
-         character_spec,
-         tool_modules,
-         skill_refs,
-         mcp_tools,
-         subagents,
-         workflows,
-         handoffs,
-         web,
-         plugin_modules,
-         hook_modules,
-         guardrail_modules,
-         request_transformer
-       ) do
-    {:ok, plugin_names} = Jidoka.Plugin.plugin_names(plugin_modules)
-
-    %{
-      kind: :imported_agent_definition,
-      module: nil,
-      runtime_module: runtime_module,
-      id: spec.id,
-      name: spec.id,
-      description: spec.description,
-      instructions: spec.instructions,
-      character: spec.character,
-      character_spec: character_spec,
-      request_transformer: request_transformer,
-      configured_model: spec.model,
-      model: Jidoka.model(spec.model),
-      context_schema: nil,
-      context: spec.context,
-      output: spec.output,
-      memory: spec.memory,
-      skills: %{refs: skill_refs, load_paths: spec.skill_paths},
-      tools: tool_modules,
-      tool_names: definition_tool_names(tool_modules, subagents, workflows, handoffs),
-      mcp_tools: mcp_tools,
-      web: web,
-      web_tool_names: web_tool_names(web),
-      subagents: subagents,
-      subagent_names: Enum.map(subagents, & &1.name),
-      workflows: workflows,
-      workflow_names: Enum.map(workflows, & &1.name),
-      handoffs: handoffs,
-      handoff_names: Enum.map(handoffs, & &1.name),
-      plugins: plugin_modules,
-      plugin_names: plugin_names,
-      hooks: hook_modules,
-      guardrails: guardrail_modules,
-      ash_resources: [],
-      ash_domain: nil,
-      requires_actor?: false
-    }
-  end
-
-  defp definition_tool_names(tool_modules, subagents, workflows, handoffs) do
-    loaded_names =
-      tool_modules
-      |> Enum.reduce([], fn module, acc ->
-        if Code.ensure_loaded?(module) and function_exported?(module, :name, 0) do
-          [module.name() | acc]
-        else
-          acc
-        end
-      end)
-
-    (Enum.reverse(loaded_names) ++
-       Enum.map(subagents, & &1.name) ++ Enum.map(workflows, & &1.name) ++ Enum.map(handoffs, & &1.name))
-    |> Enum.uniq()
-  end
-
-  defp web_tool_names(web) do
-    case Jidoka.Web.tool_names(web) do
-      {:ok, names} -> names
-      {:error, _reason} -> []
     end
   end
 

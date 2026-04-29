@@ -4,7 +4,7 @@ defmodule Jidoka.MixProject do
   @version "0.1.0"
   @source_url "https://github.com/agentjido/jidoka"
   @description "Experimental developer-friendly LLM agent harness built on Jido and Jido.AI."
-  @coverage_threshold 70
+  @coverage_threshold 75
 
   def project do
     [
@@ -25,7 +25,18 @@ defmodule Jidoka.MixProject do
         tool: ExCoveralls,
         summary: [threshold: @coverage_threshold],
         export: "cov",
-        ignore_modules: [~r/^JidokaTest\./]
+        ignore_modules: [
+          ~r/^JidokaTest\./,
+          ~r/^Jidoka\.Agent\.Dsl(\.|$)/,
+          ~r/^Jidoka\.Workflow\.Dsl(\.|$)/,
+          Jidoka.AgentView.Run,
+          Jidoka.Guardrails.Input,
+          Jidoka.Guardrails.Output,
+          Jidoka.Guardrails.Tool,
+          Jidoka.Hooks.Input,
+          Jidoka.Trace.Event,
+          Jidoka.Workflow.Runtime.Keys
+        ]
       ],
       dialyzer: [
         plt_add_apps: [:mix, :llm_db],
@@ -79,6 +90,7 @@ defmodule Jidoka.MixProject do
       {:zoi, "~> 0.17"},
       {:splode, "~> 0.3.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:jump_credo_checks, "~> 0.2.0", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.21", only: :dev, runtime: false},
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},

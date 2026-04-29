@@ -2,13 +2,12 @@ defmodule Jidoka.Trace.Collector do
   @moduledoc """
   Bounded in-memory trace collector for Jidoka and Jido.AI telemetry.
 
-  The collector is supervised by `Jidoka.Application` and is intentionally
-  internal. Public callers should use `Jidoka.Trace`.
+  The collector is supervised by the Jidoka application supervisor and is
+  intentionally internal. Public callers should use `Jidoka.Trace`.
   """
 
   use GenServer
 
-  alias Jidoka.Trace
   alias Jidoka.Trace.Event
 
   @handler_id "jidoka-trace-collector"
@@ -73,19 +72,19 @@ defmodule Jidoka.Trace.Collector do
   end
 
   @doc "Returns the latest trace matching an agent or request reference."
-  @spec latest(target_ref(), keyword()) :: {:ok, Trace.t()} | {:error, term()}
+  @spec latest(target_ref(), keyword()) :: {:ok, map()} | {:error, term()}
   def latest(ref, opts \\ []) when is_map(ref) do
     GenServer.call(__MODULE__, {:latest, ref, opts})
   end
 
   @doc "Returns the trace for a specific request id."
-  @spec for_request(target_ref(), String.t(), keyword()) :: {:ok, Trace.t()} | {:error, term()}
+  @spec for_request(target_ref(), String.t(), keyword()) :: {:ok, map()} | {:error, term()}
   def for_request(ref, request_id, opts \\ []) when is_map(ref) and is_binary(request_id) do
     GenServer.call(__MODULE__, {:for_request, ref, request_id, opts})
   end
 
   @doc "Lists retained traces matching an agent reference."
-  @spec list(target_ref(), keyword()) :: {:ok, [Trace.t()]} | {:error, term()}
+  @spec list(target_ref(), keyword()) :: {:ok, [map()]} | {:error, term()}
   def list(ref, opts \\ []) when is_map(ref) do
     GenServer.call(__MODULE__, {:list, ref, opts})
   end
@@ -296,21 +295,24 @@ defmodule Jidoka.Trace.Collector do
   defp outcome_status(_outcome), do: nil
 
   defp new_trace(%Event{} = event) do
-    %Trace{
+    %{
       trace_id: event.trace_id,
       run_id: event.run_id,
       request_id: event.request_id,
       agent_id: get_value(event.metadata, :agent_id),
       status: event.status,
-      started_at_ms: event.at_ms
+      started_at_ms: event.at_ms,
+      completed_at_ms: nil,
+      events: [],
+      summary: %{}
     }
   end
 
-  defp append_event(%Trace{} = trace, %Event{} = event, max_events) do
-    events = Enum.take(trace.events ++ [event], -max_events)
+  defp append_event(%{events: events} = trace, %Event{} = event, max_events) do
+    events = Enum.take(events ++ [event], -max_events)
     status = terminal_status(event.status) || trace.status || event.status
 
-    %Trace{
+    %{
       trace
       | trace_id: trace.trace_id || event.trace_id,
         run_id: trace.run_id || event.run_id,
@@ -426,7 +428,7 @@ defmodule Jidoka.Trace.Collector do
     {:error, Jidoka.Error.Normalize.debug_error(:request_not_found, request_id: request_id)}
   end
 
-  defp maybe_reply_trace(%Trace{} = trace, _opts), do: {:ok, trace}
+  defp maybe_reply_trace(%{} = trace, _opts), do: {:ok, trace}
 
   defp maybe_limit(values, nil), do: values
   defp maybe_limit(values, limit) when is_integer(limit) and limit >= 0, do: Enum.take(values, limit)

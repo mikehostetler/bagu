@@ -23,7 +23,6 @@ defmodule JidokaTest.AgentBasicsTest do
 
   test "starts a jidoka agent under the shared runtime" do
     assert {:ok, pid} = ChatAgent.start_link(id: "chat-agent-test")
-    assert is_pid(pid)
     assert Jidoka.whereis("chat-agent-test") == pid
     assert {"chat-agent-test", pid} in Jidoka.list_agents()
     assert :ok = Jidoka.stop_agent(pid)
@@ -78,6 +77,25 @@ defmodule JidokaTest.AgentBasicsTest do
 
     refute Jido.Memory.Plugin in modules
     refute Jido.Memory.BasicPlugin in modules
+  end
+
+  test "runtime helper composes plugins and exposes hook runtime AST" do
+    assert Jidoka.Agent.Runtime.runtime_plugins([JidokaTest.MathPlugin], nil) == [
+             Jidoka.Plugins.RuntimeCompat,
+             JidokaTest.MathPlugin
+           ]
+
+    ast =
+      Jidoka.Agent.Runtime.hook_runtime_ast(
+        Jidoka.Hooks.default_stage_map(),
+        %{},
+        Jidoka.Guardrails.default_stage_map()
+      )
+
+    rendered = Macro.to_string(ast)
+
+    assert rendered =~ "def on_before_cmd"
+    assert rendered =~ "Jidoka.Memory.on_before_cmd"
   end
 
   test "exposes configured skills and mcp settings" do

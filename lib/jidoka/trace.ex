@@ -56,7 +56,12 @@ defmodule Jidoka.Trace do
   Returns the latest trace for a running agent PID or Jidoka agent id.
   """
   @spec latest(pid() | String.t() | Jido.Agent.t(), keyword()) :: {:ok, t()} | {:error, term()}
-  def latest(target, opts \\ []), do: Collector.latest(target_ref(target), opts)
+  def latest(target, opts \\ []) do
+    target
+    |> target_ref()
+    |> Collector.latest(opts)
+    |> wrap_trace_result()
+  end
 
   @doc """
   Returns the trace associated with `request_id`.
@@ -64,14 +69,25 @@ defmodule Jidoka.Trace do
   @spec for_request(pid() | String.t() | Jido.Agent.t(), String.t(), keyword()) ::
           {:ok, t()} | {:error, term()}
   def for_request(target, request_id, opts \\ []) when is_binary(request_id) do
-    Collector.for_request(target_ref(target), request_id, opts)
+    target
+    |> target_ref()
+    |> Collector.for_request(request_id, opts)
+    |> wrap_trace_result()
   end
 
   @doc """
   Lists retained traces for a running agent PID or Jidoka agent id.
   """
   @spec list(pid() | String.t() | Jido.Agent.t(), keyword()) :: {:ok, [t()]} | {:error, term()}
-  def list(target, opts \\ []), do: Collector.list(target_ref(target), opts)
+  def list(target, opts \\ []) do
+    target
+    |> target_ref()
+    |> Collector.list(opts)
+    |> case do
+      {:ok, traces} -> {:ok, Enum.map(traces, &wrap_trace/1)}
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
   @doc """
   Returns normalized events for a trace or trace target.
@@ -145,6 +161,27 @@ defmodule Jidoka.Trace do
   defp maybe_limit(values, nil), do: values
   defp maybe_limit(values, limit) when is_integer(limit) and limit >= 0, do: Enum.take(values, limit)
   defp maybe_limit(values, _limit), do: values
+
+  defp wrap_trace_result({:ok, trace}), do: {:ok, wrap_trace(trace)}
+  defp wrap_trace_result({:error, reason}), do: {:error, reason}
+
+  defp wrap_trace(%__MODULE__{} = trace), do: trace
+
+  defp wrap_trace(trace) when is_map(trace) do
+    fields = [
+      :trace_id,
+      :run_id,
+      :request_id,
+      :agent_id,
+      :status,
+      :started_at_ms,
+      :completed_at_ms,
+      :events,
+      :summary
+    ]
+
+    struct(__MODULE__, Map.take(trace, fields))
+  end
 
   defp span_key(%Event{} = event) do
     metadata = event.metadata || %{}

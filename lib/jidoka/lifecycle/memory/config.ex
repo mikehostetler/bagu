@@ -1,0 +1,318 @@
+defmodule Jidoka.Memory.Config do
+  @moduledoc false
+
+  @default_retrieve_limit 5
+  @default_config %{
+    mode: :conversation,
+    namespace: :per_agent,
+    capture: :conversation,
+    retrieve: %{limit: @default_retrieve_limit},
+    inject: :instructions
+  }
+
+  @spec default_config() :: Jidoka.Memory.config()
+  def default_config, do: @default_config
+
+  @spec normalize_dsl([struct()]) :: {:ok, Jidoka.Memory.config() | nil} | {:error, String.t()}
+  def normalize_dsl([]), do: {:ok, nil}
+
+  def normalize_dsl(entries) when is_list(entries) do
+    with {:ok, attrs} <- reduce_dsl_entries(entries),
+         {:ok, normalized} <- normalize_map(attrs) do
+      {:ok, normalized}
+    end
+  end
+
+  @spec normalize_imported(nil | map()) :: {:ok, Jidoka.Memory.config() | nil} | {:error, String.t()}
+  def normalize_imported(nil), do: {:ok, nil}
+
+  def normalize_imported(%{} = memory) do
+    attrs =
+      memory
+      |> normalize_imported_namespace()
+      |> Map.put(:mode, imported_atom(get_value(memory, :mode)))
+      |> Map.put(:capture, imported_atom(get_value(memory, :capture)))
+      |> Map.put(:inject, imported_atom(get_value(memory, :inject)))
+      |> Map.put(
+        :retrieve,
+        memory
+        |> get_value(:retrieve, %{})
+        |> normalize_imported_retrieve()
+      )
+
+    normalize_map(attrs)
+  end
+
+  def normalize_imported(other),
+    do: {:error, "memory must be a map, got: #{inspect(other)}"}
+
+  @spec validate_dsl_entry(struct()) :: :ok | {:error, String.t()}
+  def validate_dsl_entry(%Jidoka.Agent.Dsl.MemoryMode{value: value}),
+    do: validate_mode(value)
+
+  def validate_dsl_entry(%Jidoka.Agent.Dsl.MemoryNamespace{value: value}),
+    do: validate_namespace_entry(value)
+
+  def validate_dsl_entry(%Jidoka.Agent.Dsl.MemorySharedNamespace{value: value}),
+    do: validate_shared_namespace(value)
+
+  def validate_dsl_entry(%Jidoka.Agent.Dsl.MemoryCapture{value: value}),
+    do: validate_capture(value)
+
+  def validate_dsl_entry(%Jidoka.Agent.Dsl.MemoryInject{value: value}),
+    do: validate_inject(value)
+
+  def validate_dsl_entry(%Jidoka.Agent.Dsl.MemoryRetrieve{limit: limit}),
+    do: validate_limit(limit)
+
+  @spec default_plugins(Jidoka.Memory.config() | nil) :: map()
+  def default_plugins(nil), do: %{__memory__: false}
+
+  def default_plugins(%{} = config) do
+    %{__memory__: {Jido.Memory.BasicPlugin, plugin_config(config)}}
+  end
+
+  defp reduce_dsl_entries(entries) do
+    Enum.reduce_while(entries, {:ok, %{}}, fn entry, {:ok, acc} ->
+      with :ok <- ensure_unique_entry(entry, acc) do
+        {:cont, {:ok, put_entry(entry, acc)}}
+      else
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp put_entry(%Jidoka.Agent.Dsl.MemoryMode{value: value}, acc), do: Map.put(acc, :mode, value)
+
+  defp put_entry(%Jidoka.Agent.Dsl.MemoryNamespace{value: value}, acc),
+    do: Map.put(acc, :namespace, value)
+
+  defp put_entry(%Jidoka.Agent.Dsl.MemorySharedNamespace{value: value}, acc),
+    do: Map.put(acc, :shared_namespace, value)
+
+  defp put_entry(%Jidoka.Agent.Dsl.MemoryCapture{value: value}, acc),
+    do: Map.put(acc, :capture, value)
+
+  defp put_entry(%Jidoka.Agent.Dsl.MemoryInject{value: value}, acc),
+    do: Map.put(acc, :inject, value)
+
+  defp put_entry(%Jidoka.Agent.Dsl.MemoryRetrieve{limit: limit}, acc),
+    do: Map.put(acc, :retrieve, %{limit: limit})
+
+  defp ensure_unique_entry(%module{} = entry, acc) do
+    key = dsl_entry_key(module)
+
+    if Map.has_key?(acc, key) do
+      {:error, "duplicate memory #{key} entry in Jidoka agent"}
+    else
+      validate_dsl_entry(entry)
+    end
+  end
+
+  defp dsl_entry_key(Jidoka.Agent.Dsl.MemoryMode), do: :mode
+  defp dsl_entry_key(Jidoka.Agent.Dsl.MemoryNamespace), do: :namespace
+  defp dsl_entry_key(Jidoka.Agent.Dsl.MemorySharedNamespace), do: :shared_namespace
+  defp dsl_entry_key(Jidoka.Agent.Dsl.MemoryCapture), do: :capture
+  defp dsl_entry_key(Jidoka.Agent.Dsl.MemoryInject), do: :inject
+  defp dsl_entry_key(Jidoka.Agent.Dsl.MemoryRetrieve), do: :retrieve
+
+  defp normalize_map(attrs) when is_map(attrs) do
+    mode = Map.get(attrs, :mode, @default_config.mode)
+    namespace = Map.get(attrs, :namespace, @default_config.namespace)
+    shared_namespace = Map.get(attrs, :shared_namespace)
+    capture = Map.get(attrs, :capture, @default_config.capture)
+    inject = Map.get(attrs, :inject, @default_config.inject)
+    retrieve = Map.get(attrs, :retrieve, @default_config.retrieve)
+
+    with :ok <- validate_mode(mode),
+         {:ok, namespace} <- validate_namespace(namespace, shared_namespace),
+         :ok <- validate_capture(capture),
+         :ok <- validate_inject(inject),
+         {:ok, retrieve} <- normalize_retrieve(retrieve) do
+      {:ok,
+       %{
+         mode: :conversation,
+         namespace: namespace,
+         capture: capture,
+         retrieve: retrieve,
+         inject: inject
+       }}
+    end
+  end
+
+  defp validate_mode(:conversation), do: :ok
+
+  defp validate_mode(other),
+    do: {:error, "memory mode must be :conversation, got: #{inspect(other)}"}
+
+  defp validate_namespace_entry(:per_agent), do: :ok
+  defp validate_namespace_entry(:shared), do: :ok
+  defp validate_namespace_entry({:context, key}) when is_atom(key) or is_binary(key), do: :ok
+
+  defp validate_namespace_entry(other) do
+    {:error, "memory namespace must be :per_agent, :shared, or {:context, key}, got: #{inspect(other)}"}
+  end
+
+  defp validate_namespace(:per_agent, nil), do: {:ok, :per_agent}
+
+  defp validate_namespace(:per_agent, shared_namespace) do
+    {:error, "memory shared_namespace is only valid when namespace is :shared, got: #{inspect(shared_namespace)}"}
+  end
+
+  defp validate_namespace(:shared, shared_namespace) do
+    with :ok <- validate_shared_namespace_for_namespace(shared_namespace) do
+      {:ok, {:shared, String.trim(shared_namespace)}}
+    end
+  end
+
+  defp validate_namespace({:context, key}, nil)
+       when is_atom(key) or is_binary(key) do
+    {:ok, {:context, key}}
+  end
+
+  defp validate_namespace({:context, _key}, shared_namespace) do
+    {:error, "memory shared_namespace is only valid when namespace is :shared, got: #{inspect(shared_namespace)}"}
+  end
+
+  defp validate_namespace(other, _shared_namespace) do
+    {:error,
+     "memory namespace must be :per_agent, :shared with shared_namespace, or {:context, key}, got: #{inspect(other)}"}
+  end
+
+  defp validate_shared_namespace(value) when is_binary(value) do
+    if String.trim(value) == "" do
+      {:error, "memory shared_namespace must not be empty"}
+    else
+      :ok
+    end
+  end
+
+  defp validate_shared_namespace(_),
+    do: {:error, "memory shared_namespace must be a non-empty string"}
+
+  defp validate_shared_namespace_for_namespace(value) do
+    case validate_shared_namespace(value) do
+      :ok ->
+        :ok
+
+      {:error, _reason} ->
+        {:error, "memory namespace must be :per_agent, :shared with shared_namespace, or {:context, key}, got: :shared"}
+    end
+  end
+
+  defp validate_capture(:conversation), do: :ok
+  defp validate_capture(:off), do: :ok
+
+  defp validate_capture(other),
+    do: {:error, "memory capture must be :conversation or :off, got: #{inspect(other)}"}
+
+  defp validate_inject(:instructions), do: :ok
+  defp validate_inject(:context), do: :ok
+
+  defp validate_inject(other),
+    do: {:error, "memory inject must be :instructions or :context, got: #{inspect(other)}"}
+
+  defp normalize_retrieve(%{limit: limit}),
+    do: with(:ok <- validate_limit(limit), do: {:ok, %{limit: limit}})
+
+  defp normalize_retrieve(limit) when is_integer(limit), do: normalize_retrieve(%{limit: limit})
+  defp normalize_retrieve(_), do: {:ok, %{limit: @default_retrieve_limit}}
+
+  defp validate_limit(limit) when is_integer(limit) and limit > 0, do: :ok
+
+  defp validate_limit(other),
+    do: {:error, "memory retrieve limit must be a positive integer, got: #{inspect(other)}"}
+
+  defp normalize_imported_namespace(memory) do
+    case get_value(memory, :namespace, "per_agent") do
+      "per_agent" ->
+        %{namespace: :per_agent}
+
+      :per_agent ->
+        %{namespace: :per_agent}
+
+      "shared" ->
+        %{namespace: :shared, shared_namespace: get_value(memory, :shared_namespace)}
+
+      :shared ->
+        %{namespace: :shared, shared_namespace: get_value(memory, :shared_namespace)}
+
+      "context" ->
+        %{namespace: {:context, get_value(memory, :context_namespace_key)}}
+
+      :context ->
+        %{namespace: {:context, get_value(memory, :context_namespace_key)}}
+
+      other ->
+        %{namespace: other}
+    end
+  end
+
+  defp normalize_imported_retrieve(%{} = retrieve) do
+    %{limit: get_value(retrieve, :limit, @default_retrieve_limit)}
+  end
+
+  defp normalize_imported_retrieve(_), do: %{limit: @default_retrieve_limit}
+
+  defp plugin_config(%{namespace: :per_agent}) do
+    %{
+      store: {Jido.Memory.Store.ETS, [table: :jidoka_memory]},
+      store_opts: [],
+      namespace_mode: :per_agent,
+      auto_capture: false
+    }
+  end
+
+  defp plugin_config(%{namespace: {:shared, shared_namespace}}) do
+    %{
+      store: {Jido.Memory.Store.ETS, [table: :jidoka_memory]},
+      store_opts: [],
+      namespace_mode: :shared,
+      shared_namespace: shared_namespace,
+      auto_capture: false
+    }
+  end
+
+  defp plugin_config(%{namespace: {:context, _key}}) do
+    %{
+      store: {Jido.Memory.Store.ETS, [table: :jidoka_memory]},
+      store_opts: [],
+      namespace_mode: :per_agent,
+      auto_capture: false
+    }
+  end
+
+  defp get_value(map, key, default \\ nil) when is_map(map) do
+    Map.get(map, key, Map.get(map, normalize_lookup_key(key), default))
+  end
+
+  defp imported_atom(value) when is_binary(value) do
+    value
+    |> String.trim()
+    |> case do
+      "" -> nil
+      "conversation" -> :conversation
+      "off" -> :off
+      "instructions" -> :instructions
+      "context" -> :context
+      normalized -> normalized
+    end
+  end
+
+  defp imported_atom(value), do: value
+
+  defp normalize_lookup_key(key) when is_atom(key), do: Atom.to_string(key)
+
+  defp normalize_lookup_key(key) when is_binary(key) do
+    case safe_existing_atom(key) do
+      nil -> key
+      atom -> atom
+    end
+  end
+
+  defp safe_existing_atom(value) when is_binary(value) do
+    String.to_existing_atom(value)
+  rescue
+    ArgumentError -> nil
+  end
+end

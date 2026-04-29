@@ -9,7 +9,7 @@ defmodule Jidoka.Web.Tools.SearchWeb do
     schema:
       Zoi.object(%{
         query: Zoi.string() |> Zoi.min(1),
-        max_results: Zoi.integer() |> Zoi.default(Jidoka.Web.max_results()),
+        max_results: Zoi.integer() |> Zoi.default(Jidoka.Web.Config.max_results()),
         country: Zoi.string() |> Zoi.default("us"),
         search_lang: Zoi.string() |> Zoi.default("en"),
         freshness: Zoi.string() |> Zoi.optional()
@@ -26,14 +26,14 @@ defmodule Jidoka.Web.Tools.SearchWeb do
     delegated_params =
       params
       |> Map.put(:query, String.trim(query))
-      |> Map.update(:max_results, Jidoka.Web.max_results(), &Jidoka.Web.clamp_search_results/1)
+      |> Map.update(:max_results, Jidoka.Web.Config.max_results(), &Jidoka.Web.Runtime.clamp_search_results/1)
 
     case Jido.Browser.Actions.SearchWeb.run(delegated_params, context) do
       {:ok, result} ->
         {:ok, result}
 
       {:error, reason} ->
-        {:error, Jidoka.Web.normalize_browser_error(:search_web, reason)}
+        {:error, Jidoka.Web.Runtime.normalize_browser_error(:search_web, reason)}
     end
   end
 end

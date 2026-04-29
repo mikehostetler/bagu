@@ -59,7 +59,7 @@ defmodule JidokaTest.HandoffsTest do
                Jidoka.handoff_owner(conversation_id)
 
       assert agent_id == handoff.to_agent_id
-      assert is_pid(Jidoka.whereis(agent_id))
+      assert Process.alive?(Jidoka.whereis(agent_id))
     after
       cleanup_conversation(conversation_id)
     end
@@ -209,7 +209,9 @@ defmodule JidokaTest.HandoffsTest do
       assert {:error, {:handoff, %Jidoka.Handoff{}}} =
                tool.run(%{message: "Transfer billing."}, handoff_context(conversation_id))
 
-      assert %{} = Jidoka.handoff_owner(conversation_id)
+      assert %{agent: BillingHandoffSpecialist, handoff: %Jidoka.Handoff{name: "billing_specialist"}} =
+               Jidoka.handoff_owner(conversation_id)
+
       assert :ok = Jidoka.reset_handoff(conversation_id)
       assert is_nil(Jidoka.handoff_owner(conversation_id))
     after

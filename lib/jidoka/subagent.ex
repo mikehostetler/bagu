@@ -27,10 +27,6 @@ defmodule Jidoka.Subagent do
           result: result_mode()
         }
 
-  @request_id_key :__jidoka_request_id__
-  @server_key :__jidoka_server__
-  @depth_key :__jidoka_subagent_depth__
-
   @doc """
   Returns the fixed input schema used by generated subagent tools.
   """
@@ -47,15 +43,15 @@ defmodule Jidoka.Subagent do
   Returns the internal context key used to associate calls with a parent request.
   """
   @spec request_id_key() :: atom()
-  def request_id_key, do: @request_id_key
+  defdelegate request_id_key, to: Jidoka.Subagent.Context
 
   @doc false
   @spec server_key() :: atom()
-  def server_key, do: @server_key
+  defdelegate server_key, to: Jidoka.Subagent.Context
 
   @doc false
   @spec depth_key() :: atom()
-  def depth_key, do: @depth_key
+  defdelegate depth_key, to: Jidoka.Subagent.Context
 
   @doc false
   @spec validate_agent_module(module()) :: :ok | {:error, String.t()}
@@ -71,7 +67,11 @@ defmodule Jidoka.Subagent do
 
   @doc false
   @spec new(module(), keyword()) :: {:ok, t()} | {:error, String.t()}
-  defdelegate new(agent_module, opts \\ []), to: Definition
+  def new(agent_module, opts \\ []) do
+    with {:ok, subagent} <- Definition.new(agent_module, opts) do
+      {:ok, wrap_subagent(subagent)}
+    end
+  end
 
   @doc false
   @spec normalize_available_subagents([module()] | %{required(name()) => module()}) ::
@@ -140,4 +140,11 @@ defmodule Jidoka.Subagent do
   """
   @spec latest_request_calls(pid() | String.t()) :: [map()]
   defdelegate latest_request_calls(server_or_id), to: Runtime
+
+  defp wrap_subagent(%__MODULE__{} = subagent), do: subagent
+
+  defp wrap_subagent(%{} = attrs) do
+    fields = [:agent, :name, :description, :target, :timeout, :forward_context, :result]
+    struct(__MODULE__, Map.take(attrs, fields))
+  end
 end

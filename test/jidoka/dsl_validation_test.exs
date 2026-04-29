@@ -5,7 +5,7 @@ defmodule JidokaTest.DslValidationTest do
 
   test "rejects old keyword opts in favor of the DSL" do
     assert_raise CompileError, ~r/Jidoka.Agent now uses a Spark DSL/, fn ->
-      Code.compile_string("""
+      compile_source("""
       defmodule JidokaTest.InvalidKeywordAgent do
         use Jidoka.Agent,
           instructions: "This should fail."
@@ -338,7 +338,7 @@ defmodule JidokaTest.DslValidationTest do
 
   test "rejects NimbleOptions schemas in Jidoka.Tool" do
     assert_raise CompileError, ~r/must use a Zoi schema for schema\/0/, fn ->
-      Code.compile_string("""
+      compile_source("""
       defmodule JidokaTest.NimbleSchemaTool do
         use Jidoka.Tool,
           schema: [a: [type: :integer, required: true]]
@@ -352,7 +352,7 @@ defmodule JidokaTest.DslValidationTest do
 
   test "rejects raw JSON Schema maps in Jidoka.Tool" do
     assert_raise CompileError, ~r/must use a Zoi schema for schema\/0/, fn ->
-      Code.compile_string("""
+      compile_source("""
       defmodule JidokaTest.JsonSchemaTool do
         use Jidoka.Tool,
           schema: %{"type" => "object", "properties" => %{"a" => %{"type" => "integer"}}}
@@ -376,7 +376,9 @@ defmodule JidokaTest.DslValidationTest do
     """
 
     assert_raise Spark.Error.DslError, pattern, fn ->
-      Code.compile_string(source)
+      compile_source(source)
     end
   end
+
+  defp compile_source(source), do: Code.compile_string(source)
 end

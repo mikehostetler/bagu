@@ -11,7 +11,7 @@ defmodule Jidoka.Web.Tools.ReadPage do
         url: Zoi.string() |> Zoi.min(1),
         selector: Zoi.string() |> Zoi.default("body"),
         format: Zoi.string() |> Zoi.default("markdown"),
-        max_chars: Zoi.integer() |> Zoi.default(Jidoka.Web.max_content_chars())
+        max_chars: Zoi.integer() |> Zoi.default(Jidoka.Web.Config.max_content_chars())
       }),
     output_schema:
       Zoi.object(%{
@@ -22,9 +22,9 @@ defmodule Jidoka.Web.Tools.ReadPage do
 
   @impl true
   def run(%{url: url} = params, context) do
-    with :ok <- Jidoka.Web.validate_public_url(url),
+    with :ok <- Jidoka.Web.Runtime.validate_public_url(url),
          {:ok, format} <- normalize_format(Map.get(params, :format, "markdown")) do
-      max_chars = Jidoka.Web.clamp_content_chars(Map.get(params, :max_chars))
+      max_chars = Jidoka.Web.Runtime.clamp_content_chars(Map.get(params, :max_chars))
 
       delegated_params =
         params
@@ -33,10 +33,10 @@ defmodule Jidoka.Web.Tools.ReadPage do
 
       case Jido.Browser.Actions.ReadPage.run(delegated_params, context) do
         {:ok, result} ->
-          {:ok, Jidoka.Web.truncate_content(result, max_chars)}
+          {:ok, Jidoka.Web.Runtime.truncate_content(result, max_chars)}
 
         {:error, reason} ->
-          {:error, Jidoka.Web.normalize_browser_error(:read_page, reason)}
+          {:error, Jidoka.Web.Runtime.normalize_browser_error(:read_page, reason)}
       end
     end
   end

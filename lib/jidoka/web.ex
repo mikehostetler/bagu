@@ -25,9 +25,6 @@ defmodule Jidoka.Web do
     Jidoka.Web.Tools.ReadPage,
     Jidoka.Web.Tools.SnapshotUrl
   ]
-  @max_results 5
-  @max_content_chars 12_000
-  @blocked_hosts MapSet.new(["localhost", "0.0.0.0", "127.0.0.1", "::1"])
 
   @doc """
   Returns the supported web capability modes.
@@ -39,13 +36,13 @@ defmodule Jidoka.Web do
   Returns the default maximum search results exposed to agent tools.
   """
   @spec max_results() :: pos_integer()
-  def max_results, do: @max_results
+  defdelegate max_results, to: Jidoka.Web.Config
 
   @doc """
   Returns the default maximum extracted page content characters.
   """
   @spec max_content_chars() :: pos_integer()
-  def max_content_chars, do: @max_content_chars
+  defdelegate max_content_chars, to: Jidoka.Web.Config
 
   @doc """
   Builds a web capability config.
@@ -109,76 +106,23 @@ defmodule Jidoka.Web do
 
   @doc false
   @spec clamp_search_results(term()) :: pos_integer()
-  def clamp_search_results(value) when is_integer(value) do
-    value
-    |> max(1)
-    |> min(@max_results)
-  end
-
-  def clamp_search_results(_value), do: @max_results
+  defdelegate clamp_search_results(value), to: Jidoka.Web.Runtime
 
   @doc false
   @spec clamp_content_chars(term()) :: pos_integer()
-  def clamp_content_chars(value) when is_integer(value) do
-    value
-    |> max(1)
-    |> min(@max_content_chars)
-  end
-
-  def clamp_content_chars(_value), do: @max_content_chars
+  defdelegate clamp_content_chars(value), to: Jidoka.Web.Runtime
 
   @doc false
   @spec truncate_content(map(), pos_integer()) :: map()
-  def truncate_content(%{} = result, max_chars) do
-    result
-    |> Map.update(:content, nil, &truncate_text(&1, max_chars))
-    |> Map.update("content", nil, &truncate_text(&1, max_chars))
-  end
-
-  defp truncate_text(content, max_chars) when is_binary(content) do
-    if String.length(content) > max_chars do
-      String.slice(content, 0, max_chars) <> "\n\n[Content truncated by Jidoka.Web.]"
-    else
-      content
-    end
-  end
-
-  defp truncate_text(content, _max_chars), do: content
+  defdelegate truncate_content(result, max_chars), to: Jidoka.Web.Runtime
 
   @doc false
   @spec validate_public_url(term()) :: :ok | {:error, Exception.t()}
-  def validate_public_url(url) when is_binary(url) do
-    uri = URI.parse(String.trim(url))
-
-    cond do
-      uri.scheme not in ["http", "https"] ->
-        invalid_url(url, "URL must use http or https.")
-
-      is_nil(uri.host) or String.trim(uri.host) == "" ->
-        invalid_url(url, "URL must include a host.")
-
-      blocked_host?(uri.host) ->
-        invalid_url(url, "Local, loopback, and private network URLs are not allowed.")
-
-      true ->
-        :ok
-    end
-  end
-
-  def validate_public_url(url), do: invalid_url(url, "URL must be a string.")
+  defdelegate validate_public_url(url), to: Jidoka.Web.Runtime
 
   @doc false
   @spec normalize_browser_error(atom(), term()) :: Exception.t()
-  def normalize_browser_error(operation, reason) do
-    Jidoka.Error.execution_error("Web #{operation} failed.",
-      phase: :web,
-      details: %{
-        operation: operation,
-        target: :jido_browser,
-        cause: reason
-      }
-    )
-  end
+  defdelegate normalize_browser_error(operation, reason), to: Jidoka.Web.Runtime
 
   defp normalize_entries([]), do: {:ok, []}
 
@@ -220,71 +164,4 @@ defmodule Jidoka.Web do
 
   defp tools_for(:search), do: @search_tools
   defp tools_for(:read_only), do: @read_only_tools
-
-  defp invalid_url(url, message) do
-    {:error,
-     Jidoka.Error.validation_error(message,
-       field: :url,
-       value: url,
-       details: %{operation: :web, reason: :invalid_url, cause: url}
-     )}
-  end
-
-  defp blocked_host?(host) when is_binary(host) do
-    normalized =
-      host
-      |> String.trim()
-      |> String.trim_trailing(".")
-      |> String.downcase()
-
-    MapSet.member?(@blocked_hosts, normalized) or
-      String.ends_with?(normalized, ".localhost") or
-      private_ipv4?(normalized) or
-      private_ipv6?(normalized)
-  end
-
-  defp private_ipv4?(host) do
-    case :inet.parse_address(String.to_charlist(host)) do
-      {:ok, address} when tuple_size(address) == 4 -> private_ipv4_address?(address)
-      _ -> false
-    end
-  end
-
-  defp private_ipv6?(host) do
-    case :inet.parse_address(String.to_charlist(host)) do
-      {:ok, {0, 0, 0, 0, 0, 0, 0, 0}} ->
-        true
-
-      {:ok, {0, 0, 0, 0, 0, 0, 0, 1}} ->
-        true
-
-      {:ok, {0, 0, 0, 0, 0, ipv4_marker, high, low}} when ipv4_marker in [0, 0xFFFF] ->
-        {a, b, c, d} = ipv4_octets(high, low)
-        private_ipv4_address?({a, b, c, d})
-
-      {:ok, {first, _, _, _, _, _, _, _}} when first >= 0xFC00 and first <= 0xFDFF ->
-        true
-
-      {:ok, {first, _, _, _, _, _, _, _}} when first >= 0xFE80 and first <= 0xFEFF ->
-        true
-
-      {:ok, {first, _, _, _, _, _, _, _}} when first >= 0xFF00 and first <= 0xFFFF ->
-        true
-
-      _ ->
-        false
-    end
-  end
-
-  defp private_ipv4_address?({10, _, _, _}), do: true
-  defp private_ipv4_address?({127, _, _, _}), do: true
-  defp private_ipv4_address?({169, 254, _, _}), do: true
-  defp private_ipv4_address?({172, second, _, _}) when second >= 16 and second <= 31, do: true
-  defp private_ipv4_address?({192, 168, _, _}), do: true
-  defp private_ipv4_address?({0, _, _, _}), do: true
-  defp private_ipv4_address?(_address), do: false
-
-  defp ipv4_octets(high, low) do
-    {div(high, 256), rem(high, 256), div(low, 256), rem(low, 256)}
-  end
 end

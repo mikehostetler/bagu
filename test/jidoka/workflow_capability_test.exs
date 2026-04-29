@@ -122,7 +122,7 @@ defmodule JidokaTest.WorkflowCapabilityTest do
 
   test "workflow capability names conflict with other tool-like capabilities" do
     assert_raise Spark.Error.DslError, ~r/duplicate tool names.*workflow_capability_math/s, fn ->
-      Code.compile_string("""
+      compile_agent("""
       defmodule JidokaTest.WorkflowCapability.DuplicateWorkflowToolAgent do
         use Jidoka.Agent
 
@@ -144,8 +144,11 @@ defmodule JidokaTest.WorkflowCapabilityTest do
   end
 
   test "Jidoka.run/3 is not part of the beta public API" do
+    assert Jidoka.format_error("beta") == "beta"
     refute function_exported?(Jidoka, :run, 3)
   end
+
+  defp compile_agent(source), do: Code.compile_string(source)
 
   defp workflow_tool(agent_module, name) do
     Enum.find(agent_module.tools(), fn tool_module ->

@@ -5,8 +5,34 @@ defmodule JidokaTest.AgentViewContractTest do
     def id, do: "contract_agent"
   end
 
+  defmodule AnonymousAgent do
+  end
+
+  defmodule StartableAgent do
+    def id, do: "startable_agent"
+    def start_link(_opts), do: {:ok, self()}
+  end
+
   defmodule DefaultView do
     use Jidoka.AgentView, agent: ContractAgent
+  end
+
+  defmodule StartableView do
+    use Jidoka.AgentView, agent: StartableAgent
+  end
+
+  defmodule InvalidPrepareView do
+    use Jidoka.AgentView, agent: ContractAgent
+
+    @impl Jidoka.AgentView
+    def prepare(_input), do: :unexpected
+  end
+
+  defmodule ErrorPrepareView do
+    use Jidoka.AgentView, agent: ContractAgent
+
+    @impl Jidoka.AgentView
+    def prepare(_input), do: {:error, :not_ready}
   end
 
   defmodule CustomView do
@@ -37,6 +63,25 @@ defmodule JidokaTest.AgentViewContractTest do
     assert DefaultView.conversation_id(input) == "case_123"
     assert DefaultView.agent_id(input) == "contract_agent-case_123"
     assert DefaultView.runtime_context(input) == %{session: "case_123"}
+  end
+
+  test "AgentView default helpers normalize ids and arbitrary inputs" do
+    assert Jidoka.AgentView.new(status: :running).status == :running
+    assert Jidoka.AgentView.default_conversation_id(conversation_id: "VIP Case!") == "vip_case"
+    assert Jidoka.AgentView.default_conversation_id(%{conversation_id: "Map Case"}) == "map_case"
+    assert Jidoka.AgentView.default_conversation_id(%{"conversation_id" => "String Map"}) == "string_map"
+    assert Jidoka.AgentView.default_conversation_id(%{conversation_id: "!!!"}) == "default"
+
+    assert Jidoka.AgentView.default_agent_id(ContractAgent, "case_1") == "contract_agent-case_1"
+    assert Jidoka.AgentView.default_agent_id(AnonymousAgent, "case_1") == "anonymous_agent-case_1"
+    assert Jidoka.AgentView.default_runtime_context(:ignored, "case_1") == %{session: "case_1"}
+    assert Jidoka.AgentView.normalize_id(" Billing / VIP ", "fallback") == "billing_vip"
+    assert Jidoka.AgentView.normalize_id(nil, "fallback") == "fallback"
+
+    request_id = Jidoka.AgentView.request_id()
+    assert request_id =~ "agent-view-"
+    assert Jidoka.AgentView.lifecycle_hooks() == [:before_turn, :after_turn, :snapshot]
+    assert Jidoka.AgentView.ui_hooks() == [:before_turn, :after_turn, :snapshot]
   end
 
   test "custom AgentView callbacks define the application surface" do
@@ -113,5 +158,76 @@ defmodule JidokaTest.AgentViewContractTest do
              %{role: :user, content: "Hello"},
              %{role: :assistant, content: "Working", streaming?: true}
            ] = DefaultView.visible_messages(view)
+  end
+
+  test "start helper prepares and starts view-owned agents" do
+    assert {:ok, pid} = StartableView.start_agent(%{conversation_id: "Start Me"})
+    assert pid == self()
+  end
+
+  test "start helper normalizes invalid prepare callback returns" do
+    assert {:error, %Jidoka.Error.ConfigError{} = error} =
+             InvalidPrepareView.start_agent(%{})
+
+    assert error.message =~ "AgentView prepare/1 must return"
+    assert error.value == :unexpected
+
+    assert ErrorPrepareView.start_agent(%{}) == {:error, :not_ready}
+  end
+
+  test "turn state helpers build runs and project interrupt and handoff outcomes" do
+    request = Jido.AI.Request.Handle.new("req-agent-view-run", self(), "hello")
+
+    run =
+      Jidoka.AgentView.TurnState.build_run(
+        DefaultView,
+        request,
+        %{conversation_id: "Case 42"},
+        timeout: 123,
+        conversation: "case_42"
+      )
+
+    assert run.request_id == "req-agent-view-run"
+    assert run.conversation_id == "case_42"
+    assert run.metadata == %{timeout: 123}
+
+    view =
+      Jidoka.AgentView.new(
+        agent_id: "contract-agent",
+        conversation_id: "case_42",
+        streaming_message: %{role: :assistant, content: "Working"}
+      )
+
+    interrupt = Jidoka.Interrupt.new(id: "approval", message: "Approval needed", data: %{})
+    interrupted = Jidoka.AgentView.TurnState.apply_result(view, {:interrupt, interrupt})
+
+    assert interrupted.status == :interrupted
+    assert interrupted.error_text == "Approval needed"
+    assert interrupted.streaming_message == nil
+
+    handoff =
+      Jidoka.Handoff.new(
+        conversation_id: "case_42",
+        from_agent: "contract-agent",
+        to_agent: ContractAgent,
+        to_agent_id: "specialist",
+        name: "specialist",
+        message: "Escalating",
+        context: %{}
+      )
+
+    handed_off = Jidoka.AgentView.TurnState.apply_result(view, {:handoff, handoff})
+
+    assert handed_off.status == :handoff
+    assert handed_off.error_text == "Conversation handed off to specialist."
+    assert handed_off.outcome == {:handoff, handoff}
+  end
+
+  test "running visible messages preserves optimistic messages until refreshed state exists" do
+    assert Jidoka.AgentView.TurnState.running_visible_messages([%{pending?: true}], []) == [%{pending?: true}]
+
+    assert Jidoka.AgentView.TurnState.running_visible_messages([%{pending?: true}], [%{role: :assistant}]) == [
+             %{role: :assistant}
+           ]
   end
 end

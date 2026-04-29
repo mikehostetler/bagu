@@ -85,7 +85,7 @@ defmodule Jidoka.Demo.Debug do
 
   @spec safe_stop_agent(pid()) :: :ok
   def safe_stop_agent(pid) when is_pid(pid) do
-    case Jidoka.stop_agent(pid) do
+    case Jidoka.Runtime.stop_agent(pid) do
       :ok -> :ok
       {:error, :not_found} -> :ok
     end
@@ -115,7 +115,7 @@ defmodule Jidoka.Demo.Debug do
 
       {:error, reason} ->
         section(debug_title(level))
-        row("events", "failed: #{Jidoka.format_error(reason)}")
+        row("events", "failed: #{Jidoka.Error.format(reason)}")
     end
 
     IO.puts("")
@@ -242,7 +242,7 @@ defmodule Jidoka.Demo.Debug do
     Enum.each(errors, fn error ->
       endpoint = error[:endpoint] || "unknown"
       prefix = if error[:prefix], do: ":#{error.prefix}", else: ""
-      reason = (error[:message] || Jidoka.format_error(error[:reason])) |> preview(level)
+      reason = (error[:message] || Jidoka.Error.format(error[:reason])) |> preview(level)
 
       row("mcp error", "#{endpoint}#{prefix} #{reason}")
     end)
@@ -257,7 +257,7 @@ defmodule Jidoka.Demo.Debug do
 
   defp print_memory_summary(%{error: reason}) do
     section("Memory")
-    row("error", Jidoka.format_error(reason))
+    row("error", Jidoka.Error.format(reason))
   end
 
   defp print_memory_summary(%{} = memory) do
@@ -355,7 +355,7 @@ defmodule Jidoka.Demo.Debug do
     section("Guardrail")
     row("stage", to_string(stage))
     row("name", to_string(label))
-    row("reason", Jidoka.format_error(reason))
+    row("reason", Jidoka.Error.format(reason))
   end
 
   defp print_error_summary(%{error: nil}), do: :ok
@@ -365,7 +365,7 @@ defmodule Jidoka.Demo.Debug do
       :ok
     else
       section("Error")
-      row("reason", Jidoka.format_error(other))
+      row("reason", Jidoka.Error.format(other))
     end
   end
 
@@ -391,7 +391,7 @@ defmodule Jidoka.Demo.Debug do
   defp print_structured_trace(_pid, :debug), do: :ok
 
   defp print_structured_trace(pid, :trace) do
-    case Jidoka.inspect_trace(pid) do
+    case Jidoka.Trace.latest(pid) do
       {:ok, trace} ->
         section("Structured Trace")
         row("events", "#{length(trace.events)} status=#{trace.status || "unknown"}")
@@ -454,11 +454,11 @@ defmodule Jidoka.Demo.Debug do
 
   defp subagent_status(%{outcome: :ok}), do: "ok"
   defp subagent_status(%{outcome: {:interrupt, _interrupt}}), do: "interrupt"
-  defp subagent_status(%{outcome: {:error, reason}}), do: "error:#{Jidoka.format_error(reason)}"
+  defp subagent_status(%{outcome: {:error, reason}}), do: "error:#{Jidoka.Error.format(reason)}"
   defp subagent_status(call), do: get_in(call, [:child_result_meta, :status]) || "unknown"
 
   defp workflow_status(%{outcome: :ok}), do: "ok"
-  defp workflow_status(%{outcome: {:error, reason}}), do: "error:#{Jidoka.format_error(reason)}"
+  defp workflow_status(%{outcome: {:error, reason}}), do: "error:#{Jidoka.Error.format(reason)}"
   defp workflow_status(_call), do: "unknown"
 
   defp invalid_log_level(level) do
@@ -522,7 +522,7 @@ defmodule Jidoka.Demo.Debug do
   defp format_optional_term(term), do: inspect(term)
 
   defp format_optional_error(nil), do: nil
-  defp format_optional_error(error), do: Jidoka.format_error(error)
+  defp format_optional_error(error), do: Jidoka.Error.format(error)
 
   defp section(title) do
     IO.puts("")

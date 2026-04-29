@@ -90,7 +90,7 @@ defmodule Jidoka.Demo.AgentSession do
     flush_interrupts(opts)
     print_subagent_calls(pid, log_level, Keyword.get(opts, :subagents, false))
     Debug.print_recent_events(pid, log_level)
-    IO.puts("error> #{Jidoka.format_error(reason)}")
+    IO.puts("error> #{Jidoka.Error.format(reason)}")
   end
 
   defp reply_label(:interactive, opts) do
@@ -172,6 +172,6 @@ defmodule Jidoka.Demo.AgentSession do
 
   defp subagent_status(%{outcome: :ok}), do: "ok"
   defp subagent_status(%{outcome: {:interrupt, _interrupt}}), do: "interrupt"
-  defp subagent_status(%{outcome: {:error, reason}}), do: "error:#{Jidoka.format_error(reason)}"
+  defp subagent_status(%{outcome: {:error, reason}}), do: "error:#{Jidoka.Error.format(reason)}"
   defp subagent_status(entry), do: get_in(entry, [:child_result_meta, :status]) || "unknown"
 end

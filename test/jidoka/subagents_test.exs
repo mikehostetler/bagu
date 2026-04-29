@@ -437,7 +437,7 @@ defmodule JidokaTest.SubagentsTest do
   defp refute_agent_running(id, attempts) do
     case Jidoka.whereis(id) do
       nil ->
-        assert true
+        :ok
 
       _pid ->
         Process.sleep(10)

@@ -241,6 +241,162 @@ defmodule JidokaTest.OutputTest do
     assert {:ok, "raw assistant answer"} = Request.get_result(agent, request_id)
   end
 
+  test "output runtime no-ops without contracts, start actions, or completed requests" do
+    runtime = StructuredOutputPlainAgent.runtime_module()
+    output = StructuredOutputPlainAgent.output()
+    agent = new_runtime_agent(runtime)
+
+    assert {:ok, ^agent, {:not_react, %{}}} = Output.on_before_cmd(agent, {:not_react, %{}}, output)
+    assert {:ok, ^agent, [:directive]} = Output.on_after_cmd(agent, {:not_react, %{}}, [:directive], nil)
+    assert Output.finalize(agent, "missing-request", output) == agent
+
+    request_id = "req-output-not-completed"
+
+    agent =
+      agent
+      |> Request.start_request(request_id, "Classify this")
+
+    assert Output.finalize(agent, request_id, output) == agent
+  end
+
+  test "output runtime records context and rebuilds it from request metadata" do
+    runtime = StructuredOutputPlainAgent.runtime_module()
+    request_id = "req-output-context-fallback"
+
+    {:ok, agent, {:ai_react_start, _params}} =
+      Output.on_before_cmd(
+        runtime
+        |> new_runtime_agent()
+        |> Request.start_request(request_id, "Classify this"),
+        {:ai_react_start,
+         %{
+           query: "Classify this",
+           request_id: request_id,
+           llm_opts: [tools: [:removed], temperature: 0],
+           tool_context: %{},
+           runtime_context: %{}
+         }},
+        StructuredOutputPlainAgent.output()
+      )
+
+    assert get_in(agent.state, [:requests, request_id, :meta, :jidoka_output_runtime, :mode]) == :structured
+
+    assert get_in(agent.state, [:requests, request_id, :meta, :jidoka_output_runtime, :llm_opts]) == [
+             tools: [:removed],
+             temperature: 0
+           ]
+
+    agent =
+      agent
+      |> Request.complete_request(request_id, ~s({"category":"technical","confidence":0.64,"summary":"Bug report"}))
+
+    assert {:ok, agent, []} =
+             Output.on_after_cmd(
+               agent,
+               {:ai_react_runtime_event, %{kind: :request_completed}},
+               [],
+               StructuredOutputPlainAgent.output()
+             )
+
+    assert {:ok, %{category: :technical, confidence: 0.64, summary: "Bug report"}} =
+             Request.get_result(agent, request_id)
+  end
+
+  test "output finalization fails without repair when validation mode is error" do
+    {:ok, output} = Output.new(schema: @schema, retries: 3, on_validation_error: :error)
+    request_id = "req-output-error-mode"
+
+    agent =
+      StructuredOutputPlainAgent.runtime_module()
+      |> new_runtime_agent()
+      |> Request.start_request(request_id, "Classify this")
+      |> Request.complete_request(request_id, "not structured")
+
+    agent = Output.finalize(agent, request_id, output)
+
+    assert {:error, %Jidoka.Error.ValidationError{} = error} = Request.get_result(agent, request_id)
+    assert error.details.reason |> elem(0) == :parse
+    assert get_in(agent.state, [:requests, request_id, :meta, :jidoka_output, :status]) == :error
+    assert get_in(agent.state, [:requests, request_id, :meta, :jidoka_output, :attempt]) == 0
+  end
+
+  test "output repair failures record validation metadata" do
+    output = StructuredOutputAgent.output()
+    request_id = "req-output-repair-failure"
+
+    agent =
+      StructuredOutputAgent.runtime_module()
+      |> new_runtime_agent()
+      |> Request.start_request(request_id, "Classify this")
+      |> Request.complete_request(request_id, "not structured")
+
+    repair_fun = fn _output, _agent, _context, _raw, _reason ->
+      {:error, Jidoka.Output.Error.output_error({:repair_failed, "still invalid"}, "not structured")}
+    end
+
+    agent = Output.finalize(agent, request_id, output, repair_fun: repair_fun)
+
+    assert {:error, %Jidoka.Error.ValidationError{} = error} = Request.get_result(agent, request_id)
+    assert error.details.reason == {:repair_failed, "still invalid"}
+    assert get_in(agent.state, [:requests, request_id, :meta, :jidoka_output, :status]) == :error
+    assert get_in(agent.state, [:requests, request_id, :meta, :jidoka_output, :attempt]) == 1
+  end
+
+  test "output repair exceptions are normalized" do
+    output = StructuredOutputAgent.output()
+    request_id = "req-output-repair-exception"
+
+    agent =
+      StructuredOutputAgent.runtime_module()
+      |> new_runtime_agent()
+      |> Request.start_request(request_id, "Classify this")
+      |> Request.complete_request(request_id, "not structured")
+
+    repair_fun = fn _output, _agent, _context, _raw, _reason ->
+      raise "repair exploded"
+    end
+
+    agent = Output.finalize(agent, request_id, output, repair_fun: repair_fun)
+
+    assert {:error, %Jidoka.Error.ValidationError{} = error} = Request.get_result(agent, request_id)
+    assert error.details.reason == {:repair_exception, "repair exploded"}
+  end
+
+  test "default output repair requires an agent model" do
+    output = StructuredOutputAgent.output()
+    request_id = "req-output-missing-model-repair"
+
+    agent =
+      StructuredOutputAgent.runtime_module()
+      |> new_runtime_agent()
+      |> put_in([Access.key(:state), :model], nil)
+      |> Request.start_request(request_id, "Classify this")
+      |> Request.complete_request(request_id, "not structured")
+
+    agent = Output.finalize(agent, request_id, output)
+
+    assert {:error, %Jidoka.Error.ValidationError{} = error} = Request.get_result(agent, request_id)
+    assert error.details.reason == :missing_repair_model
+  end
+
+  test "output helpers expose request option and unsupported output errors" do
+    {:ok, output} = Output.new(schema: @schema)
+    context = Output.attach_request_option(%{}, "raw")
+
+    assert Output.runtime_output(%{Jidoka.Output.context_key() => %{output: output}}) == output
+    assert Output.runtime_output(%{Atom.to_string(Jidoka.Output.context_key()) => %{output: output}}) == output
+    assert Output.runtime_output(context) == %{mode: :raw}
+    assert Output.attach_request_option(%{}, :unknown) == %{}
+
+    assert {:error, %Jidoka.Error.ValidationError{} = error} = Output.parse(output, [:not, :supported])
+    assert error.details.reason == :unsupported_raw_output
+
+    assert {:error, %Jidoka.Error.ValidationError{} = error} = Output.parse(output, ~s(["not", "an", "object"]))
+    assert error.details.reason == :expected_map
+
+    assert Jidoka.Output.Error.reason_message(RuntimeError.exception("boom")) == "boom"
+  end
+
   test "agents without output contracts remain unchanged" do
     runtime = ChatAgent.runtime_module()
     request_id = "req-plain-output"

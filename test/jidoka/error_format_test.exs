@@ -44,7 +44,29 @@ defmodule JidokaTest.ErrorFormatTest do
              "Invalid context: expected `domain` to be MyApp.Domain, got Other.Domain."
   end
 
+  test "builds configuration, execution, and context schema errors" do
+    assert %Jidoka.Error.ConfigError{field: :schema, details: %{reason: :expected_zoi_schema}} =
+             Jidoka.Error.invalid_context_schema(:expected_zoi_schema, value: :bad)
+
+    assert %Jidoka.Error.ConfigError{field: :schema, details: %{reason: :expected_zoi_map_schema}} =
+             Jidoka.Error.invalid_context_schema(:expected_zoi_map_schema, value: :bad)
+
+    assert %Jidoka.Error.ConfigError{field: :schema, details: %{reason: :expected_map_result}} =
+             Jidoka.Error.invalid_context_schema({:expected_map_result, [:bad]}, value: :schema)
+
+    assert %Jidoka.Error.ValidationError{field: :context, details: %{reason: :schema_result}} =
+             Jidoka.Error.invalid_context({:schema_result, :expected_map, [:bad]}, value: %{tenant: "acme"})
+
+    assert %Jidoka.Error.ConfigError{message: "Bad config.", details: %{code: :bad}} =
+             Jidoka.Error.config_error("Bad config.", %{details: %{code: :bad}})
+
+    assert %Jidoka.Error.ExecutionError{message: "Bad run.", phase: :unit} =
+             Jidoka.Error.execution_error("Bad run.", phase: :unit)
+  end
+
   test "falls back to inspect for unknown errors" do
+    assert Jidoka.format_error(Jidoka.Error.Internal.UnknownError.exception(error: nil)) == "Unknown Jidoka error"
+    assert Jidoka.format_error(Jidoka.Error.Internal.UnknownError.exception(error: :boom)) == ":boom"
     assert Jidoka.format_error({:unhandled, :shape}) == "{:unhandled, :shape}"
   end
 
@@ -57,5 +79,16 @@ defmodule JidokaTest.ErrorFormatTest do
 
     assert Jidoka.format_error(error) ==
              "Multiple Jidoka errors:\n- Input is invalid.\n- Workflow step failed."
+  end
+
+  test "formats nested Splode error classes" do
+    nested =
+      Jidoka.Error.to_class([
+        Jidoka.Error.to_class([
+          Jidoka.Error.validation_error("Nested input.")
+        ])
+      ])
+
+    assert Jidoka.format_error(nested) == "Nested input."
   end
 end

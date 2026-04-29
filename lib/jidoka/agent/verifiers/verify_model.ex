@@ -22,7 +22,7 @@ defmodule Jidoka.Agent.Verifiers.VerifyModel do
   end
 
   defp validate_model(model) do
-    Jidoka.model(model)
+    Jidoka.Model.model(model)
     :ok
   rescue
     error in [ArgumentError] ->

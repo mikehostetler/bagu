@@ -14,17 +14,17 @@ defmodule Jidoka.Web.Tools.SnapshotUrl do
         include_links: Zoi.boolean() |> Zoi.default(true),
         include_headings: Zoi.boolean() |> Zoi.default(true),
         include_forms: Zoi.boolean() |> Zoi.default(false),
-        max_content_length: Zoi.integer() |> Zoi.default(Jidoka.Web.max_content_chars())
+        max_content_length: Zoi.integer() |> Zoi.default(Jidoka.Web.Config.max_content_chars())
       }),
     output_schema: Zoi.map()
 
   @impl true
   def run(%{url: url} = params, context) do
-    with :ok <- Jidoka.Web.validate_public_url(url) do
+    with :ok <- Jidoka.Web.Runtime.validate_public_url(url) do
       max_content_length =
         params
         |> Map.get(:max_content_length)
-        |> Jidoka.Web.clamp_content_chars()
+        |> Jidoka.Web.Runtime.clamp_content_chars()
 
       delegated_params =
         params
@@ -33,10 +33,10 @@ defmodule Jidoka.Web.Tools.SnapshotUrl do
 
       case Jido.Browser.Actions.SnapshotUrl.run(delegated_params, context) do
         {:ok, result} ->
-          {:ok, Jidoka.Web.truncate_content(result, max_content_length)}
+          {:ok, Jidoka.Web.Runtime.truncate_content(result, max_content_length)}
 
         {:error, reason} ->
-          {:error, Jidoka.Web.normalize_browser_error(:snapshot_url, reason)}
+          {:error, Jidoka.Web.Runtime.normalize_browser_error(:snapshot_url, reason)}
       end
     end
   end

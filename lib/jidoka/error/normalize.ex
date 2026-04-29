@@ -3,6 +3,26 @@ defmodule Jidoka.Error.Normalize do
 
   alias Jidoka.Error
 
+  import Jidoka.Error.Normalize.Common,
+    only: [
+      execution: 4,
+      execution: 5,
+      memory_exception_error: 3,
+      passthrough_or_execution: 4,
+      passthrough_or_validation: 4,
+      timeout_error: 3,
+      validation: 4
+    ]
+
+  import Jidoka.Error.Normalize.Context,
+    only: [
+      detail: 2,
+      detail: 3,
+      details: 2,
+      jidoka_error?: 1,
+      to_map: 1
+    ]
+
   @type context :: keyword() | map()
 
   @spec chat_error(term(), context()) :: Exception.t() | {:handoff, Jidoka.Handoff.t()}
@@ -433,103 +453,4 @@ defmodule Jidoka.Error.Normalize do
   end
 
   def debug_error(reason, context), do: execution("Jidoka debug lookup failed.", :debug, reason, context)
-
-  defp validation(message, field, reason, context) do
-    Error.validation_error(message,
-      field: field,
-      value: detail(context, :value),
-      details: details(context, %{cause: reason})
-    )
-  end
-
-  defp passthrough_or_validation(error, message, field, context) do
-    if jidoka_error?(error) do
-      error
-    else
-      validation(message, field, error, context)
-    end
-  end
-
-  defp passthrough_or_execution(error, message, phase, context) do
-    if jidoka_error?(error) do
-      error
-    else
-      execution(message, phase, error, context)
-    end
-  end
-
-  defp memory_exception_error(:retrieve, error, context) do
-    execution("Jidoka memory retrieval failed.", :memory, error, context, %{phase: :memory_retrieve})
-  end
-
-  defp memory_exception_error(:capture, error, context) do
-    execution("Jidoka memory capture failed.", :memory, error, context, %{phase: :memory_capture})
-  end
-
-  defp memory_exception_error(phase, error, context) do
-    execution("Jidoka memory failed.", :memory, error, context, %{phase: phase})
-  end
-
-  defp execution(message, phase, reason, context, extra \\ %{}) do
-    Error.execution_error(message,
-      phase: phase,
-      details: details(context, Map.merge(%{operation: phase, cause: reason}, extra))
-    )
-  end
-
-  defp timeout_error(operation, timeout, context) do
-    Error.execution_error("#{humanize(operation)} timed out.",
-      phase: operation,
-      details: details(context, %{operation: operation, reason: :timeout, timeout: timeout, cause: {:timeout, timeout}})
-    )
-  end
-
-  defp humanize(operation) do
-    operation
-    |> to_string()
-    |> String.replace("_", " ")
-    |> String.capitalize()
-  end
-
-  defp details(context, attrs) do
-    context
-    |> to_map()
-    |> Map.take([
-      :operation,
-      :agent_id,
-      :workflow_id,
-      :step,
-      :target,
-      :phase,
-      :field,
-      :value,
-      :timeout,
-      :request_id
-    ])
-    |> Map.merge(attrs)
-    |> drop_nil_values()
-  end
-
-  defp detail(context, key, default \\ nil)
-  defp detail(context, key, default) when is_map(context), do: Map.get(context, key, default)
-  defp detail(context, key, default) when is_list(context), do: Keyword.get(context, key, default)
-  defp detail(_context, _key, default), do: default
-
-  defp to_map(context) when is_map(context), do: context
-  defp to_map(context) when is_list(context), do: Map.new(context)
-  defp to_map(_context), do: %{}
-
-  defp drop_nil_values(map) do
-    Map.reject(map, fn {_key, value} -> is_nil(value) end)
-  end
-
-  defp jidoka_error?(%Error.ValidationError{}), do: true
-  defp jidoka_error?(%Error.ConfigError{}), do: true
-  defp jidoka_error?(%Error.ExecutionError{}), do: true
-  defp jidoka_error?(%Error.Internal.UnknownError{}), do: true
-  defp jidoka_error?(%Error.Invalid{}), do: true
-  defp jidoka_error?(%Error.Config{}), do: true
-  defp jidoka_error?(%Error.Execution{}), do: true
-  defp jidoka_error?(%Error.Internal{}), do: true
-  defp jidoka_error?(_error), do: false
 end

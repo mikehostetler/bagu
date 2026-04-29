@@ -254,19 +254,19 @@ The top-level `livebook/` folder contains runnable onboarding notebooks:
 
 [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fagentjido%2Fjidoka%2Fmain%2Flivebook%2F01_hello_agent.livemd)
 
-- [Hello Agent](livebook/01_hello_agent.livemd): define, inspect, and run a
+- [Hello Agent](https://github.com/agentjido/jidoka/blob/main/livebook/01_hello_agent.livemd): define, inspect, and run a
   minimal agent.
-- [Tools And Context](livebook/02_tools_and_context.livemd): expose
+- [Tools And Context](https://github.com/agentjido/jidoka/blob/main/livebook/02_tools_and_context.livemd): expose
   deterministic tools and context to a model.
-- [Workflows And Imports](livebook/03_workflows_and_imports.livemd): run
+- [Workflows And Imports](https://github.com/agentjido/jidoka/blob/main/livebook/03_workflows_and_imports.livemd): run
   deterministic workflows and import a JSON agent.
 
-See [LiveBook Template Notes](livebook/README.md) for notebook conventions and
+See [LiveBook Template Notes](https://github.com/agentjido/jidoka/blob/main/livebook/README.md) for notebook conventions and
 the full onboarding series, including diagnostics, hooks, memory, characters,
 subagents, handoffs, skills, MCP, web tools, plugins, Ash resources, evals,
 production readiness, and
-[Structured Output](livebook/21_structured_output.livemd). The series includes
-a [Kitchen Sink](livebook/20_kitchen_sink.livemd) capstone for advanced
+[Structured Output](https://github.com/agentjido/jidoka/blob/main/livebook/21_structured_output.livemd). The series includes
+a [Kitchen Sink](https://github.com/agentjido/jidoka/blob/main/livebook/20_kitchen_sink.livemd) capstone for advanced
 developers.
 
 ## Package Development

@@ -63,7 +63,7 @@ defmodule JidokaTest.RuntimeErrorNormalizationTest do
 
     assert error.details.operation == :prepare_chat_opts
     assert error.details.reason == :invalid_hook_spec
-    assert is_binary(error.details.cause)
+    assert error.details.cause =~ "hooks must be a keyword list or map"
   end
 
   test "workflow failures preserve the raw cause" do
@@ -183,6 +183,24 @@ defmodule JidokaTest.RuntimeErrorNormalizationTest do
     end
   end
 
+  test "hook exceptions are normalized without crashing the agent" do
+    assert {:ok, pid} = ChatAgent.start_link(id: "runtime-hook-exception-normalization")
+
+    try do
+      raising_hook = fn _input -> raise "hook boom" end
+
+      assert {:error, %Jidoka.Error.ExecutionError{} = error} =
+               Jidoka.chat(pid, "hello", hooks: [before_turn: raising_hook])
+
+      assert error.details.operation == :hook
+      assert error.details.stage == :before_turn
+      assert error.details.cause =~ "hook boom"
+      assert Process.alive?(pid)
+    after
+      :ok = Jidoka.stop_agent(pid)
+    end
+  end
+
   test "guardrail blocks return structured execution errors" do
     assert {:ok, pid} = GuardrailedAgent.start_link(id: "runtime-guardrail-error-normalization")
 
@@ -194,6 +212,25 @@ defmodule JidokaTest.RuntimeErrorNormalizationTest do
       assert error.details.stage == :input
       assert error.details.label == "anonymous_guardrail"
       assert error.details.cause == :blocked_for_test
+    after
+      :ok = Jidoka.stop_agent(pid)
+    end
+  end
+
+  test "guardrail exceptions are normalized without crashing the agent" do
+    assert {:ok, pid} = GuardrailedAgent.start_link(id: "runtime-guardrail-exception-normalization")
+
+    try do
+      raising_guardrail = fn _input -> raise "guardrail boom" end
+
+      assert {:error, %Jidoka.Error.ExecutionError{} = error} =
+               Jidoka.chat(pid, "hello", guardrails: [input: raising_guardrail])
+
+      assert error.details.operation == :guardrail
+      assert error.details.stage == :input
+      assert error.details.label == "anonymous_guardrail"
+      assert error.details.cause =~ "guardrail boom"
+      assert Process.alive?(pid)
     after
       :ok = Jidoka.stop_agent(pid)
     end
