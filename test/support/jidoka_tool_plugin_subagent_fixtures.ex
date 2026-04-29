@@ -338,6 +338,36 @@ defmodule JidokaTest.InvalidResultOrchestratorAgent do
   end
 end
 
+defmodule JidokaTest.RaisingSpecialist do
+  defmodule Runtime do
+    use Jido.Agent,
+      name: "raising_specialist_runtime",
+      schema: Zoi.object(%{})
+  end
+
+  def name, do: "raising_agent"
+  def runtime_module, do: Runtime
+  def start_link(opts \\ []), do: Jidoka.start_agent(Runtime, opts)
+  def chat(_pid, _message, _opts \\ []), do: raise("raising specialist failed")
+end
+
+defmodule JidokaTest.RaisingOrchestratorAgent do
+  use Jidoka.Agent
+
+  agent do
+    id :raising_orchestrator_agent
+  end
+
+  defaults do
+    model :fast
+    instructions "You can delegate to a raising specialist."
+  end
+
+  capabilities do
+    subagent JidokaTest.RaisingSpecialist
+  end
+end
+
 defmodule JidokaTest.InterruptSpecialist do
   defmodule Runtime do
     use Jido.Agent,

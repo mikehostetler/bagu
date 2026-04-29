@@ -148,19 +148,29 @@ defmodule Jidoka.Subagent.Runtime.Executor do
   end
 
   defp ask_compatible_child(agent_module, pid, task, context, timeout) do
-    task_ref = Task.async(fn -> agent_module.chat(pid, task, context: context) end)
+    task_ref = Task.async(fn -> safe_call(fn -> agent_module.chat(pid, task, context: context) end) end)
 
-    case Task.yield(task_ref, timeout) do
-      {:ok, result} ->
+    case Task.yield(task_ref, timeout) || Task.shutdown(task_ref, :brutal_kill) do
+      {:ok, {:ok, result}} ->
         normalize_direct_child_result(result)
+
+      {:ok, {:error, reason}} ->
+        {:error, {:child_error, reason}, nil, %{}}
 
       {:exit, reason} ->
         {:error, {:child_error, reason}, nil, %{}}
 
       nil ->
-        Task.shutdown(task_ref, :brutal_kill)
         {:error, {:timeout, timeout}, nil, %{}}
     end
+  end
+
+  defp safe_call(fun) do
+    {:ok, fun.()}
+  rescue
+    error -> {:error, error}
+  catch
+    kind, reason -> {:error, {kind, reason}}
   end
 
   defp normalize_jidoka_child_result({:error, :timeout}, pid, request_id, timeout) do

@@ -13,6 +13,7 @@ defmodule JidokaTest.SubagentsTest do
     MissingPeerOrchestratorAgent,
     OrchestratorAgent,
     PeerOrchestratorAgent,
+    RaisingOrchestratorAgent,
     ResearchSpecialist,
     ReviewSpecialist,
     StartFailureOrchestratorAgent,
@@ -231,6 +232,21 @@ defmodule JidokaTest.SubagentsTest do
     assert error.details.reason == :invalid_result
     assert error.details.agent_id == "invalid_result_agent"
     assert error.details.cause == %{not: "text"}
+  end
+
+  test "normalizes raised child chat failures without crashing the caller" do
+    raising_tool = find_tool(RaisingOrchestratorAgent, "raising_agent")
+    parent = self()
+
+    {pid, ref} =
+      spawn_monitor(fn ->
+        send(parent, {:raising_subagent_result, raising_tool.run(%{task: "Raise"}, %{})})
+      end)
+
+    assert_receive {:raising_subagent_result, {:error, %Jidoka.Error.ExecutionError{} = error}}
+    assert error.message == "Subagent child failed."
+    assert %RuntimeError{message: "raising specialist failed"} = error.details.cause
+    assert_receive {:DOWN, ^ref, :process, ^pid, :normal}
   end
 
   test "normalizes child interrupts" do

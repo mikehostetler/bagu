@@ -12,6 +12,17 @@ defmodule JidokaTest.WorkflowRuntimeUnitTest do
     def throws(_params, _context), do: throw(:thrown_function)
   end
 
+  defmodule RaisingAgent do
+    defmodule Runtime do
+      use Jido.Agent,
+        name: "workflow_raising_agent_runtime",
+        schema: Zoi.object(%{})
+    end
+
+    def start_link(opts \\ []), do: Jidoka.start_agent(Runtime, opts)
+    def chat(_pid, _message, _opts \\ []), do: raise("agent chat raised")
+  end
+
   @state %{
     input: %{:topic => "schemas", "count" => 2},
     context: %{:suffix => "done", "tenant" => "acme"},
@@ -165,6 +176,17 @@ defmodule JidokaTest.WorkflowRuntimeUnitTest do
              StepRunner.execute_step(
                definition,
                %{kind: :agent, target: {:bad, :target}, prompt: "hello", context: %{}},
+               @state
+             )
+  end
+
+  test "agent steps normalize raised chat failures without crashing the caller" do
+    definition = %{id: "unit_workflow"}
+
+    assert {:error, %RuntimeError{message: "agent chat raised"}} =
+             StepRunner.execute_step(
+               definition,
+               %{kind: :agent, target: RaisingAgent, prompt: "hello", context: %{}},
                @state
              )
   end

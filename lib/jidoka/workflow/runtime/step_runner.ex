@@ -120,28 +120,38 @@ defmodule Jidoka.Workflow.Runtime.StepRunner do
   defp normalize_start_result(other), do: {:error, {:invalid_start_return, other}}
 
   defp call_agent(fun, timeout) do
-    task = Task.async(fun)
+    task = Task.async(fn -> safe_call(fun) end)
 
-    case Task.yield(task, timeout) do
-      {:ok, {:ok, result}} ->
+    case Task.yield(task, timeout) || Task.shutdown(task, :brutal_kill) do
+      {:ok, {:ok, {:ok, result}}} ->
         {:ok, result}
+
+      {:ok, {:ok, {:error, reason}}} ->
+        {:error, reason}
+
+      {:ok, {:ok, {:interrupt, interrupt}}} ->
+        {:error, {:interrupt, interrupt}}
+
+      {:ok, {:ok, other}} ->
+        {:error, {:invalid_agent_result, other}}
 
       {:ok, {:error, reason}} ->
         {:error, reason}
-
-      {:ok, {:interrupt, interrupt}} ->
-        {:error, {:interrupt, interrupt}}
-
-      {:ok, other} ->
-        {:error, {:invalid_agent_result, other}}
 
       {:exit, reason} ->
         {:error, reason}
 
       nil ->
-        Task.shutdown(task, :brutal_kill)
         {:error, {:timeout, timeout}}
     end
+  end
+
+  defp safe_call(fun) do
+    {:ok, fun.()}
+  rescue
+    error -> {:error, error}
+  catch
+    kind, reason -> {:error, {kind, reason}}
   end
 
   defp ensure_map(value, _field) when is_map(value), do: {:ok, value}
