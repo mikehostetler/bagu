@@ -1,7 +1,11 @@
 defmodule Jidoka.Demo.Loader do
   @moduledoc false
 
-  @spec load!(:chat | :orchestrator | :kitchen_sink | :trace | :workflow | :structured_output) :: :ok
+  @spec load!(:chat | :orchestrator | :kitchen_sink | :trace | :workflow | :structured_output | String.t()) :: :ok
+  def load!(name) when is_binary(name) do
+    require_example!(name)
+  end
+
   def load!(:chat) do
     require_example!("chat")
   end

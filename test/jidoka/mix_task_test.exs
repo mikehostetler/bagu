@@ -3,6 +3,20 @@ defmodule JidokaTest.MixTaskTest do
 
   import ExUnit.CaptureIO
 
+  @canonical_examples [
+    "support_triage",
+    "lead_qualification",
+    "data_analyst",
+    "meeting_followup",
+    "feedback_synthesizer",
+    "invoice_extraction",
+    "incident_triage",
+    "approval_flow",
+    "pr_reviewer",
+    "research_brief",
+    "document_intake"
+  ]
+
   setup do
     previous_api_key = Application.get_env(:req_llm, :anthropic_api_key)
     Application.put_env(:req_llm, :anthropic_api_key, "test-key")
@@ -95,6 +109,84 @@ defmodule JidokaTest.MixTaskTest do
     assert output =~ "editor_specialist"
     assert output =~ "Dry run: no agent started."
     assert Jidoka.Runtime.debug() == :off
+  end
+
+  test "dynamic canonical examples are discoverable" do
+    names = Jidoka.Demo.names()
+
+    Enum.each(@canonical_examples, fn example ->
+      assert example in names
+    end)
+  end
+
+  test "support triage example verifies without a provider" do
+    output =
+      capture_io(fn ->
+        Mix.Tasks.Jidoka.run(["support_triage", "--dry-run", "--log-level", "trace"])
+      end)
+
+    assert output =~ "Jidoka support triage example"
+    assert output =~ "Runtime Context"
+    assert output =~ "BlockPaymentSecrets"
+    assert output =~ "Dry run: no agent started."
+    assert Jidoka.Runtime.debug() == :off
+
+    output =
+      capture_io(fn ->
+        Mix.Tasks.Jidoka.run(["support_triage", "--verify"])
+      end)
+
+    assert output =~ "Support triage verification: ok"
+    assert output =~ "structured_output"
+    assert Jidoka.Runtime.debug() == :off
+  end
+
+  test "lead qualification example verifies without a provider" do
+    output =
+      capture_io(fn ->
+        Mix.Tasks.Jidoka.run(["lead_qualification", "--verify"])
+      end)
+
+    assert output =~ "Jidoka lead qualification example"
+    assert output =~ "Lead qualification verification: ok"
+    assert output =~ "structured_output"
+    assert Jidoka.Runtime.debug() == :off
+  end
+
+  test "data analyst example verifies without a provider" do
+    output =
+      capture_io(fn ->
+        Mix.Tasks.Jidoka.run(["data_analyst", "--verify"])
+      end)
+
+    assert output =~ "Jidoka data analyst example"
+    assert output =~ "Data analyst verification: ok"
+    assert output =~ "structured_output"
+    assert Jidoka.Runtime.debug() == :off
+  end
+
+  test "remaining canonical examples verify without a provider" do
+    examples = [
+      {"meeting_followup", "Meeting follow-up verification: ok"},
+      {"feedback_synthesizer", "Feedback synthesizer verification: ok"},
+      {"invoice_extraction", "Invoice extraction verification: ok"},
+      {"incident_triage", "Incident triage verification: ok"},
+      {"approval_flow", "Approval flow verification: ok"},
+      {"pr_reviewer", "PR reviewer verification: ok"},
+      {"research_brief", "Research brief verification: ok"},
+      {"document_intake", "Document intake verification: ok"}
+    ]
+
+    Enum.each(examples, fn {example, success_line} ->
+      output =
+        capture_io(fn ->
+          Mix.Tasks.Jidoka.run([example, "--verify"])
+        end)
+
+      assert output =~ success_line
+      assert output =~ "structured_output"
+      assert Jidoka.Runtime.debug() == :off
+    end)
   end
 
   test "trace demo mix task verifies structured tracing without a provider" do

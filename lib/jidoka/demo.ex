@@ -3,7 +3,7 @@ defmodule Jidoka.Demo do
 
   alias Jidoka.Demo.Loader
 
-  @demos %{
+  @builtin_demos %{
     "chat" => %{loader: :chat, module: Jidoka.Examples.Chat.Demo},
     "imported" => %{loader: :chat, module: Jidoka.Examples.Chat.ImportedDemo},
     "trace" => %{loader: :trace, module: Jidoka.Examples.Trace.Demo},
@@ -16,8 +16,10 @@ defmodule Jidoka.Demo do
   @doc false
   @spec names() :: [String.t()]
   def names do
-    @demos
+    @builtin_demos
     |> Map.keys()
+    |> Kernel.++(example_names())
+    |> Enum.uniq()
     |> Enum.sort()
   end
 
@@ -32,10 +34,15 @@ defmodule Jidoka.Demo do
   @doc false
   @spec load(String.t()) :: {:ok, module()} | {:error, String.t()}
   def load(name) when is_binary(name) do
-    case Map.fetch(@demos, name) do
+    case demo_for(name) do
       {:ok, demo} ->
         Loader.load!(demo.loader)
-        {:ok, demo.module}
+
+        if Code.ensure_loaded?(demo.module) do
+          {:ok, demo.module}
+        else
+          {:error, "demo #{inspect(name)} did not define #{inspect(demo.module)}."}
+        end
 
       :error ->
         unknown_demo(name)
@@ -45,7 +52,7 @@ defmodule Jidoka.Demo do
   @doc false
   @spec preload(String.t()) :: :ok | {:error, String.t()}
   def preload(name) when is_binary(name) do
-    case Map.fetch(@demos, name) do
+    case demo_for(name) do
       {:ok, demo} ->
         demo
         |> Map.get(:preload, [])
@@ -60,5 +67,37 @@ defmodule Jidoka.Demo do
 
   defp unknown_demo(name) do
     {:error, "unknown demo #{inspect(name)}. Expected #{Enum.map_join(names(), ", ", &"`#{&1}`")}."}
+  end
+
+  defp demo_for(name) do
+    case Map.fetch(@builtin_demos, name) do
+      {:ok, demo} -> {:ok, demo}
+      :error -> dynamic_demo_for(name)
+    end
+  end
+
+  defp dynamic_demo_for(name) do
+    if name in example_names() do
+      {:ok, %{loader: name, module: demo_module(name)}}
+    else
+      :error
+    end
+  end
+
+  defp demo_module(name) do
+    Module.concat([Jidoka, Examples, Macro.camelize(name), Demo])
+  end
+
+  defp example_names do
+    example_root()
+    |> Path.join("*")
+    |> Path.wildcard()
+    |> Enum.filter(&File.dir?/1)
+    |> Enum.filter(&File.exists?(Path.join(&1, "demo.ex")))
+    |> Enum.map(&Path.basename/1)
+  end
+
+  defp example_root do
+    Path.expand("../../examples", __DIR__)
   end
 end

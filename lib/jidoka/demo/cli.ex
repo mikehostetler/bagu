@@ -3,13 +3,14 @@ defmodule Jidoka.Demo.CLI do
 
   alias Jidoka.Demo.Debug
 
-  @switches [log_level: :string, dry_run: :boolean, help: :boolean]
+  @switches [log_level: :string, dry_run: :boolean, verify: :boolean, help: :boolean]
   @aliases [l: :log_level]
 
   @type options :: %{
           help?: boolean(),
           log_level: Debug.log_level(),
           dry_run?: boolean(),
+          verify?: boolean(),
           prompt: String.t() | nil
         }
 
@@ -22,7 +23,7 @@ defmodule Jidoka.Demo.CLI do
         {:error, "invalid options: #{Enum.map_join(invalid, ", ", fn {key, _} -> "--#{key}" end)}"}
 
       opts[:help] ->
-        {:ok, %{help?: true, log_level: :info, dry_run?: false, prompt: nil}}
+        {:ok, %{help?: true, log_level: :info, dry_run?: false, verify?: false, prompt: nil}}
 
       true ->
         with {:ok, log_level} <- Debug.parse_log_level(opts) do
@@ -31,6 +32,7 @@ defmodule Jidoka.Demo.CLI do
              help?: false,
              log_level: log_level,
              dry_run?: Keyword.get(opts, :dry_run, false),
+             verify?: Keyword.get(opts, :verify, false),
              prompt: join_prompt(normalize_argv(args))
            }}
         end
@@ -63,7 +65,7 @@ defmodule Jidoka.Demo.CLI do
 
   @spec usage(String.t()) :: :ok
   def usage(command) when is_binary(command) do
-    IO.puts("mix jidoka #{command} [--log-level info|debug|trace] [--dry-run] [prompt]")
+    IO.puts("mix jidoka #{command} [--log-level info|debug|trace] [--dry-run] [--verify] [prompt]")
     :ok
   end
 

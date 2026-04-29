@@ -12,6 +12,7 @@ defmodule Mix.Tasks.Jidoka do
       mix jidoka trace --log-level trace -- 7
       mix jidoka structured_output --dry-run
       mix jidoka structured_output --dry-run -- "invalid"
+      mix jidoka support_triage --verify
       mix jidoka workflow --dry-run
       mix jidoka orchestrator --log-level trace -- "Use the research_agent specialist ..."
       mix jidoka kitchen_sink --log-level trace --dry-run
@@ -50,6 +51,6 @@ defmodule Mix.Tasks.Jidoka do
       Jidoka.Demo.names()
       |> Enum.join("|")
 
-    Mix.shell().info("mix jidoka <#{demos}> [--log-level info|debug|trace] [--dry-run] [prompt]")
+    Mix.shell().info("mix jidoka <#{demos}> [--log-level info|debug|trace] [--dry-run] [--verify] [prompt]")
   end
 end

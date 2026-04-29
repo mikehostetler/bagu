@@ -30,9 +30,9 @@ defmodule Jidoka.Memory.Config do
     attrs =
       memory
       |> normalize_imported_namespace()
-      |> Map.put(:mode, imported_atom(get_value(memory, :mode)))
-      |> Map.put(:capture, imported_atom(get_value(memory, :capture)))
-      |> Map.put(:inject, imported_atom(get_value(memory, :inject)))
+      |> Map.put(:mode, imported_atom(get_value(memory, :mode, @default_config.mode)))
+      |> Map.put(:capture, imported_atom(get_value(memory, :capture, @default_config.capture)))
+      |> Map.put(:inject, imported_atom(get_value(memory, :inject, @default_config.inject)))
       |> Map.put(
         :retrieve,
         memory
