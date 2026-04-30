@@ -19,12 +19,13 @@ API is shown through the `Jidoka` namespace.
 For your first agent, read in this order:
 
 1. [Getting Started](getting-started.html): build and run the smallest useful agent.
-2. [Agents](agents.html): the 4-section DSL shape and compile-time validation.
-3. [Running Agents](running-agents.html): choose request, session, app, or job lifetimes.
-4. [AgentView](agent-view.html): adapt an agent to UI, API, job, or test boundaries.
-5. one capability guide that matches your use case (start with [Tools](tools.html)).
-6. [Structured Output](structured-output.html): typed JSON results with retries.
-7. [Chat Turn](chat-turn.html): the turn lifecycle and public return shapes.
+2. [Agents](agents.html): the agent DSL shape and compile-time validation.
+3. [Running Agents](running-agents.html): choose request, session, app, or scheduled lifetimes.
+4. [Schedules](schedules.html): run agents and workflows from Jidoka's schedule manager.
+5. [AgentView](agent-view.html): adapt an agent to UI, API, job, or test boundaries.
+6. one capability guide that matches your use case (start with [Tools](tools.html)).
+7. [Structured Output](structured-output.html): typed JSON results with retries.
+8. [Chat Turn](chat-turn.html): the turn lifecycle and public return shapes.
 
 Everything else is opt-in.
 
@@ -37,7 +38,7 @@ Everything else is opt-in.
 
 ### Agent Fundamentals
 
-- [Agents](agents.html): the 4-section DSL (`agent`, `defaults`, `capabilities`, `lifecycle`) and compile-time validation.
+- [Agents](agents.html): the DSL sections and compile-time validation.
 - [Models](models.html): aliases like `:fast`, direct provider strings, inline maps, and `%LLMDB.Model{}`.
 - [Instructions](instructions.html): static strings, module resolvers, MFA, and dynamic per-turn instructions.
 - [Context](context.html): request-scoped Zoi schemas, defaults, validation, per-turn merge, and forwarding.
@@ -46,7 +47,8 @@ Everything else is opt-in.
 
 ### Runtime Integration
 
-- [Running Agents](running-agents.html): request-scoped, session-scoped, app-scoped, and job-triggered agents.
+- [Running Agents](running-agents.html): request-scoped, session-scoped, app-scoped, and scheduled agents.
+- [Schedules](schedules.html): cron-based scheduled agent turns and workflow runs.
 - [AgentView](agent-view.html): app-facing adapter for conversation ids, runtime context, async turns, and projected messages.
 - [Phoenix LiveView](phoenix-liveview.html): LiveView integration built on AgentView.
 - [Graduating To Jido](graduating-to-jido.html): use Jidoka as the onramp, then move into Jido runtime features when needed.
@@ -82,6 +84,7 @@ Everything else is opt-in.
 - [Errors](errors.html): error classes, `format_error/1`, `details.cause`.
 - [Inspection](inspection.html): `inspect_agent/1`, `inspect_request/1`, `inspect_workflow/1`.
 - [Tracing](tracing.html): `Jidoka.Trace`, run traces, Kino helpers.
+- [Testing Agents](testing-agents.html): contract, tool, guardrail, structured-output, workflow, and live eval layers.
 - [Evals](evals.html): deterministic and live LLM evals.
 - [Mix Tasks](mix-tasks.html): the `mix jidoka <name>` family with `--dry-run`, `--verify`, `--log-level`.
 - [Livebooks](livebooks.html): the onboarding LiveBook series.

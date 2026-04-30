@@ -1,15 +1,16 @@
 # Agents
 
 A Jidoka agent is a compiled Elixir module that generates a Jido.AI runtime with
-a smaller, validated authoring surface. This guide covers the four-section DSL
+a smaller, validated authoring surface. This guide covers the main DSL
 shape and the compile-time checks that keep agent modules consistent. For
 runtime topics (instructions, models, the chat turn) see the linked guides
 below.
 
 ## DSL Shape
 
-The DSL has four top-level sections: `agent`, `defaults`, `capabilities`, and
-`lifecycle`. Only `agent.id` and `defaults.instructions` are required.
+The DSL has five top-level sections: `agent`, `defaults`, `capabilities`,
+`lifecycle`, and `schedules`. Only `agent.id` and `defaults.instructions` are
+required.
 
 ```elixir
 defmodule MyApp.SupportAgent do
@@ -84,6 +85,16 @@ Non-capability runtime policy:
 - `output_guardrail`
 - `tool_guardrail`
 
+### `schedules do`
+
+Application-registered recurring turns:
+
+- `schedule`
+
+Schedule declarations compile into `MyAgent.schedules/0`. They are not started
+automatically at compile time; register them from the runtime boundary with
+`Jidoka.Schedule.Manager`. See [schedules.md](schedules.md).
+
 ## Compile-Time Feedback
 
 Jidoka rejects legacy or ambiguous placements at compile time so production
@@ -124,6 +135,7 @@ MyApp.SupportAgent.workflow_names()
 MyApp.SupportAgent.handoff_names()
 MyApp.SupportAgent.hooks()
 MyApp.SupportAgent.guardrails()
+MyApp.SupportAgent.schedules()
 ```
 
 Prefer these helpers and `Jidoka.inspect_agent/1` over reaching into private
@@ -141,7 +153,7 @@ helpers like `Jidoka.inspect_request/1`.
 
 ## Imported agents
 
-Imported JSON or YAML agents share the same four-section conceptual shape and
+Imported JSON or YAML agents share the same core conceptual shape and
 are loaded at runtime through `Jidoka.import_agent/2` and
 `Jidoka.import_agent_file/2`. They expose the same return shapes through
 `Jidoka.chat/3`. See [imported-agents.md](imported-agents.md) for the

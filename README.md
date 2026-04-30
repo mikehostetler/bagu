@@ -68,7 +68,7 @@ runtime. See [Two equal authoring paths](#two-equal-authoring-paths) below.
 
 Jidoka agents are OTP processes owned by the shared `Jidoka.Runtime`
 supervisor. Your application chooses the lifetime: one request, one user
-session, one long-lived application worker, or one background job.
+session, one long-lived application worker, or one first-class Jidoka schedule.
 
 ```elixir
 {:ok, pid} = MyApp.AssistantAgent.start_link(id: "assistant-1")
@@ -89,7 +89,7 @@ If you need an application-owned Jido instance instead of the shared
 `use Jido, otp_app: :my_app` runtime and keep calling `Jidoka.chat/3`.
 
 See [Running Agents](guides/running-agents.md), [AgentView](guides/agent-view.md),
-[Phoenix LiveView](guides/phoenix-liveview.md), and
+[Schedules](guides/schedules.md), [Phoenix LiveView](guides/phoenix-liveview.md), and
 [Graduating To Jido](guides/graduating-to-jido.md).
 
 ## Return structured data, not just text
@@ -191,6 +191,8 @@ documented under `guides/`.
   tone, and identity, rendered into the prompt before instructions.
 - **[Structured output](guides/structured-output.md)**: Zoi-validated final
   answers with retries and optional repair.
+- **[Schedules](guides/schedules.md)**: cron-based scheduled agent turns and
+  workflow runs through `Jidoka.Schedule.Manager`.
 
 ### Orchestration
 
@@ -222,6 +224,8 @@ documented under `guides/`.
   `Jidoka.inspect_workflow/1` expose stable views of definitions and runs.
 - **Tracing**: first-class run traces through `Jidoka.Trace` and Livebook
   helpers.
+- **Testing**: provider-free contract, tool, guardrail, structured output, and
+  workflow tests, plus opt-in live evals. See [Testing Agents](guides/testing-agents.md).
 
 ### Where to learn each feature
 
@@ -234,16 +238,17 @@ Recommended reading order:
 5. [Context](guides/context.md)
 6. [Structured Output](guides/structured-output.md)
 7. [Running Agents](guides/running-agents.md)
-8. [AgentView](guides/agent-view.md)
-9. [Tools](guides/tools.md) (then see Capabilities for the rest)
-10. [Subagents](guides/subagents.md), [Workflows](guides/workflows.md), [Handoffs](guides/handoffs.md)
-11. [Memory](guides/memory.md)
-12. [Imported Agents](guides/imported-agents.md)
-13. [Errors](guides/errors.md) and [Inspection](guides/inspection.md)
-14. [Examples](guides/examples.md)
-15. [Phoenix LiveView](guides/phoenix-liveview.md)
-16. [Graduating To Jido](guides/graduating-to-jido.md)
-17. [Production](guides/production.md)
+8. [Schedules](guides/schedules.md)
+9. [AgentView](guides/agent-view.md)
+10. [Tools](guides/tools.md) (then see Capabilities for the rest)
+11. [Subagents](guides/subagents.md), [Workflows](guides/workflows.md), [Handoffs](guides/handoffs.md)
+12. [Memory](guides/memory.md)
+13. [Imported Agents](guides/imported-agents.md)
+14. [Errors](guides/errors.md), [Inspection](guides/inspection.md), and [Testing Agents](guides/testing-agents.md)
+15. [Examples](guides/examples.md)
+16. [Phoenix LiveView](guides/phoenix-liveview.md)
+17. [Graduating To Jido](guides/graduating-to-jido.md)
+18. [Production](guides/production.md)
 
 The full guide index is at [guides/overview.md](guides/overview.md).
 

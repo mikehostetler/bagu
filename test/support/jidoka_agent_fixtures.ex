@@ -11,6 +11,37 @@ defmodule JidokaTest.ChatAgent do
   end
 end
 
+defmodule JidokaTest.ScheduleCallbacks do
+  @moduledoc false
+
+  def support_digest_prompt, do: "Prepare the daily support digest."
+  def support_digest_context, do: %{tenant: "demo", channel: "schedule"}
+end
+
+defmodule JidokaTest.ScheduledAgent do
+  use Jidoka.Agent
+
+  agent do
+    id :scheduled_agent
+  end
+
+  defaults do
+    model :fast
+    instructions "You are a concise scheduled assistant."
+  end
+
+  schedules do
+    schedule :daily_digest do
+      cron("0 9 * * *")
+      timezone("America/Chicago")
+      prompt({JidokaTest.ScheduleCallbacks, :support_digest_prompt, []})
+      context({JidokaTest.ScheduleCallbacks, :support_digest_context, []})
+      conversation("support-digest")
+      overlap(:skip)
+    end
+  end
+end
+
 defmodule JidokaTest.ContextAgent do
   use Jidoka.Agent
 

@@ -32,6 +32,7 @@ defmodule Jidoka.Agent do
   - `defaults.character` as an optional prompt/persona source
   - `capabilities` for tools, Ash resources, MCP tools, skills, plugins, subagents, and workflows
   - `lifecycle` for memory, hooks, and guardrails
+  - `schedules` for first-class recurring agent turns registered by the application
 
   A nested runtime module is generated automatically and uses `Jido.AI.Agent`
   with the configured tool modules. The `capabilities` block currently supports
@@ -48,6 +49,8 @@ defmodule Jidoka.Agent do
   supplied through `Jidoka.chat/3` or the generated agent `chat/3` function.
   Plugin entries accept `Jidoka.Plugin` modules and merge their declared
   action-backed tools into the same LLM-visible tool registry.
+  Schedule entries compile into `schedules/0` metadata that can be registered
+  with `Jidoka.Schedule.Manager` from the application runtime boundary.
   """
 
   @doc false

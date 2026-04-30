@@ -51,9 +51,10 @@ children = [
 ```
 
 Use the bootstrapper for app-scoped agents, `AgentView` for session-scoped UI
-agents, and normal job workers for scheduled or background agent turns. See
-[Running Agents](running-agents.html) and [AgentView](agent-view.html) before
-copying the LiveView-specific example.
+agents, `Jidoka.Schedule.Manager` for app-local recurring work, and durable job
+workers when you need queue semantics. See [Running Agents](running-agents.html),
+[Schedules](schedules.html), and [AgentView](agent-view.html) before copying
+the LiveView-specific example.
 
 If the application needs its own Jido instance for isolated registries, task
 supervisors, scheduler configuration, pools, or persistence policy, see

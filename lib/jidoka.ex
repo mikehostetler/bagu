@@ -138,6 +138,48 @@ defmodule Jidoka do
   defdelegate await_chat_request(request, opts \\ []), to: Jidoka.Chat
 
   @doc """
+  Registers a first-class Jidoka schedule.
+
+  Agent schedules run through `Jidoka.chat/3`; workflow schedules run through
+  `Jidoka.Workflow.run/3`. The default scheduler is in-memory and supervised by
+  the Jidoka application.
+  """
+  @spec schedule(Jidoka.Schedule.target(), keyword()) :: {:ok, Jidoka.Schedule.t()} | {:error, term()}
+  defdelegate schedule(target, opts), to: Jidoka.Schedule.Manager
+
+  @doc """
+  Convenience alias for registering an agent schedule.
+  """
+  @spec schedule_agent(Jidoka.Schedule.target(), keyword()) :: {:ok, Jidoka.Schedule.t()} | {:error, term()}
+  def schedule_agent(target, opts) when is_list(opts), do: schedule(target, Keyword.put(opts, :kind, :agent))
+
+  @doc """
+  Registers a workflow schedule.
+  """
+  @spec schedule_workflow(module(), keyword()) :: {:ok, Jidoka.Schedule.t()} | {:error, term()}
+  def schedule_workflow(workflow_module, opts) when is_atom(workflow_module) and is_list(opts) do
+    schedule(workflow_module, Keyword.put(opts, :kind, :workflow))
+  end
+
+  @doc """
+  Lists schedules registered with the Jidoka schedule manager.
+  """
+  @spec list_schedules(keyword()) :: {:ok, [Jidoka.Schedule.t()]} | {:error, term()}
+  defdelegate list_schedules(opts \\ []), to: Jidoka.Schedule.Manager, as: :list
+
+  @doc """
+  Cancels and removes a schedule.
+  """
+  @spec cancel_schedule(String.t() | atom(), keyword()) :: :ok | {:error, term()}
+  defdelegate cancel_schedule(id, opts \\ []), to: Jidoka.Schedule.Manager, as: :cancel
+
+  @doc """
+  Runs a schedule immediately and waits for the run record.
+  """
+  @spec run_schedule(String.t() | atom(), keyword()) :: {:ok, map()} | {:error, term()}
+  defdelegate run_schedule(id, opts \\ []), to: Jidoka.Schedule.Manager, as: :run
+
+  @doc """
   Returns the current handoff owner for a conversation, if any.
   """
   @spec handoff_owner(String.t()) :: map() | nil

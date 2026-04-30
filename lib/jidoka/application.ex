@@ -7,6 +7,8 @@ defmodule Jidoka.Application do
   def start(_type, _args) do
     children = [
       Jidoka.Trace.Collector,
+      {Task.Supervisor, name: Jidoka.Schedule.TaskSupervisor},
+      Jidoka.Schedule.Manager,
       Jidoka.Subagent.Metadata,
       Jidoka.Workflow.Capability.Metadata,
       Jidoka.Handoff.Metadata,

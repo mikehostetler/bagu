@@ -91,6 +91,24 @@ defmodule Jidoka.Agent.Dsl.Handoff do
   ]
 end
 
+defmodule Jidoka.Agent.Dsl.Schedule do
+  @moduledoc false
+
+  defstruct [
+    :name,
+    :cron,
+    :timezone,
+    :prompt,
+    :context,
+    :conversation,
+    :agent_id,
+    :overlap,
+    :timeout,
+    :enabled?,
+    :__spark_metadata__
+  ]
+end
+
 defmodule Jidoka.Agent.Dsl.MemoryMode do
   @moduledoc false
 

@@ -8,7 +8,8 @@ defmodule Jidoka.Agent.Definition do
     Legacy,
     LifecycleConfig,
     MemoryConfig,
-    OutputConfig
+    OutputConfig,
+    ScheduleConfig
   }
 
   @type t :: map()
@@ -47,6 +48,7 @@ defmodule Jidoka.Agent.Definition do
 
     configured_context = ContextConfig.resolve_defaults!(owner_module, configured_context_schema)
     configured_output = OutputConfig.resolve!(owner_module)
+    configured_schedules = ScheduleConfig.resolve!(owner_module)
 
     capability_entities = Spark.Dsl.Extension.get_entities(owner_module, [:capabilities])
 
@@ -213,6 +215,7 @@ defmodule Jidoka.Agent.Definition do
       context_schema: configured_context_schema,
       context: configured_context,
       output: configured_output,
+      schedules: configured_schedules,
       memory: configured_memory,
       skills: configured_skills,
       tools: tool_modules,
@@ -253,6 +256,7 @@ defmodule Jidoka.Agent.Definition do
       context_schema: configured_context_schema,
       context: configured_context,
       output: configured_output,
+      schedules: configured_schedules,
       memory: configured_memory,
       skills: configured_skills,
       skill_names: skill_names,

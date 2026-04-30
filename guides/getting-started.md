@@ -67,12 +67,13 @@ defmodule MyApp.AssistantAgent do
 end
 ```
 
-The DSL has four sections:
+The DSL has five sections:
 
 - `agent do`: stable identity and optional context schema
 - `defaults do`: model and required instructions
 - `capabilities do`: tools and orchestration features, when needed
 - `lifecycle do`: memory, hooks, and guardrails, when needed
+- `schedules do`: recurring agent turns, when needed
 
 Only `agent.id` and `defaults.instructions` are required for a basic agent.
 
@@ -161,6 +162,7 @@ PORT=4002 mix phx.server
 
 - [Agents](agents.html): the full DSL sections and generated functions.
 - [Running Agents](running-agents.html): choose where the agent lives in your OTP app.
+- [Schedules](schedules.html): run agents and workflows from Jidoka's schedule manager.
 - [AgentView](agent-view.html): adapt an agent to a UI, API, job, or test boundary.
 - [Structured Output](structured-output.html): return typed maps validated by Zoi instead of free text.
 - [Tools](tools.html): give the agent deterministic capabilities to call mid-turn.

@@ -210,6 +210,15 @@ defmodule Jidoka.Agent.Codegen do
       def output_schema, do: unquote(Macro.escape(output_schema(definition.output)))
 
       @doc """
+      Returns first-class schedules declared for this agent.
+
+      Register these with `Jidoka.Schedule.Manager` or `Jidoka.schedule/2` from
+      your application supervision boundary.
+      """
+      @spec schedules() :: [Jidoka.Schedule.t()]
+      def schedules, do: unquote(Macro.escape(definition.schedules))
+
+      @doc """
       Returns the configured memory settings for this agent, if any.
       """
       @spec memory() :: Jidoka.Memory.config() | nil

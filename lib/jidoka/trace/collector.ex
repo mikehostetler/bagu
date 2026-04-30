@@ -36,7 +36,8 @@ defmodule Jidoka.Trace.Collector do
     [:jidoka, :subagent, :event],
     [:jidoka, :handoff, :event],
     [:jidoka, :mcp, :event],
-    [:jidoka, :output, :event]
+    [:jidoka, :output, :event],
+    [:jidoka, :schedule, :event]
   ]
 
   defstruct enabled?: true,
@@ -268,6 +269,7 @@ defmodule Jidoka.Trace.Collector do
   defp event_name_label(:memory, metadata), do: string_value(metadata, :namespace)
   defp event_name_label(:mcp, metadata), do: string_value(metadata, :endpoint)
   defp event_name_label(:output, metadata), do: string_value(metadata, :output) || string_value(metadata, :name)
+  defp event_name_label(:schedule, metadata), do: string_value(metadata, :schedule_id) || string_value(metadata, :name)
   defp event_name_label(_category, metadata), do: string_value(metadata, :name)
 
   defp event_status(:request, :start, _metadata), do: :running
@@ -351,6 +353,7 @@ defmodule Jidoka.Trace.Collector do
       guardrail_events: count_category(events, :guardrail),
       memory_events: count_category(events, :memory),
       output_events: count_category(events, :output),
+      schedule_events: count_category(events, :schedule),
       error_events: Enum.count(events, &(&1.status == :failed))
     }
   end

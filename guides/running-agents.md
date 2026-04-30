@@ -92,7 +92,8 @@ need to design that topology directly.
 | Request-scoped | One HTTP request, one job, one CLI command | Start, chat, stop in the caller. |
 | Session-scoped | One LiveView/browser session or support conversation | Derive a stable conversation id and agent id. |
 | App-scoped | Shared router, analyst, or operations agent | Start once during application startup. |
-| Job-triggered | Cron, Oban, Quantum, or external scheduler | Scheduler triggers a turn on an agent or workflow. |
+| Scheduled | Recurring app-local work | `Jidoka.Schedule.Manager` triggers a normal agent turn or workflow run. |
+| External job-triggered | Durable queues or external schedulers | External job triggers a turn on an agent or workflow. |
 
 The main decision is not technical. It is ownership: does the agent represent a
 single interaction, a user conversation, or an application-level worker?
@@ -224,10 +225,59 @@ without blocking the socket process, and awaits completion in the task
 supervisor. See [AgentView](agent-view.html) and
 [Phoenix LiveView](phoenix-liveview.html).
 
-## Background Jobs
+## Scheduled Tasks
 
-For Oban, Quantum, cron, or another scheduler, keep the scheduler responsible
-for when work happens. The job can start or look up an agent and run a normal
+Use `Jidoka.Schedule.Manager` when the application needs recurring app-local
+agent turns or workflow runs. The manager is supervised by Jidoka and keeps
+scheduled execution on the same runtime path as ordinary calls.
+
+```elixir
+{:ok, _schedule} =
+  Jidoka.schedule(MyApp.SupportDigestAgent,
+    id: "daily-support-digest",
+    cron: "0 9 * * *",
+    timezone: "America/Chicago",
+    prompt: "Prepare the daily support digest.",
+    conversation: "support-digest",
+    context: &MyApp.SupportDigest.context/0,
+    overlap: :skip
+  )
+```
+
+When the cron fires, Jidoka resolves the agent, then calls `Jidoka.chat/3` with
+the configured prompt, context, conversation, and generated request id. That
+means scheduled turns still run through context schemas, memory, hooks,
+guardrails, structured output, and tracing.
+
+For deterministic scheduled work, schedule a workflow:
+
+```elixir
+{:ok, _schedule} =
+  Jidoka.schedule_workflow(MyApp.DailyMetricsWorkflow,
+    id: "daily-metrics",
+    cron: "30 7 * * *",
+    input: %{window: "yesterday"},
+    context: &MyApp.Metrics.context/0
+  )
+```
+
+Agents can also declare schedules and let the application register them from
+its runtime boundary:
+
+```elixir
+Enum.each(MyApp.SupportDigestAgent.schedules(), fn schedule ->
+  {:ok, _schedule} = Jidoka.Schedule.Manager.put_schedule(schedule)
+end)
+```
+
+See [Schedules](schedules.html) for schedule options, manual runs, overlap
+policy, and trace inspection.
+
+## External Background Jobs
+
+Use Oban, system cron, or another external scheduler when you need durable job
+queues, retries, uniqueness, backoff, or operational tooling beyond Jidoka's
+in-memory beta scheduler. The job can start or look up an agent and run a normal
 turn:
 
 ```elixir
@@ -254,21 +304,7 @@ end
 ```
 
 This keeps durable scheduling, retries, uniqueness, and backoff in the job
-system. Jidoka stays focused on the agent turn.
-
-## Scheduled Tasks Status
-
-Jido has lower-level scheduling and cron primitives, but Jidoka does not expose
-a first-class scheduling DSL yet. The recommended beta posture is:
-
-- use Oban, Quantum, system cron, Phoenix scheduled jobs, or your existing job
-  system to trigger work
-- call `Jidoka.chat/3` or `Jidoka.Workflow.run/3` from that job
-- keep durable retry and schedule history in the scheduler
-- pass context explicitly into each turn
-
-A future Jidoka scheduling API should wrap the Jido scheduler only after the
-developer-facing shape is clear.
+system while Jidoka still owns the agent turn.
 
 ## When To Graduate Into Jido
 

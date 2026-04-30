@@ -171,6 +171,7 @@ defmodule Jidoka.MixProject do
         ],
         "Runtime Integration": [
           "guides/running-agents.md",
+          "guides/schedules.md",
           "guides/agent-view.md",
           "guides/phoenix-liveview.md",
           "guides/graduating-to-jido.md"
@@ -201,6 +202,7 @@ defmodule Jidoka.MixProject do
           "guides/errors.md",
           "guides/inspection.md",
           "guides/tracing.md",
+          "guides/testing-agents.md",
           "guides/evals.md",
           "guides/mix-tasks.md",
           "guides/livebooks.md",
@@ -230,6 +232,8 @@ defmodule Jidoka.MixProject do
           Jidoka,
           Jidoka.Kino,
           Jidoka.Runtime,
+          Jidoka.Schedule,
+          Jidoka.Schedule.Manager,
           Jidoka.Trace,
           Jidoka.Trace.Event,
           Jidoka.Interrupt,
@@ -267,6 +271,7 @@ defmodule Jidoka.MixProject do
       "guides/chat-turn.md",
       # Runtime integration
       "guides/running-agents.md",
+      "guides/schedules.md",
       "guides/agent-view.md",
       "guides/phoenix-liveview.md",
       "guides/graduating-to-jido.md",
@@ -292,6 +297,7 @@ defmodule Jidoka.MixProject do
       "guides/errors.md",
       "guides/inspection.md",
       "guides/tracing.md",
+      "guides/testing-agents.md",
       "guides/evals.md",
       "guides/mix-tasks.md",
       "guides/livebooks.md",
