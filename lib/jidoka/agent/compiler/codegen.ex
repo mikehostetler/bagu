@@ -111,6 +111,9 @@ defmodule Jidoka.Agent.Codegen do
     quote location: :keep do
       @doc """
       Starts this agent under the shared `Jidoka.Runtime` instance.
+
+      For an application-owned Jido instance, pass `runtime_module/0` to that
+      instance's `start_agent/2` instead.
       """
       @spec start_link(keyword()) :: DynamicSupervisor.on_start_child()
       def start_link(opts \\ []) do
@@ -130,7 +133,15 @@ defmodule Jidoka.Agent.Codegen do
       @spec __jidoka__() :: map()
       def __jidoka__, do: unquote(Macro.escape(definition.public_definition))
 
-      @doc false
+      @doc """
+      Returns the generated Jido/Jido.AI runtime module for this Jidoka agent.
+
+      Use this when graduating into an application-owned Jido runtime:
+
+          MyApp.Jido.start_agent(__MODULE__.runtime_module(), id: "support-router")
+
+      Normal Jidoka callers should use `start_link/1`.
+      """
       @spec runtime_module() :: module()
       def runtime_module, do: unquote(definition.runtime_module)
 

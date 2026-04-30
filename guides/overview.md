@@ -20,9 +20,11 @@ For your first agent, read in this order:
 
 1. [Getting Started](getting-started.html): build and run the smallest useful agent.
 2. [Agents](agents.html): the 4-section DSL shape and compile-time validation.
-3. one capability guide that matches your use case (start with [Tools](tools.html)).
-4. [Structured Output](structured-output.html): typed JSON results with retries.
-5. [Chat Turn](chat-turn.html): the turn lifecycle and public return shapes.
+3. [Running Agents](running-agents.html): choose request, session, app, or job lifetimes.
+4. [AgentView](agent-view.html): adapt an agent to UI, API, job, or test boundaries.
+5. one capability guide that matches your use case (start with [Tools](tools.html)).
+6. [Structured Output](structured-output.html): typed JSON results with retries.
+7. [Chat Turn](chat-turn.html): the turn lifecycle and public return shapes.
 
 Everything else is opt-in.
 
@@ -41,6 +43,13 @@ Everything else is opt-in.
 - [Context](context.html): request-scoped Zoi schemas, defaults, validation, per-turn merge, and forwarding.
 - [Structured Output](structured-output.html): `output do schema retries on_validation_error`, `output: :raw`.
 - [Chat Turn](chat-turn.html): the 7-step turn lifecycle and public return shapes.
+
+### Runtime Integration
+
+- [Running Agents](running-agents.html): request-scoped, session-scoped, app-scoped, and job-triggered agents.
+- [AgentView](agent-view.html): app-facing adapter for conversation ids, runtime context, async turns, and projected messages.
+- [Phoenix LiveView](phoenix-liveview.html): LiveView integration built on AgentView.
+- [Graduating To Jido](graduating-to-jido.html): use Jidoka as the onramp, then move into Jido runtime features when needed.
 
 ### Capabilities
 
@@ -76,7 +85,6 @@ Everything else is opt-in.
 - [Evals](evals.html): deterministic and live LLM evals.
 - [Mix Tasks](mix-tasks.html): the `mix jidoka <name>` family with `--dry-run`, `--verify`, `--log-level`.
 - [Livebooks](livebooks.html): the onboarding LiveBook series.
-- [Phoenix LiveView](phoenix-liveview.html): `Jidoka.AgentView`, projection, runtime context boundary.
 - [Examples](examples.html): example index by domain.
 - [Production](production.html): release checklist and operational decisions.
 
@@ -151,8 +159,10 @@ The stable beta entrypoints are:
 - `Jidoka.Workflow.run/3`
 
 Generated compiled agents also expose stable helpers such as `start_link/1`,
-`chat/3`, `id/0`, `tools/0`, and capability name functions. Internal generated
-modules and `__jidoka__/0` helpers are not the public authoring surface.
+`chat/3`, `runtime_module/0`, `id/0`, `tools/0`, and capability name functions.
+Use `runtime_module/0` when starting a Jidoka-authored agent under an
+application-owned Jido instance. Internal generated modules and `__jidoka__/0`
+helpers are not the public authoring surface.
 
 ## Two Authoring Paths
 

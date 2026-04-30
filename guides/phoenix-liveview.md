@@ -4,6 +4,11 @@ Phoenix integration should treat Jidoka as an OTP runtime plus a projection
 source. The LiveView should own UI state and rendering. The agent should own
 execution. `Jido.Thread` should remain the canonical event log.
 
+Read [Running Agents](running-agents.html) first for process lifetime and
+supervision choices, then [AgentView](agent-view.html) for the surface-neutral
+adapter contract. This guide shows one Phoenix LiveView implementation of those
+patterns.
+
 The important boundary is that the provider-facing LLM context is not the same
 thing as the user-visible chat transcript.
 

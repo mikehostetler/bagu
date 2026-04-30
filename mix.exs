@@ -169,6 +169,12 @@ defmodule Jidoka.MixProject do
           "guides/structured-output.md",
           "guides/chat-turn.md"
         ],
+        "Runtime Integration": [
+          "guides/running-agents.md",
+          "guides/agent-view.md",
+          "guides/phoenix-liveview.md",
+          "guides/graduating-to-jido.md"
+        ],
         Capabilities: [
           "guides/tools.md",
           "guides/ash-resources.md",
@@ -198,7 +204,6 @@ defmodule Jidoka.MixProject do
           "guides/evals.md",
           "guides/mix-tasks.md",
           "guides/livebooks.md",
-          "guides/phoenix-liveview.md",
           "guides/examples.md",
           "guides/production.md"
         ],
@@ -260,6 +265,11 @@ defmodule Jidoka.MixProject do
       "guides/context.md",
       "guides/structured-output.md",
       "guides/chat-turn.md",
+      # Runtime integration
+      "guides/running-agents.md",
+      "guides/agent-view.md",
+      "guides/phoenix-liveview.md",
+      "guides/graduating-to-jido.md",
       # Capabilities
       "guides/tools.md",
       "guides/ash-resources.md",
@@ -285,7 +295,6 @@ defmodule Jidoka.MixProject do
       "guides/evals.md",
       "guides/mix-tasks.md",
       "guides/livebooks.md",
-      "guides/phoenix-liveview.md",
       "guides/examples.md",
       "guides/production.md"
     ]

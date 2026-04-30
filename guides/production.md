@@ -7,8 +7,10 @@ shipping.
 ## Supervision
 
 Jidoka starts a shared runtime from its OTP application. In an application that
-depends on Jidoka, start compiled agents under your own supervision tree when they
-should be long-lived, or start them on demand when they are request scoped.
+depends on Jidoka, compiled agents are started under that shared
+`Jidoka.Runtime` supervisor. Your application still owns the operational policy:
+which agents should exist, what ids they use, and when request or session agents
+should be stopped.
 
 Manual start:
 
@@ -37,6 +39,25 @@ Jidoka.stop_agent("support-router")
 
 Choose stable ids for long-lived agents. Use generated or request-scoped ids for
 temporary workers.
+
+In Phoenix, the usual shape is:
+
+```elixir
+children = [
+  {Task.Supervisor, name: MyApp.AgentTaskSupervisor},
+  MyApp.AgentBootstrapper,
+  MyAppWeb.Endpoint
+]
+```
+
+Use the bootstrapper for app-scoped agents, `AgentView` for session-scoped UI
+agents, and normal job workers for scheduled or background agent turns. See
+[Running Agents](running-agents.html) and [AgentView](agent-view.html) before
+copying the LiveView-specific example.
+
+If the application needs its own Jido instance for isolated registries, task
+supervisors, scheduler configuration, pools, or persistence policy, see
+[Graduating To Jido](graduating-to-jido.html).
 
 ## Provider Configuration
 

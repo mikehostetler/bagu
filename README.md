@@ -64,6 +64,34 @@ are required. Everything else is optional.
 You can also load the same conceptual agent from a JSON or YAML spec at
 runtime. See [Two equal authoring paths](#two-equal-authoring-paths) below.
 
+## Run it in your app
+
+Jidoka agents are OTP processes owned by the shared `Jidoka.Runtime`
+supervisor. Your application chooses the lifetime: one request, one user
+session, one long-lived application worker, or one background job.
+
+```elixir
+{:ok, pid} = MyApp.AssistantAgent.start_link(id: "assistant-1")
+
+{:ok, reply} =
+  MyApp.AssistantAgent.chat(pid, "Help me triage this support ticket.",
+    conversation: "support-123",
+    context: %{session: "support-123", actor: current_user}
+  )
+```
+
+For UI-facing or session-scoped agents, use an `AgentView` adapter to keep
+conversation ids, runtime context, async turns, visible messages, and final
+result mapping in one module.
+
+If you need an application-owned Jido instance instead of the shared
+`Jidoka.Runtime`, start the generated `runtime_module/0` under your own
+`use Jido, otp_app: :my_app` runtime and keep calling `Jidoka.chat/3`.
+
+See [Running Agents](guides/running-agents.md), [AgentView](guides/agent-view.md),
+[Phoenix LiveView](guides/phoenix-liveview.md), and
+[Graduating To Jido](guides/graduating-to-jido.md).
+
 ## Return structured data, not just text
 
 For classification, extraction, and routing tasks, put the response shape on
@@ -205,14 +233,17 @@ Recommended reading order:
 4. [Instructions](guides/instructions.md)
 5. [Context](guides/context.md)
 6. [Structured Output](guides/structured-output.md)
-7. [Tools](guides/tools.md) (then see Capabilities for the rest)
-8. [Subagents](guides/subagents.md), [Workflows](guides/workflows.md), [Handoffs](guides/handoffs.md)
-9. [Memory](guides/memory.md)
-10. [Imported Agents](guides/imported-agents.md)
-11. [Errors](guides/errors.md) and [Inspection](guides/inspection.md)
-12. [Examples](guides/examples.md)
-13. [Phoenix LiveView](guides/phoenix-liveview.md)
-14. [Production](guides/production.md)
+7. [Running Agents](guides/running-agents.md)
+8. [AgentView](guides/agent-view.md)
+9. [Tools](guides/tools.md) (then see Capabilities for the rest)
+10. [Subagents](guides/subagents.md), [Workflows](guides/workflows.md), [Handoffs](guides/handoffs.md)
+11. [Memory](guides/memory.md)
+12. [Imported Agents](guides/imported-agents.md)
+13. [Errors](guides/errors.md) and [Inspection](guides/inspection.md)
+14. [Examples](guides/examples.md)
+15. [Phoenix LiveView](guides/phoenix-liveview.md)
+16. [Graduating To Jido](guides/graduating-to-jido.md)
+17. [Production](guides/production.md)
 
 The full guide index is at [guides/overview.md](guides/overview.md).
 

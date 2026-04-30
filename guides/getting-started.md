@@ -160,6 +160,8 @@ PORT=4002 mix phx.server
 ## Next Steps
 
 - [Agents](agents.html): the full DSL sections and generated functions.
+- [Running Agents](running-agents.html): choose where the agent lives in your OTP app.
+- [AgentView](agent-view.html): adapt an agent to a UI, API, job, or test boundary.
 - [Structured Output](structured-output.html): return typed maps validated by Zoi instead of free text.
 - [Tools](tools.html): give the agent deterministic capabilities to call mid-turn.
 - [Chat Turn](chat-turn.html): per-turn options, return shapes, and how to opt out of structured parsing with `output: :raw`.
