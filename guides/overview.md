@@ -8,11 +8,11 @@ tools, structured output, memory, workflows, subagents, and handoffs.
 These guides are organized in tiers. Each guide focuses on one topic so you can
 read only what your application needs.
 
-Jidoka is alpha. The public beta surface is intentionally small: compiled
-agents, imported agents, workflows, structured runtime errors, and a few
-runtime facade functions. When a guide mentions Jido, Jido.AI, Runic, or
-Jido Memory, treat those as implementation notes unless the API is shown
-through the `Jidoka` namespace.
+Jidoka is beta software. The public surface is intentionally small: compiled
+agents, imported agents, workflows, structured output, tracing, structured
+runtime errors, and a few runtime facade functions. When a guide mentions Jido,
+Jido.AI, Runic, or Jido Memory, treat those as implementation notes unless the
+API is shown through the `Jidoka` namespace.
 
 ## Recommended Reading Path
 

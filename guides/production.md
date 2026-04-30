@@ -1,6 +1,6 @@
 # Production
 
-Jidoka is pre-beta, but its runtime model is designed for ordinary OTP
+Jidoka is beta software, and its runtime model is designed for ordinary OTP
 applications. This guide collects the operational decisions to make before
 shipping.
 

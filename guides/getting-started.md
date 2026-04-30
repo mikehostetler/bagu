@@ -5,8 +5,17 @@ handles errors correctly.
 
 ## Install
 
-Jidoka is pre-beta and is not published to Hex yet. Use the Git repository while
-the beta surface is stabilizing:
+Jidoka beta releases are distributed through Hex:
+
+```elixir
+def deps do
+  [
+    {:jidoka, "~> 1.0.0-beta.1"}
+  ]
+end
+```
+
+During beta development, you can also pin a specific Git commit:
 
 ```elixir
 def deps do

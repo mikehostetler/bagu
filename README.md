@@ -273,7 +273,17 @@ schema.
 
 ### Add the dependency
 
-Jidoka is alpha and not on Hex yet. Pin a commit ref from Git:
+Jidoka beta releases are distributed through Hex:
+
+```elixir
+def deps do
+  [
+    {:jidoka, "~> 1.0.0-beta.1"}
+  ]
+end
+```
+
+During beta development, you can also pin a specific Git commit:
 
 ```elixir
 def deps do
@@ -319,12 +329,12 @@ default `:fast` alias maps to `anthropic:claude-haiku-4-5`. You can also pass
 direct model strings (`"anthropic:claude-haiku-4-5"`) or inline maps wherever
 `model` is accepted.
 
-### Alpha status
+### Beta status
 
-Jidoka is currently alpha. The beta surface (agents, tools, workflows,
-imports, structured errors, and the Phoenix LiveView consumer) is being
-stabilized. Pin a commit ref when consuming Jidoka from another app and expect
-small breaking changes during the alpha-to-beta window. See
+Jidoka is currently beta. The core authoring surface (agents, tools, workflows,
+imports, structured output, tracing, structured errors, examples, and the Phoenix
+LiveView consumer) is ready for early adopters, but small breaking changes are
+still possible before stable 1.0. See
 [ROADMAP.md](https://github.com/agentjido/jidoka/blob/main/ROADMAP.md) for the
 current state.
 

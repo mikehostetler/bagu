@@ -1,9 +1,9 @@
 defmodule Jidoka.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "1.0.0-beta.1"
   @source_url "https://github.com/agentjido/jidoka"
-  @description "Experimental developer-friendly LLM agent harness built on Jido and Jido.AI."
+  @description "Developer-friendly LLM agent harness built on Jido and Jido.AI."
   @coverage_threshold 75
 
   def project do
@@ -71,8 +71,8 @@ defmodule Jidoka.MixProject do
       {:ash_jido, git: "https://github.com/agentjido/ash_jido.git", ref: "d10cf6e8292ab7c1a9caf826b641787eb7e864c4"},
       {:dotenvy, "~> 1.1"},
       {:jason, "~> 1.4"},
-      {:jido, "~> 2.2", override: true},
-      {:jido_ai, git: "https://github.com/agentjido/jido_ai.git", branch: "feat/structured-output", override: true},
+      {:jido, "~> 2.2"},
+      {:jido_ai, git: "https://github.com/agentjido/jido_ai.git", branch: "feat/structured-output"},
       {:jido_character,
        git: "https://github.com/agentjido/jido_character.git", ref: "c84532fbb7ba7ccc58e4e76818688208fb59ccac"},
       {:jido_browser, "~> 2.0"},
@@ -117,6 +117,7 @@ defmodule Jidoka.MixProject do
 
   defp package do
     [
+      name: "jidoka",
       files: [
         "lib",
         "examples",
@@ -128,6 +129,7 @@ defmodule Jidoka.MixProject do
         "LICENSE",
         "usage-rules.md"
       ],
+      build_tools: ["mix"],
       maintainers: ["Mike Hostetler"],
       licenses: ["Apache-2.0"],
       links: %{
