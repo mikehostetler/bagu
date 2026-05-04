@@ -279,7 +279,8 @@ defmodule Jidoka.Schedule do
   defp normalize_prompt(:agent, prompt) when is_binary(prompt) or is_function(prompt, 0), do: {:ok, prompt}
 
   defp normalize_prompt(:agent, {module, function, args} = prompt)
-       when is_atom(module) and is_atom(function) and is_list(args), do: {:ok, prompt}
+       when is_atom(module) and is_atom(function) and is_list(args),
+       do: {:ok, prompt}
 
   defp normalize_prompt(:workflow, nil), do: {:ok, nil}
 
@@ -305,7 +306,8 @@ defmodule Jidoka.Schedule do
     do: if(Keyword.keyword?(value), do: {:ok, value}, else: context_error(value))
 
   defp normalize_context_source({module, function, args} = value)
-       when is_atom(module) and is_atom(function) and is_list(args), do: {:ok, value}
+       when is_atom(module) and is_atom(function) and is_list(args),
+       do: {:ok, value}
 
   defp normalize_context_source(value), do: context_error(value)
 
