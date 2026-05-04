@@ -33,6 +33,64 @@ defmodule JidokaTest.ScheduleTest do
     assert error.field == :prompt
   end
 
+  test "normalizes accepted schedule option shapes" do
+    assert {:ok, %Schedule{} = schedule} =
+             Schedule.new(ToolOnlyWorkflow,
+               kind: :workflow,
+               id: :daily_report,
+               cron: " 0 9 * * * ",
+               timezone: "",
+               input: [value: 5],
+               context: [tenant: "demo"],
+               conversation: " support-digest ",
+               opts: [trace?: true],
+               start_opts: [name: :ignored_for_workflows],
+               timeout: 1_000,
+               overlap: :allow,
+               enabled: false
+             )
+
+    assert schedule.id == "daily_report"
+    assert schedule.cron == "0 9 * * *"
+    assert schedule.timezone == Schedule.default_timezone()
+    assert schedule.input == [value: 5]
+    assert schedule.context == [tenant: "demo"]
+    assert schedule.conversation == "support-digest"
+    assert schedule.opts == [trace?: true]
+    assert schedule.start_opts == [name: :ignored_for_workflows]
+    assert schedule.timeout == 1_000
+    assert schedule.overlap == :allow
+    refute schedule.enabled?
+  end
+
+  test "returns validation errors for invalid schedule option shapes" do
+    invalid_options = [
+      {[kind: :other], :kind},
+      {[timezone: 123], :timezone},
+      {[overlap: :queue], :overlap},
+      {[enabled?: :yes], :enabled?},
+      {[timeout: 0], :timeout},
+      {[context: [:not_a_pair]], :context},
+      {[runtime: "runtime"], :runtime},
+      {[opts: [:not_a_pair]], :opts},
+      {[start_opts: [:not_a_pair]], :opts},
+      {[conversation: :daily], :conversation}
+    ]
+
+    for {extra_opts, field} <- invalid_options do
+      assert {:error, %Jidoka.Error.ValidationError{} = error} =
+               Schedule.new(
+                 ToolOnlyWorkflow,
+                 Keyword.merge(
+                   [kind: :workflow, id: "invalid-#{field}", cron: "0 9 * * *", input: %{value: 5}],
+                   extra_opts
+                 )
+               )
+
+      assert error.field == field
+    end
+  end
+
   test "registers, lists, and cancels disabled schedules", %{manager: manager} do
     assert {:ok, %Schedule{id: "disabled-digest", status: :disabled, scheduler_pid: nil}} =
              Jidoka.schedule_workflow(ToolOnlyWorkflow,
@@ -75,6 +133,24 @@ defmodule JidokaTest.ScheduleTest do
              )
 
     assert error.field == :cron
+  end
+
+  test "starts a manager with initial schedules and supports list limits" do
+    assert {:ok, schedule} =
+             Schedule.new(ToolOnlyWorkflow,
+               kind: :workflow,
+               id: "initial",
+               cron: "0 9 * * *",
+               input: %{value: 5},
+               enabled?: false
+             )
+
+    manager = :"initial_schedule_manager_#{System.unique_integer([:positive])}"
+    start_supervised!({Jidoka.Schedule.Manager, name: manager, id: manager, schedules: [schedule]})
+
+    assert {:ok, [%Schedule{id: "initial"}]} = Jidoka.list_schedules(manager: manager, limit: 1)
+    assert {:ok, []} = Jidoka.list_schedules(manager: manager, limit: 0)
+    assert {:error, :not_found} = Jidoka.cancel_schedule("missing", manager: manager)
   end
 
   test "runs a workflow schedule manually and records bounded history", %{manager: manager} do
@@ -126,6 +202,7 @@ defmodule JidokaTest.ScheduleTest do
 
   test "generated agents expose declared schedules" do
     assert [%Schedule{} = schedule] = JidokaTest.ScheduledAgent.schedules()
+    assert [%Schedule{} = resolved] = Jidoka.Agent.Definition.ScheduleConfig.resolve!(JidokaTest.ScheduledAgent)
 
     assert schedule.id == "scheduled_agent:daily_digest"
     assert schedule.agent_id == "scheduled_agent:daily_digest"
@@ -134,5 +211,6 @@ defmodule JidokaTest.ScheduleTest do
     assert schedule.timezone == "America/Chicago"
     assert schedule.conversation == "support-digest"
     assert schedule.overlap == :skip
+    assert resolved == schedule
   end
 end
