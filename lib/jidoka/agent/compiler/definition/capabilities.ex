@@ -312,6 +312,8 @@ defmodule Jidoka.Agent.Definition.Capabilities do
               module: owner_module
             )
     end
+
+    :ok
   end
 
   @spec ash_tool_config(map()) :: map() | nil

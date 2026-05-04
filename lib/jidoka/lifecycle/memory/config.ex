@@ -302,17 +302,4 @@ defmodule Jidoka.Memory.Config do
   defp imported_atom(value), do: value
 
   defp normalize_lookup_key(key) when is_atom(key), do: Atom.to_string(key)
-
-  defp normalize_lookup_key(key) when is_binary(key) do
-    case safe_existing_atom(key) do
-      nil -> key
-      atom -> atom
-    end
-  end
-
-  defp safe_existing_atom(value) when is_binary(value) do
-    String.to_existing_atom(value)
-  rescue
-    ArgumentError -> nil
-  end
 end

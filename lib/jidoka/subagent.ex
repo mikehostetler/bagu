@@ -141,8 +141,6 @@ defmodule Jidoka.Subagent do
   @spec latest_request_calls(pid() | String.t()) :: [map()]
   defdelegate latest_request_calls(server_or_id), to: Runtime
 
-  defp wrap_subagent(%__MODULE__{} = subagent), do: subagent
-
   defp wrap_subagent(%{} = attrs) do
     fields = [:agent, :name, :description, :target, :timeout, :forward_context, :result]
     struct(__MODULE__, Map.take(attrs, fields))
