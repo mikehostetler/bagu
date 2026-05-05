@@ -10,7 +10,7 @@ page tools without exposing arbitrary browser control to the model.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", branch: "main"},
     {:kino, "~> 0.19.0"}
   ],
   config: [
@@ -105,12 +105,13 @@ Map.take(definition, [:id, :tool_names, :web])
 ## Optional Provider Turn
 
 ```elixir
-{:ok, pid} =
-  Jidoka.Kino.start_or_reuse("livebook-web-read-only-agent", fn ->
-    LivebookDemo.Web.ReadOnlyAgent.start_link(id: "livebook-web-read-only-agent")
-  end)
+web_session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.Web.ReadOnlyAgent,
+    id: "livebook-web-read-only"
+  )
 
 Jidoka.Kino.chat("Web-capable chat", fn ->
-  LivebookDemo.Web.ReadOnlyAgent.chat(pid, "What web tools are available to you?")
+  Jidoka.chat(web_session, "What web tools are available to you?")
 end)
 ```

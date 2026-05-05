@@ -10,7 +10,7 @@ tools, and keeps sync failures inside the turn boundary.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", branch: "main"},
     {:kino, "~> 0.19.0"}
   ],
   config: [
@@ -133,12 +133,13 @@ end
 ## Optional Provider Turn
 
 ```elixir
-{:ok, pid} =
-  Jidoka.Kino.start_or_reuse("livebook-mcp-agent", fn ->
-    LivebookDemo.MCP.Agent.start_link(id: "livebook-mcp-agent")
-  end)
+mcp_session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.MCP.Agent,
+    id: "livebook-mcp"
+  )
 
 Jidoka.Kino.chat("MCP-aware chat", fn ->
-  LivebookDemo.MCP.Agent.chat(pid, "Explain MCP sync in one sentence.")
+  Jidoka.chat(mcp_session, "Explain MCP sync in one sentence.")
 end)
 ```

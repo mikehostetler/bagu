@@ -3,7 +3,7 @@ defmodule Jidoka do
   Minimal runtime facade for starting and discovering Jidoka agents.
   """
 
-  alias Jidoka.ImportedAgent
+  alias Jidoka.{ImportedAgent, Session}
 
   @doc """
   Returns Jidoka-owned model aliases from application config.
@@ -123,12 +123,12 @@ defmodule Jidoka do
 
   Accepts a PID, server reference, or Jidoka agent ID string.
   """
-  @spec chat(pid() | atom() | {:via, module(), term()} | String.t(), String.t(), keyword()) ::
+  @spec chat(Session.t() | pid() | atom() | {:via, module(), term()} | String.t(), String.t(), keyword()) ::
           {:ok, term()} | {:error, term()} | {:interrupt, Jidoka.Interrupt.t()} | {:handoff, Jidoka.Handoff.t()}
   defdelegate chat(server_or_id, message, opts \\ []), to: Jidoka.Chat
 
   @doc false
-  @spec start_chat_request(pid() | atom() | {:via, module(), term()} | String.t(), String.t(), keyword()) ::
+  @spec start_chat_request(Session.t() | pid() | atom() | {:via, module(), term()} | String.t(), String.t(), keyword()) ::
           {:ok, Jido.AI.Request.Handle.t()} | {:error, term()}
   defdelegate start_chat_request(server_or_id, message, opts \\ []), to: Jidoka.Chat
 
@@ -182,13 +182,15 @@ defmodule Jidoka do
   @doc """
   Returns the current handoff owner for a conversation, if any.
   """
-  @spec handoff_owner(String.t()) :: map() | nil
+  @spec handoff_owner(Session.t() | String.t()) :: map() | nil
+  def handoff_owner(%Session{} = session), do: Session.handoff_owner(session)
   def handoff_owner(conversation_id), do: Jidoka.Handoff.Registry.owner(conversation_id)
 
   @doc """
   Clears the current handoff owner for a conversation.
   """
-  @spec reset_handoff(String.t()) :: :ok
+  @spec reset_handoff(Session.t() | String.t()) :: :ok
+  def reset_handoff(%Session{} = session), do: Session.reset_handoff(session)
   def reset_handoff(conversation_id), do: Jidoka.Handoff.Registry.reset(conversation_id)
 
   @doc """
@@ -214,29 +216,33 @@ defmodule Jidoka do
   @doc """
   Returns a summary for the latest request on a running Jidoka agent.
   """
-  @spec inspect_request(pid() | String.t() | Jido.Agent.t()) ::
+  @spec inspect_request(Session.t() | pid() | String.t() | Jido.Agent.t()) ::
           {:ok, map()} | {:error, term()}
+  def inspect_request(%Session{} = session), do: Jidoka.Inspection.inspect_request(session)
   def inspect_request(target), do: Jidoka.Inspection.inspect_request(target)
 
   @doc """
   Returns a summary for a specific request on an agent.
   """
-  @spec inspect_request(pid() | String.t() | Jido.Agent.t(), String.t()) ::
+  @spec inspect_request(Session.t() | pid() | String.t() | Jido.Agent.t(), String.t()) ::
           {:ok, map()} | {:error, term()}
+  def inspect_request(%Session{} = session, request_id), do: Jidoka.Inspection.inspect_request(session, request_id)
   def inspect_request(target, request_id), do: Jidoka.Inspection.inspect_request(target, request_id)
 
   @doc """
   Returns the latest structured runtime trace for a running Jidoka agent.
   """
-  @spec inspect_trace(pid() | String.t() | Jido.Agent.t()) ::
+  @spec inspect_trace(Session.t() | pid() | String.t() | Jido.Agent.t()) ::
           {:ok, Jidoka.Trace.t()} | {:error, term()}
+  def inspect_trace(%Session{} = session), do: Session.trace(session)
   def inspect_trace(target), do: Jidoka.Trace.latest(target)
 
   @doc """
   Returns the structured runtime trace for a specific request.
   """
-  @spec inspect_trace(pid() | String.t() | Jido.Agent.t(), String.t()) ::
+  @spec inspect_trace(Session.t() | pid() | String.t() | Jido.Agent.t(), String.t()) ::
           {:ok, Jidoka.Trace.t()} | {:error, term()}
+  def inspect_trace(%Session{} = session, request_id), do: Jidoka.Trace.for_request(session.agent_id, request_id)
   def inspect_trace(target, request_id), do: Jidoka.Trace.for_request(target, request_id)
 
   @doc false

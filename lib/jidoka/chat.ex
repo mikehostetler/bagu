@@ -3,17 +3,42 @@ defmodule Jidoka.Chat do
 
   alias Jido.AI.Request
 
-  @spec chat(pid() | atom() | {:via, module(), term()} | String.t(), String.t(), keyword()) ::
+  @spec chat(Jidoka.Session.t() | pid() | atom() | {:via, module(), term()} | String.t(), String.t(), keyword()) ::
           {:ok, term()} | {:error, term()} | {:interrupt, Jidoka.Interrupt.t()} | {:handoff, Jidoka.Handoff.t()}
-  def chat(server_or_id, message, opts \\ []) when is_binary(message) do
+  def chat(server_or_id, message, opts \\ [])
+
+  def chat(%Jidoka.Session{} = session, message, opts) when is_binary(message) and is_list(opts) do
+    with {:ok, request} <- start_chat_request(session, message, opts) do
+      await_chat_request(request, opts)
+    end
+  end
+
+  def chat(server_or_id, message, opts) when is_binary(message) do
     with {:ok, request} <- start_chat_request(server_or_id, message, opts) do
       await_chat_request(request, opts)
     end
   end
 
-  @spec start_chat_request(pid() | atom() | {:via, module(), term()} | String.t(), String.t(), keyword()) ::
+  @spec start_chat_request(
+          Jidoka.Session.t() | pid() | atom() | {:via, module(), term()} | String.t(),
+          String.t(),
+          keyword()
+        ) ::
           {:ok, Request.Handle.t()} | {:error, term()}
-  def start_chat_request(server_or_id, message, opts \\ []) when is_binary(message) and is_list(opts) do
+  def start_chat_request(server_or_id, message, opts \\ [])
+
+  def start_chat_request(%Jidoka.Session{} = session, message, opts)
+      when is_binary(message) and is_list(opts) do
+    case Jidoka.Session.start_agent(session) do
+      {:ok, pid} ->
+        start_chat_request(pid, message, Jidoka.Session.chat_opts(session, opts))
+
+      {:error, reason} ->
+        normalize_start_chat_result({:error, reason}, session.agent_id, opts)
+    end
+  end
+
+  def start_chat_request(server_or_id, message, opts) when is_binary(message) and is_list(opts) do
     result =
       with :ok <- validate_conversation_opt(opts),
            {:ok, target} <- route_conversation_owner(server_or_id, opts),

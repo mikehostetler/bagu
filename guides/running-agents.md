@@ -126,24 +126,27 @@ Use this when the agent does not need conversation memory or state between calls
 
 ## Session-Scoped
 
-Session-scoped agents work well for chat UIs. Derive ids from server-side session
+Session-scoped agents work well for chat UIs and support conversations. Use
+`Jidoka.Session` to keep the conversation id, runtime agent id, and trusted
+runtime context in one plain descriptor. Derive the session id from server-side
 data, not from untrusted browser params.
 
 ```elixir
-conversation_id = Jidoka.AgentView.normalize_id(session["conversation_id"], "support")
-agent_id = "support-liveview-#{conversation_id}"
-
-{:ok, pid} = MyApp.SupportAgent.start_link(id: agent_id)
+session =
+  Jidoka.Session.new!(
+    agent: MyApp.SupportAgent,
+    id: session["conversation_id"],
+    context: %{actor: current_user}
+  )
 
 {:ok, reply} =
-  MyApp.SupportAgent.chat(pid, message,
-    conversation: conversation_id,
-    context: %{session: conversation_id, actor: current_user}
-  )
+  Jidoka.chat(session, message)
 ```
 
-For UI-facing chat, prefer an `AgentView` adapter so this identity and context
-logic is in one module. See [AgentView](agent-view.html).
+The session is not a process or database record. It is an addressing model over
+the running Jido agent process and its `Jido.Thread`. For UI-facing chat, pair a
+session with `AgentView` so projected messages and async turn state have one
+surface-neutral shape. See [Sessions](sessions.html) and [AgentView](agent-view.html).
 
 ## App-Scoped
 

@@ -17,6 +17,10 @@ defmodule JidokaTest.AgentViewContractTest do
     use Jidoka.AgentView, agent: ContractAgent
   end
 
+  defmodule SessionView do
+    use Jidoka.AgentView
+  end
+
   defmodule StartableView do
     use Jidoka.AgentView, agent: StartableAgent
   end
@@ -63,6 +67,20 @@ defmodule JidokaTest.AgentViewContractTest do
     assert DefaultView.conversation_id(input) == "case_123"
     assert DefaultView.agent_id(input) == "contract_agent-case_123"
     assert DefaultView.runtime_context(input) == %{session: "case_123"}
+  end
+
+  test "default AgentView callbacks derive from a Jidoka session" do
+    session =
+      Jidoka.Session.new!(
+        agent: ContractAgent,
+        id: "Case 123!",
+        context: %{tenant: "acme"}
+      )
+
+    assert SessionView.agent_module(session) == ContractAgent
+    assert SessionView.conversation_id(session) == "case_123"
+    assert SessionView.agent_id(session) == "contract_agent-case_123"
+    assert SessionView.runtime_context(session) == %{session: "case_123", tenant: "acme"}
   end
 
   test "AgentView default helpers normalize ids and arbitrary inputs" do

@@ -71,26 +71,29 @@ supervisor. Your application chooses the lifetime: one request, one user
 session, one long-lived application worker, or one first-class Jidoka schedule.
 
 ```elixir
-{:ok, pid} = MyApp.AssistantAgent.start_link(id: "assistant-1")
+session =
+  Jidoka.Session.new!(
+    agent: MyApp.AssistantAgent,
+    id: "support-123",
+    context: %{actor: current_user}
+  )
 
 {:ok, reply} =
-  MyApp.AssistantAgent.chat(pid, "Help me triage this support ticket.",
-    conversation: "support-123",
-    context: %{session: "support-123", actor: current_user}
-  )
+  Jidoka.chat(session, "Help me triage this support ticket.")
 ```
 
-For UI-facing or session-scoped agents, use an `AgentView` adapter to keep
-conversation ids, runtime context, async turns, visible messages, and final
-result mapping in one module.
+`Jidoka.Session` is a plain descriptor for stable conversation identity and
+runtime context. It is not a process or persistence layer. For UI-facing agents,
+use an `AgentView` adapter to project visible messages, async turns, streaming
+state, and final result mapping.
 
 If you need an application-owned Jido instance instead of the shared
 `Jidoka.Runtime`, start the generated `runtime_module/0` under your own
 `use Jido, otp_app: :my_app` runtime and keep calling `Jidoka.chat/3`.
 
-See [Running Agents](guides/running-agents.md), [AgentView](guides/agent-view.md),
-[Schedules](guides/schedules.md), [Phoenix LiveView](guides/phoenix-liveview.md), and
-[Graduating To Jido](guides/graduating-to-jido.md).
+See [Running Agents](guides/running-agents.md), [Sessions](guides/sessions.md),
+[AgentView](guides/agent-view.md), [Schedules](guides/schedules.md),
+[Phoenix LiveView](guides/phoenix-liveview.md), and [Graduating To Jido](guides/graduating-to-jido.md).
 
 ## Return structured data, not just text
 
@@ -238,17 +241,18 @@ Recommended reading order:
 5. [Context](guides/context.md)
 6. [Structured Output](guides/structured-output.md)
 7. [Running Agents](guides/running-agents.md)
-8. [Schedules](guides/schedules.md)
-9. [AgentView](guides/agent-view.md)
-10. [Tools](guides/tools.md) (then see Capabilities for the rest)
-11. [Subagents](guides/subagents.md), [Workflows](guides/workflows.md), [Handoffs](guides/handoffs.md)
-12. [Memory](guides/memory.md)
-13. [Imported Agents](guides/imported-agents.md)
-14. [Errors](guides/errors.md), [Inspection](guides/inspection.md), and [Testing Agents](guides/testing-agents.md)
-15. [Examples](guides/examples.md)
-16. [Phoenix LiveView](guides/phoenix-liveview.md)
-17. [Graduating To Jido](guides/graduating-to-jido.md)
-18. [Production](guides/production.md)
+8. [Sessions](guides/sessions.md)
+9. [Schedules](guides/schedules.md)
+10. [AgentView](guides/agent-view.md)
+11. [Tools](guides/tools.md) (then see Capabilities for the rest)
+12. [Subagents](guides/subagents.md), [Workflows](guides/workflows.md), [Handoffs](guides/handoffs.md)
+13. [Memory](guides/memory.md)
+14. [Imported Agents](guides/imported-agents.md)
+15. [Errors](guides/errors.md), [Inspection](guides/inspection.md), and [Testing Agents](guides/testing-agents.md)
+16. [Examples](guides/examples.md)
+17. [Phoenix LiveView](guides/phoenix-liveview.md)
+18. [Graduating To Jido](guides/graduating-to-jido.md)
+19. [Production](guides/production.md)
 
 The full guide index is at [guides/overview.md](guides/overview.md).
 

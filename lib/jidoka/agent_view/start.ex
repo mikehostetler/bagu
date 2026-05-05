@@ -57,6 +57,10 @@ defmodule Jidoka.AgentView.Start do
     end
   end
 
+  defp start_agent_module(%Jidoka.ImportedAgent{} = agent, agent_id) do
+    Jidoka.start_agent(agent, id: agent_id)
+  end
+
   defp with_start_lock(view_module, agent_id, fun) when is_atom(view_module) and is_binary(agent_id) do
     lock_id = {{:jidoka_agent_view, view_module, agent_id}, self()}
 

@@ -10,7 +10,7 @@ memory is injected into the prompt or exposed as runtime context.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", branch: "main"},
     {:kino, "~> 0.19.0"}
   ],
   config: [
@@ -125,15 +125,32 @@ Jidoka.Kino.table("Retrieved memory", rows)
 Switching to `inject :instructions` would append a bounded `Relevant memory:`
 section to the system prompt instead of exposing `context.memory`.
 
+## Session Addressing
+
+Memory namespaces often come from runtime context. A `Jidoka.Session` gives the
+conversation a stable id and automatically adds `%{session: id}` to every chat
+turn.
+
+```elixir
+memory_session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.Memory.Agent,
+    id: session,
+    context: %{channel: "livebook"}
+  )
+
+Map.take(memory_session, [:id, :agent_id, :conversation_id, :context])
+```
+
 ## Optional Provider Turn
 
 ```elixir
-{:ok, pid} =
-  Jidoka.Kino.start_or_reuse("livebook-memory-agent", fn ->
-    LivebookDemo.Memory.Agent.start_link(id: "livebook-memory-agent")
+{:ok, _pid} =
+  Jidoka.Kino.start_or_reuse(memory_session.agent_id, fn ->
+    Jidoka.Session.start_agent(memory_session)
   end)
 
 Jidoka.Kino.chat("Memory chat", fn ->
-  LivebookDemo.Memory.Agent.chat(pid, "Remember that my favorite snack is almonds.", context: %{session: session})
+  Jidoka.chat(memory_session, "Remember that my favorite snack is almonds.")
 end)
 ```

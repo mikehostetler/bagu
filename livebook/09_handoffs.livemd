@@ -10,7 +10,7 @@ continue the conversation, not merely answer a subtask.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", branch: "main"},
     {:kino, "~> 0.19.0"}
   ],
   config: [
@@ -76,7 +76,13 @@ That tells the caller to stop the current turn and route the conversation to the
 new owner.
 
 ```elixir
-conversation_id = "livebook-handoff-#{System.unique_integer([:positive])}"
+handoff_session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.Handoffs.RouterAgent,
+    id: "livebook-handoff-#{System.unique_integer([:positive])}",
+    context: %{tenant: "acme"}
+  )
+
 request_id = "req-handoff-#{System.unique_integer([:positive])}"
 
 handoff_tool =
@@ -85,7 +91,7 @@ handoff_tool =
   end)
 
 context = %{
-  Jidoka.Handoff.context_key() => conversation_id,
+  Jidoka.Handoff.context_key() => handoff_session.conversation_id,
   Jidoka.Handoff.server_key() => self(),
   Jidoka.Handoff.request_id_key() => request_id,
   Jidoka.Handoff.from_agent_key() => LivebookDemo.Handoffs.RouterAgent.id(),
@@ -103,7 +109,7 @@ context = %{
     context
   )
 
-owner = Jidoka.handoff_owner(conversation_id)
+owner = Jidoka.handoff_owner(handoff_session)
 
 %{
   handoff: Map.take(handoff, [:conversation_id, :from_agent, :to_agent_id, :name, :message, :summary, :reason]),
@@ -115,24 +121,21 @@ owner = Jidoka.handoff_owner(conversation_id)
 Reset ownership when the conversation is finished or returned to the router.
 
 ```elixir
-Jidoka.reset_handoff(conversation_id)
-Jidoka.handoff_owner(conversation_id)
+Jidoka.reset_handoff(handoff_session)
+Jidoka.handoff_owner(handoff_session)
 ```
 
 ## Optional Provider Turn
 
 ```elixir
-{:ok, pid} =
-  Jidoka.Kino.start_or_reuse("livebook-handoff-router", fn ->
-    LivebookDemo.Handoffs.RouterAgent.start_link(id: "livebook-handoff-router")
-  end)
-
-Jidoka.Kino.chat("Handoff router chat", fn ->
-  LivebookDemo.Handoffs.RouterAgent.chat(
-    pid,
-    "The customer needs billing to take over this invoice conversation.",
-    conversation: "livebook-handoff-chat",
+chat_session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.Handoffs.RouterAgent,
+    id: "livebook-handoff-chat",
     context: %{tenant: "acme"}
   )
+
+Jidoka.Kino.chat("Handoff router chat", fn ->
+  Jidoka.chat(chat_session, "The customer needs billing to take over this invoice conversation.")
 end)
 ```

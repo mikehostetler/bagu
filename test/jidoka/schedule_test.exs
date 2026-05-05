@@ -1,7 +1,8 @@
 defmodule JidokaTest.ScheduleTest do
   use JidokaTest.Support.Case, async: false
 
-  alias Jidoka.Schedule
+  alias Jidoka.{Schedule, Session}
+  alias JidokaTest.ChatAgent
   alias JidokaTest.Workflow.ToolOnlyWorkflow
 
   setup do
@@ -212,5 +213,70 @@ defmodule JidokaTest.ScheduleTest do
     assert schedule.conversation == "support-digest"
     assert schedule.overlap == :skip
     assert resolved == schedule
+  end
+
+  test "runs a session target schedule through Jidoka.chat", %{manager: manager} do
+    session =
+      Session.new!(
+        agent: ChatAgent,
+        id: "scheduled-session-#{System.unique_integer([:positive, :monotonic])}",
+        context: %{tenant: "acme"}
+      )
+
+    test_pid = self()
+
+    guardrail = fn input ->
+      send(test_pid, {:scheduled_session_context, input.context})
+      {:interrupt, %{kind: :approval, message: "Scheduled stop", data: %{}}}
+    end
+
+    assert {:ok, %Schedule{} = schedule} =
+             Jidoka.schedule(session,
+               id: "session-schedule",
+               cron: "0 9 * * *",
+               prompt: "Check in.",
+               context: %{channel: "schedule"},
+               opts: [guardrails: [input: guardrail]],
+               enabled?: false,
+               manager: manager
+             )
+
+    assert schedule.target == session
+    assert schedule.agent_id == session.agent_id
+
+    try do
+      assert {:ok, run} = Jidoka.run_schedule("session-schedule", manager: manager)
+      assert run.status == :interrupted
+      assert {:interrupt, %Jidoka.Interrupt{message: "Scheduled stop"}} = run.result
+
+      assert_receive {:scheduled_session_context, %{session: session_id, tenant: "acme", channel: "schedule"}}
+
+      assert session_id == session.id
+
+      assert {:ok, [%Schedule{} = updated]} = Jidoka.list_schedules(manager: manager)
+      assert updated.last_status == :interrupted
+      assert hd(updated.history).status == :interrupted
+    after
+      case Session.whereis(session) do
+        pid when is_pid(pid) -> Jidoka.stop_agent(pid)
+        nil -> :ok
+      end
+    end
+  end
+
+  test "rejects session schedules with mismatched explicit agent ids" do
+    session = Session.new!(agent: ChatAgent, id: "scheduled-session-mismatch")
+
+    assert {:error, %Jidoka.Error.ValidationError{} = error} =
+             Schedule.new(session,
+               kind: :agent,
+               id: "bad-session-schedule",
+               cron: "0 9 * * *",
+               prompt: "Check in.",
+               agent_id: "other-agent"
+             )
+
+    assert error.field == :agent_id
+    assert error.details.reason == :session_agent_id_mismatch
   end
 end

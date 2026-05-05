@@ -39,6 +39,25 @@ Jidoka.chat(pid, prompt,
 
 When the target is an agent module, the default runtime agent id is the schedule
 id. Pass `agent_id:` when the schedule should use an existing app-scoped agent.
+When the target is a `%Jidoka.Session{}`, the schedule starts or reuses that
+session's runtime agent and merges scheduled context over the session context:
+
+```elixir
+session =
+  Jidoka.Session.new!(
+    agent: MyApp.SupportDigestAgent,
+    id: "support-digest",
+    context: %{tenant: "acme"}
+  )
+
+{:ok, _schedule} =
+  Jidoka.schedule(session,
+    id: "daily-support-digest",
+    cron: "0 9 * * *",
+    prompt: "Prepare the daily support digest.",
+    context: %{channel: "schedule"}
+  )
+```
 
 That means schedules keep the same context validation, memory, hooks,
 guardrails, structured output, handoffs, and tracing as a normal chat turn.

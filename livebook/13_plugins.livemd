@@ -10,7 +10,7 @@ important contract is simple: a plugin can publish stable action-backed tools.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", branch: "main"},
     {:kino, "~> 0.19.0"}
   ],
   config: [
@@ -85,12 +85,13 @@ multiply_tool.run(%{a: 6, b: 7}, %{})
 ## Optional Provider Turn
 
 ```elixir
-{:ok, pid} =
-  Jidoka.Kino.start_or_reuse("livebook-plugin-agent", fn ->
-    LivebookDemo.Plugins.Agent.start_link(id: "livebook-plugin-agent")
-  end)
+plugin_session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.Plugins.Agent,
+    id: "livebook-plugin"
+  )
 
 Jidoka.Kino.chat("Plugin tool chat", fn ->
-  LivebookDemo.Plugins.Agent.chat(pid, "Use plugin_multiply_numbers to multiply 6 and 7. Reply with only the product.")
+  Jidoka.chat(plugin_session, "Use plugin_multiply_numbers to multiply 6 and 7. Reply with only the product.")
 end)
 ```

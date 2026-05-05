@@ -9,7 +9,7 @@ Use hooks to shape a turn and guardrails to stop work at clear boundaries.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", branch: "main"},
     {:kino, "~> 0.19.0"}
   ],
   config: [
@@ -153,12 +153,14 @@ Jidoka.format_error(blocked_error)
 ## Optional Provider Turn
 
 ```elixir
-{:ok, pid} =
-  Jidoka.Kino.start_or_reuse("livebook-lifecycle-agent", fn ->
-    LivebookDemo.Lifecycle.Agent.start_link(id: "livebook-lifecycle-agent")
-  end)
+lifecycle_session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.Lifecycle.Agent,
+    id: "livebook-lifecycle",
+    context: %{tenant: "acme"}
+  )
 
 Jidoka.Kino.chat("Lifecycle chat", fn ->
-  LivebookDemo.Lifecycle.Agent.chat(pid, "Summarize lifecycle hooks in one sentence.", context: %{tenant: "acme"})
+  Jidoka.chat(lifecycle_session, "Summarize lifecycle hooks in one sentence.")
 end)
 ```

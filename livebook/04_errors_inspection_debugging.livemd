@@ -10,7 +10,7 @@ error, format it for a user, and capture a concise runtime trace.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", branch: "main"},
     {:kino, "~> 0.19.0"}
   ],
   config: [
@@ -84,13 +84,19 @@ Context validation happens before the provider call, so this cell runs without
 an API key.
 
 ```elixir
+diagnostic_session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.Diagnostics.Agent,
+    id: "livebook-diagnostic"
+  )
+
 {:ok, pid} =
-  Jidoka.Kino.start_or_reuse("livebook-diagnostic-agent", fn ->
-    LivebookDemo.Diagnostics.Agent.start_link(id: "livebook-diagnostic-agent")
+  Jidoka.Kino.start_or_reuse(diagnostic_session.agent_id, fn ->
+    Jidoka.Session.start_agent(diagnostic_session)
   end)
 
 {:error, error} =
-  LivebookDemo.Diagnostics.Agent.chat(pid, "Hello", context: %{tenant: 123})
+  Jidoka.chat(diagnostic_session, "Hello", context: %{tenant: 123})
 
 %{
   error_struct: error,
@@ -128,7 +134,7 @@ before calling the provider.
 
 ```elixir
 Jidoka.Kino.chat("Diagnostic chat", fn ->
-  LivebookDemo.Diagnostics.Agent.chat(pid, "Use one sentence to describe Jidoka debugging.")
+  Jidoka.chat(diagnostic_session, "Use one sentence to describe Jidoka debugging.")
 end)
 ```
 

@@ -3,7 +3,7 @@
 [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fagentjido%2Fjidoka%2Fmain%2Flivebook%2F01_hello_agent.livemd)
 
 Build the smallest useful Jidoka agent, inspect its compiled definition, and
-send it one provider-backed chat request.
+send it one provider-backed chat request through a `Jidoka.Session`.
 
 ## Setup
 
@@ -13,7 +13,7 @@ local checkout. Chat cells use a Livebook secret named `ANTHROPIC_API_KEY`.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", branch: "main"},
     {:kino, "~> 0.19.0"}
   ],
   config: [
@@ -77,17 +77,27 @@ Map.take(definition, [
 
 ## Run The Agent
 
-Start the agent and send one message. `Jidoka.Kino.chat/3` captures useful
-runtime events, renders a compact trace, and returns plain response text.
+Create a session and send one message. The session is just data: it names the
+conversation, the runtime agent id, and trusted context. `Jidoka.chat/3` starts
+or reuses the session's runtime agent.
 
 ```elixir
-{:ok, pid} =
-  Jidoka.Kino.start_or_reuse("livebook-assistant", fn ->
-    LivebookDemo.AssistantAgent.start_link(id: "livebook-assistant")
-  end)
+session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.AssistantAgent,
+    id: "livebook-assistant",
+    context: %{channel: "livebook"}
+  )
 
+Map.take(session, [:id, :agent_id, :conversation_id, :context])
+```
+
+`Jidoka.Kino.chat/3` captures useful runtime events, renders a compact trace,
+and returns plain response text.
+
+```elixir
 Jidoka.Kino.chat("Assistant chat", fn ->
-  LivebookDemo.AssistantAgent.chat(pid, "Write one sentence about what Jidoka does.")
+  Jidoka.chat(session, "Write one sentence about what Jidoka does.")
 end)
 ```
 

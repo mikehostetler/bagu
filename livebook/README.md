@@ -14,6 +14,9 @@ a fresh LiveBook session.
 - Use a single setup cell with `Mix.install/2`, `:kino`, and `:jidoka` loaded
   from GitHub with a full tested commit `ref`. Avoid `branch: "main"` in
   committed notebooks so LiveBook dependency caching stays predictable.
+- If a notebook depends on an API that has not been pinned yet, `branch: "main"`
+  is acceptable as a short-lived bridge; replace it with the landing commit ref
+  before release docs are cut.
 - Call `Jidoka.Kino.setup/1` after dependencies install, then use
   `Jidoka.Kino.start_or_reuse/2` for stable agent IDs.
 - Put deterministic inspection and direct tool/workflow calls before provider

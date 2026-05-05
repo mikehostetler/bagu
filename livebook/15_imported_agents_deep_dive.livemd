@@ -10,7 +10,7 @@ through explicit registries supplied by the application.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", branch: "main"},
     {:kino, "~> 0.19.0"}
   ],
   config: [
@@ -139,12 +139,13 @@ reason
 ## Optional Provider Turn
 
 ```elixir
-{:ok, pid} =
-  Jidoka.Kino.start_or_reuse("livebook-imported-deep-dive-agent", fn ->
-    Jidoka.start_agent(imported_agent, id: "livebook-imported-deep-dive-agent")
-  end)
+imported_session =
+  Jidoka.Session.new!(
+    agent: imported_agent,
+    id: "livebook-imported-deep-dive"
+  )
 
 Jidoka.Kino.chat("Imported deep-dive chat", fn ->
-  Jidoka.chat(pid, "Use imported_add_numbers to add 9 and 33. Reply with only the sum.")
+  Jidoka.chat(imported_session, "Use imported_add_numbers to add 9 and 33. Reply with only the sum.")
 end)
 ```

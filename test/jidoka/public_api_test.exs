@@ -15,6 +15,11 @@ defmodule JidokaTest.PublicAPITest do
     assert function_exported?(Jidoka, :list_agents, 1)
     assert function_exported?(Jidoka, :model, 1)
     assert function_exported?(Jidoka, :format_error, 1)
+
+    assert function_exported?(Jidoka.Session, :new, 1)
+    assert function_exported?(Jidoka.Session, :chat_opts, 2)
+    assert function_exported?(Jidoka.Session, :start_agent, 2)
+    assert function_exported?(Jidoka.Session, :snapshot, 2)
   end
 
   test "top-level import and inspection entrypoints are exported" do

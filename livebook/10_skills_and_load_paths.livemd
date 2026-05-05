@@ -10,7 +10,7 @@ They can be modules or runtime-loaded `SKILL.md` files.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", branch: "main"},
     {:kino, "~> 0.19.0"}
   ],
   config: [
@@ -166,12 +166,13 @@ runtime_agent = LivebookDemo.Skills.RuntimeSkillAgent.runtime_module().new(id: "
 ## Optional Provider Turn
 
 ```elixir
-{:ok, pid} =
-  Jidoka.Kino.start_or_reuse("livebook-runtime-skill-agent", fn ->
-    LivebookDemo.Skills.RuntimeSkillAgent.start_link(id: "livebook-runtime-skill-agent")
-  end)
+skill_session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.Skills.RuntimeSkillAgent,
+    id: "livebook-runtime-skill"
+  )
 
 Jidoka.Kino.chat("Runtime skill chat", fn ->
-  LivebookDemo.Skills.RuntimeSkillAgent.chat(pid, "Add 17 and 25. Reply with only the sum.")
+  Jidoka.chat(skill_session, "Add 17 and 25. Reply with only the sum.")
 end)
 ```

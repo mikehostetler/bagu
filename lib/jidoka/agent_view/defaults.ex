@@ -2,6 +2,8 @@ defmodule Jidoka.AgentView.Defaults do
   @moduledoc false
 
   @spec conversation_id(term()) :: String.t()
+  def conversation_id(%Jidoka.Session{conversation_id: conversation_id}), do: conversation_id
+
   def conversation_id(input) do
     input
     |> input_value(:conversation_id)
@@ -24,6 +26,8 @@ defmodule Jidoka.AgentView.Defaults do
   end
 
   @spec runtime_context(term(), String.t()) :: map()
+  def runtime_context(%Jidoka.Session{context: context}, _conversation_id), do: context
+
   def runtime_context(_input, conversation_id), do: %{session: conversation_id}
 
   @spec normalize_id(term(), String.t()) :: String.t()

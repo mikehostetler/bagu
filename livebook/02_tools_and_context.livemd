@@ -13,7 +13,7 @@ cell runs without a provider key.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", branch: "main"},
     {:kino, "~> 0.19.0"}
   ],
   config: [
@@ -101,17 +101,15 @@ Inspect the agent's context defaults and published tool names:
 ## Run A Tool Call
 
 ```elixir
-{:ok, pid} =
-  Jidoka.Kino.start_or_reuse("livebook-math-agent", fn ->
-    LivebookDemo.MathAgent.start_link(id: "livebook-math-agent")
-  end)
+session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.MathAgent,
+    id: "livebook-math",
+    context: %{tenant: "demo"}
+  )
 
 Jidoka.Kino.chat("Tool call", fn ->
-  LivebookDemo.MathAgent.chat(
-    pid,
-    "Use the add_numbers tool to add 20 and 22. Reply with only the sum.",
-    context: %{session: "livebook"}
-  )
+  Jidoka.chat(session, "Use the add_numbers tool to add 20 and 22. Reply with only the sum.")
 end)
 ```
 

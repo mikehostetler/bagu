@@ -10,7 +10,7 @@ runtime start, context validation, guardrails, and inspection.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", branch: "main"},
     {:kino, "~> 0.19.0"}
   ],
   config: [
@@ -73,13 +73,20 @@ provider_status =
     {:error, message} -> "missing: #{message}"
   end
 
+production_session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.Production.Agent,
+    id: "livebook-production",
+    context: %{tenant: "demo", actor: %{id: "user-1"}}
+  )
+
 {:ok, pid} =
-  Jidoka.Kino.start_or_reuse("livebook-production-agent", fn ->
-    LivebookDemo.Production.Agent.start_link(id: "livebook-production-agent")
+  Jidoka.Kino.start_or_reuse(production_session.agent_id, fn ->
+    Jidoka.Session.start_agent(production_session)
   end)
 
 {:error, context_error} =
-  LivebookDemo.Production.Agent.chat(pid, "Hello", context: %{tenant: 123, actor: %{id: "user-1"}})
+  Jidoka.chat(production_session, "Hello", context: %{tenant: 123})
 
 runtime = LivebookDemo.Production.Agent.runtime_module()
 agent = runtime.new(id: "livebook-production-runtime")
@@ -101,7 +108,7 @@ agent = runtime.new(id: "livebook-production-runtime")
 
 checks = [
   %{area: "provider", status: provider_status},
-  %{area: "runtime", status: if(Jidoka.whereis("livebook-production-agent") == pid, do: "running", else: "missing")},
+  %{area: "runtime", status: if(Jidoka.whereis(production_session.agent_id) == pid, do: "running", else: "missing")},
   %{area: "context schema", status: Jidoka.format_error(context_error)},
   %{area: "input guardrail", status: Jidoka.format_error(guardrail_error)},
   %{area: "inspection", status: "agent #{inspection.id} exposes #{length(inspection.definition.tool_names)} tools"}
@@ -125,10 +132,6 @@ Before moving an agent into production, make these decisions outside the model:
 
 ```elixir
 Jidoka.Kino.chat("Production checklist chat", fn ->
-  LivebookDemo.Production.Agent.chat(
-    pid,
-    "Give one concise production-readiness reminder.",
-    context: %{tenant: "demo", actor: %{id: "user-1"}}
-  )
+  Jidoka.chat(production_session, "Give one concise production-readiness reminder.")
 end)
 ```

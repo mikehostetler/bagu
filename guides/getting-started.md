@@ -97,6 +97,20 @@ Or use the top-level facade:
 {:ok, reply} = Jidoka.chat(pid, "Write one sentence about Elixir.")
 ```
 
+For a named multi-turn conversation, create a session descriptor and keep using
+the same `Jidoka.chat/3` API:
+
+```elixir
+session =
+  Jidoka.Session.new!(
+    agent: MyApp.AssistantAgent,
+    id: "onboarding-chat",
+    context: %{channel: "docs"}
+  )
+
+{:ok, reply} = Jidoka.chat(session, "Remember that I am evaluating Jidoka.")
+```
+
 You can also start by runtime module:
 
 ```elixir

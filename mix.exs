@@ -171,6 +171,7 @@ defmodule Jidoka.MixProject do
         ],
         "Runtime Integration": [
           "guides/running-agents.md",
+          "guides/sessions.md",
           "guides/schedules.md",
           "guides/agent-view.md",
           "guides/phoenix-liveview.md",
@@ -230,6 +231,7 @@ defmodule Jidoka.MixProject do
         ],
         Runtime: [
           Jidoka,
+          Jidoka.Session,
           Jidoka.Kino,
           Jidoka.Runtime,
           Jidoka.Schedule,
@@ -271,6 +273,7 @@ defmodule Jidoka.MixProject do
       "guides/chat-turn.md",
       # Runtime integration
       "guides/running-agents.md",
+      "guides/sessions.md",
       "guides/schedules.md",
       "guides/agent-view.md",
       "guides/phoenix-liveview.md",

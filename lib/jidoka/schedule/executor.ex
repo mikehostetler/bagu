@@ -58,6 +58,14 @@ defmodule Jidoka.Schedule.Executor do
     run
   end
 
+  defp dispatch(%Schedule{kind: :agent, target: %Jidoka.Session{} = session} = schedule, request_id) do
+    with {:ok, prompt} <- resolve_prompt(schedule.prompt),
+         {:ok, context} <- resolve_payload(schedule.context, :context) do
+      chat_opts = chat_opts(schedule, context, request_id)
+      Jidoka.chat(session, prompt, chat_opts)
+    end
+  end
+
   defp dispatch(%Schedule{kind: :agent} = schedule, request_id) do
     with {:ok, prompt} <- resolve_prompt(schedule.prompt),
          {:ok, context} <- resolve_payload(schedule.context, :context),
@@ -152,6 +160,10 @@ defmodule Jidoka.Schedule.Executor do
       nil ->
         start_agent(runtime, module, agent_id, schedule.start_opts)
     end
+  end
+
+  defp resolve_agent(%Schedule{target: %Jidoka.Session{} = session}) do
+    Jidoka.Session.start_agent(session)
   end
 
   defp resolve_agent(%Schedule{target: target}) do
@@ -276,6 +288,7 @@ defmodule Jidoka.Schedule.Executor do
   end
 
   defp schedule_id_for_trace(%Schedule{target: target}) when is_binary(target), do: target
+  defp schedule_id_for_trace(%Schedule{target: %Jidoka.Session{} = session}), do: session.agent_id
   defp schedule_id_for_trace(%Schedule{kind: :workflow, target: target}) when is_atom(target), do: module_id(target)
   defp schedule_id_for_trace(%Schedule{kind: :agent, id: id, target: target}) when is_atom(target), do: id
   defp schedule_id_for_trace(%Schedule{id: id}), do: id

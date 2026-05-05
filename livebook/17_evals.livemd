@@ -10,7 +10,7 @@ that truly requires language judgment.
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", branch: "main"},
     {:kino, "~> 0.19.0"}
   ],
   config: [
@@ -149,12 +149,13 @@ Jidoka.format_error(guardrail_error)
 Run this only when you want a provider-backed sanity check.
 
 ```elixir
-{:ok, pid} =
-  Jidoka.Kino.start_or_reuse("livebook-eval-agent", fn ->
-    LivebookDemo.Evals.Agent.start_link(id: "livebook-eval-agent")
-  end)
+eval_session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.Evals.Agent,
+    id: "livebook-eval"
+  )
 
 Jidoka.Kino.chat("Live eval sample", fn ->
-  LivebookDemo.Evals.Agent.chat(pid, "Use eval_add_numbers to add 20 and 22. Reply with only the sum.")
+  Jidoka.chat(eval_session, "Use eval_add_numbers to add 20 and 22. Reply with only the sum.")
 end)
 ```

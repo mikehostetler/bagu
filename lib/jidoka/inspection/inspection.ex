@@ -2,6 +2,7 @@ defmodule Jidoka.Inspection do
   @moduledoc false
 
   alias Jido.AI.Request
+  alias Jidoka.Session
 
   @type agent_definition :: map()
   @type running_agent_summary :: %{
@@ -65,14 +66,46 @@ defmodule Jidoka.Inspection do
   @spec inspect_workflow(module()) :: {:ok, map()} | {:error, term()}
   def inspect_workflow(module) when is_atom(module), do: Jidoka.Workflow.inspect_workflow(module)
 
-  @spec inspect_request(pid() | String.t() | Jido.Agent.t()) ::
+  @spec inspect_request(Session.t() | pid() | String.t() | Jido.Agent.t()) ::
           {:ok, Jidoka.Debug.summary()} | {:error, term()}
+  def inspect_request(%Session{} = session) do
+    case Session.whereis(session) do
+      pid when is_pid(pid) -> Jidoka.Debug.request_summary(pid)
+      nil -> {:error, session_not_running_error(session)}
+    end
+  end
+
   def inspect_request(server_or_agent), do: Jidoka.Debug.request_summary(server_or_agent)
 
-  @spec inspect_request(pid() | String.t() | Jido.Agent.t(), String.t()) ::
+  @spec inspect_request(Session.t() | pid() | String.t() | Jido.Agent.t(), String.t()) ::
           {:ok, Jidoka.Debug.summary()} | {:error, term()}
+  def inspect_request(%Session{} = session, request_id) do
+    case Session.whereis(session) do
+      pid when is_pid(pid) -> request_summary_for_server(pid, request_id)
+      nil -> {:error, session_not_running_error(session)}
+    end
+  end
+
   def inspect_request(server_or_agent, request_id),
     do: Jidoka.Debug.request_summary(server_or_agent, request_id)
+
+  defp session_not_running_error(%Session{} = session) do
+    Jidoka.Error.validation_error("Session agent is not running.",
+      field: :session,
+      value: session.id,
+      details: %{reason: :session_agent_not_running, agent_id: session.agent_id}
+    )
+  end
+
+  defp request_summary_for_server(pid, request_id) when is_pid(pid) and is_binary(request_id) do
+    case Jido.AgentServer.state(pid) do
+      {:ok, %{agent: %Jido.Agent{} = agent}} ->
+        Jidoka.Debug.request_summary(agent, request_id)
+
+      {:error, reason} ->
+        {:error, Jidoka.Error.Normalize.debug_error(reason, target: pid)}
+    end
+  end
 
   defp request_count(%{state: %{requests: requests}}) when is_map(requests),
     do: map_size(requests)

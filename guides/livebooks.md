@@ -19,11 +19,11 @@ Prerequisites:
 - Provider key: most chat cells expect a Livebook secret named
   `ANTHROPIC_API_KEY`. Cells that need a secret fall back to a friendly
   missing-secret message instead of crashing.
-- No local checkout required. Each notebook installs Jidoka from GitHub at a
-  pinned commit `ref`.
+- No local checkout required. Each notebook installs Jidoka from GitHub, usually
+  at a pinned commit `ref`.
 
 Every notebook starts with the same shape: a `Mix.install/2` cell that loads
-`:jidoka` (from GitHub at a tested commit) and `:kino`, followed by a
+`:jidoka` from GitHub and `:kino`, followed by a
 `Jidoka.Kino.setup()` cell. After that, agent definition and chat cells use
 the public facade (`Jidoka.chat/3`, `Jidoka.format_error/1`, and friends).
 
@@ -68,6 +68,10 @@ Reading order, grouped by guide tier:
 - Workflow patterns: `16`.
 - Operations and capstone: `17`, `18`, `19`, `20`.
 - Structured output: `21`.
+
+Session addressing is woven into the notebooks that need stable conversation
+identity: tools/context, memory, handoffs, AgentView/Phoenix, production, and
+the kitchen-sink capstone.
 
 ## Kino helpers
 

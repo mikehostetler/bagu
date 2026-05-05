@@ -54,7 +54,7 @@ defmodule Jidoka.AgentView do
             metadata: %{}
 
   @callback prepare(input()) :: :ok | {:error, term()}
-  @callback agent_module(input()) :: module()
+  @callback agent_module(input()) :: module() | Jidoka.ImportedAgent.t()
   @callback conversation_id(input()) :: String.t()
   @callback agent_id(input()) :: String.t()
   @callback runtime_context(input()) :: map()
@@ -76,12 +76,18 @@ defmodule Jidoka.AgentView do
 
       @doc false
       @impl Jidoka.AgentView
-      @spec agent_module(Jidoka.AgentView.input()) :: module()
-      def agent_module(_input) do
+      @spec agent_module(Jidoka.AgentView.input()) :: module() | Jidoka.ImportedAgent.t()
+      def agent_module(input) do
         case @jidoka_agent_view_agent do
           nil ->
-            raise ArgumentError,
-                  "#{inspect(__MODULE__)} must pass `agent:` to `use Jidoka.AgentView` or override agent_module/1"
+            case Jidoka.AgentView.default_agent_module(input) do
+              nil ->
+                raise ArgumentError,
+                      "#{inspect(__MODULE__)} must pass `agent:` to `use Jidoka.AgentView`, pass a %Jidoka.Session{} input, or override agent_module/1"
+
+              agent ->
+                agent
+            end
 
           module ->
             module
@@ -96,11 +102,15 @@ defmodule Jidoka.AgentView do
       @doc false
       @impl Jidoka.AgentView
       @spec agent_id(Jidoka.AgentView.input()) :: String.t()
+      def agent_id(%Jidoka.Session{} = session), do: session.agent_id
+
       def agent_id(input), do: Jidoka.AgentView.default_agent_id(agent_module(input), conversation_id(input))
 
       @doc false
       @impl Jidoka.AgentView
       @spec runtime_context(Jidoka.AgentView.input()) :: map()
+      def runtime_context(%Jidoka.Session{} = session), do: session.context
+
       def runtime_context(input), do: Jidoka.AgentView.default_runtime_context(input, conversation_id(input))
 
       @doc false
@@ -381,6 +391,13 @@ defmodule Jidoka.AgentView do
   def request_id do
     "agent-view-" <> Integer.to_string(System.unique_integer([:positive, :monotonic]))
   end
+
+  @doc """
+  Default agent module derivation for session inputs.
+  """
+  @spec default_agent_module(input()) :: Jidoka.Session.agent() | nil
+  def default_agent_module(%Jidoka.Session{agent: agent}), do: agent
+  def default_agent_module(_input), do: nil
 
   @doc """
   Default conversation id derivation for map, keyword, or arbitrary input.

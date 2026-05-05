@@ -43,6 +43,21 @@ Jidoka.chat(router_pid, "What is the next billing step?",
 )
 ```
 
+If your application uses `Jidoka.Session`, the session conversation id is used
+for the same routing:
+
+```elixir
+session =
+  Jidoka.Session.new!(
+    agent: MyApp.SupportRouterAgent,
+    id: "support-123",
+    context: %{tenant: "acme", account_id: "acct_123"}
+  )
+
+Jidoka.chat(session, "What is the next billing step?")
+Jidoka.handoff_owner(session)
+```
+
 ## Capability Options
 
 The `handoff` capability accepts:

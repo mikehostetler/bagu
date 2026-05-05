@@ -1,13 +1,11 @@
 # Jidoka: Kitchen Sink
 
-## Section
-
 [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fagentjido%2Fjidoka%2Fmain%2Flivebook%2F20_kitchen_sink.livemd)
 
 Build one advanced support router that composes the main Jidoka primitives:
 context, dynamic instructions, characters, tools, plugins, Ash resources, MCP,
 web tools, skills, hooks, guardrails, memory, workflows, subagents, handoffs,
-imports, AgentView, eval checks, and optional provider-backed chat.
+imports, sessions, AgentView, eval checks, and optional provider-backed chat.
 
 This is a capstone notebook. Start with the focused notebooks first if you are
 new to Jidoka.
@@ -831,46 +829,31 @@ imported_spec = %{
 }
 ```
 
-## Chapter 13: AgentView And Eval Checks
+## Chapter 13: Sessions, AgentView And Eval Checks
 
+`Jidoka.Session` names the conversation, runtime agent id, and trusted context.
 `Jidoka.AgentView` is the application boundary for UI surfaces. It is not a
-Phoenix component; it projects runtime state into data a UI can render.
+Phoenix component; it projects the session's runtime state into data a UI can
+render.
 
 ```elixir
 defmodule LivebookDemo.KitchenSink.SupportView do
-  use Jidoka.AgentView,
-    agent: LivebookDemo.KitchenSink.Agent
-
-  @impl true
-  def conversation_id(session) do
-    session
-    |> Map.get("conversation_id", "kitchen-sink")
-    |> Jidoka.AgentView.normalize_id("kitchen-sink")
-  end
-
-  @impl true
-  def agent_id(session), do: "livebook-kitchen-view-#{conversation_id(session)}"
-
-  @impl true
-  def runtime_context(session) do
-    %{
-      tenant: Map.get(session, "tenant", "acme"),
-      channel: "livebook",
-      session: conversation_id(session),
-      account_tier: Map.get(session, "account_tier", "enterprise"),
-      actor: %{id: Map.get(session, "actor_id", "agent-dev")}
-    }
-  end
+  use Jidoka.AgentView
 end
 ```
 
 ```elixir
-view_session = %{
-  "conversation_id" => "kitchen-capstone",
-  "tenant" => "acme",
-  "actor_id" => "agent-dev",
-  "account_tier" => "enterprise"
-}
+view_session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.KitchenSink.Agent,
+    id: "kitchen-capstone",
+    context: %{
+      tenant: "acme",
+      channel: "livebook",
+      account_tier: "enterprise",
+      actor: %{id: "agent-dev"}
+    }
+  )
 
 {:ok, view_pid} = LivebookDemo.KitchenSink.SupportView.start_agent(view_session)
 {:ok, view} = LivebookDemo.KitchenSink.SupportView.snapshot(view_pid, view_session)
@@ -952,19 +935,25 @@ tool, workflow, subagent, handoff, guardrail, memory, and MCP events. Without
 ```elixir
 Application.put_env(:jidoka, :mcp_sync_module, LivebookDemo.KitchenSink.FakeMCPSync)
 
-{:ok, pid} =
-  Jidoka.Kino.start_or_reuse("livebook-kitchen-sink-agent", fn ->
-    LivebookDemo.KitchenSink.Agent.start_link(id: "livebook-kitchen-sink-agent")
-  end)
-
 runtime_context = %{
   tenant: "acme",
   channel: "livebook",
-  session: "kitchen-sink-provider",
   account_tier: "enterprise",
   actor: %{id: "agent-dev"},
   notify_pid: self()
 }
+
+provider_session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.KitchenSink.Agent,
+    id: "kitchen_sink_provider",
+    context: runtime_context
+  )
+
+{:ok, pid} =
+  Jidoka.Kino.start_or_reuse(provider_session.agent_id, fn ->
+    Jidoka.Session.start_agent(provider_session)
+  end)
 
 chat_prompts = %{
   workflow:
@@ -981,20 +970,15 @@ result =
   Jidoka.Kino.chat(
     "Kitchen-sink support router",
     fn ->
-      LivebookDemo.KitchenSink.Agent.chat(
-        pid,
-        prompt,
-        conversation: "kitchen-sink-provider",
-        context: runtime_context
-      )
+      Jidoka.chat(provider_session, prompt)
     end,
     num_rows: 40
   )
 
-Jidoka.Kino.context("Provider runtime context", runtime_context)
+Jidoka.Kino.context("Provider runtime context", provider_session.context)
 Jidoka.Kino.debug_agent(pid)
 
-case Jidoka.inspect_trace(pid) do
+case Jidoka.inspect_trace(provider_session) do
   {:ok, trace} ->
     Jidoka.Kino.timeline(trace)
     Jidoka.Kino.call_graph(trace)
@@ -1012,7 +996,7 @@ To intentionally test ownership transfer, switch the prompt above to
 summary}` and should no longer show as an unformatted Livebook error.
 
 ```elixir
-case Jidoka.handoff_owner("kitchen-sink-provider") do
+case Jidoka.handoff_owner(provider_session) do
   nil ->
     %{handoff_owner: :none}
 
@@ -1022,7 +1006,7 @@ end
 ```
 
 ```elixir
-Jidoka.reset_handoff("kitchen-sink-provider")
+Jidoka.reset_handoff(provider_session)
 ```
 
 ## What To Look For
@@ -1036,5 +1020,3 @@ The advanced story is not "turn everything on." It is:
 * AgentView as the UI boundary
 * Kino helpers for trace output, context inspection, diagrams, and request debug summaries
 * eval checks and pre-flight tables before provider-backed behavior
-
-<!-- livebook:{"offset":29520,"stamp":{"token":"XCP.gu0UmkB8S6fuRyUmgngwiSZuE7-yNl02iAuDUkw_QYbxqSHdUAcU9Se6DpUcKTrc1aBqTsK-sMRaYpZw3g2XLNThMaB-phCuFbiCCPw6vVL_UHpiT07099fFkVY","version":2}} -->

@@ -10,6 +10,10 @@ If `Jidoka.chat/3` is enough for your caller, use it directly. Reach for
 `AgentView` when the caller needs projected messages, async turns, streaming
 drafts, or a stable application-facing shape.
 
+When your surface already has a `%Jidoka.Session{}`, AgentView can use it
+directly. Session inputs provide the agent, conversation id, runtime agent id,
+and runtime context defaults without adding a separate session process.
+
 ## Two Projection Layers
 
 Jidoka exposes two layers:
@@ -41,6 +45,21 @@ defmodule MyAppWeb.SupportChatAgentView do
   use Jidoka.AgentView,
     agent: MyApp.SupportAgent
 end
+```
+
+If the caller passes a `%Jidoka.Session{}`, the adapter can be even smaller:
+
+```elixir
+defmodule MyAppWeb.SupportChatAgentView do
+  use Jidoka.AgentView
+end
+
+session =
+  Jidoka.Session.new!(
+    agent: MyApp.SupportAgent,
+    id: "support-123",
+    context: %{actor: current_user}
+  )
 ```
 
 Most applications should override the identity and context callbacks:

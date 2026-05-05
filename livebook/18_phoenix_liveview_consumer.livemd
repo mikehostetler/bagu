@@ -2,16 +2,17 @@
 
 [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fraw.githubusercontent.com%2Fagentjido%2Fjidoka%2Fmain%2Flivebook%2F18_phoenix_liveview_consumer.livemd)
 
-Jidoka does not need to render Phoenix components. The reusable boundary is an
-`AgentView`: it chooses the agent, conversation id, runtime context, and
-projection shape that a LiveView can render.
+Jidoka does not need to render Phoenix components. The reusable boundary is a
+`Jidoka.Session` plus an `AgentView`: the session names the conversation and
+runtime context, while AgentView projects the runtime state a LiveView can
+render.
 
 ## Setup
 
 ```elixir
 Mix.install(
   [
-    {:jidoka, git: "https://github.com/agentjido/jidoka.git", ref: "924a486f3c1b7e7a943cb3d5ceee0de65f158467"},
+    {:jidoka, git: "https://github.com/agentjido/jidoka.git", branch: "main"},
     {:kino, "~> 0.19.0"}
   ],
   config: [
@@ -48,34 +49,19 @@ defmodule LivebookDemo.AgentView.SupportAgent do
 end
 
 defmodule LivebookDemo.AgentView.SupportView do
-  use Jidoka.AgentView,
-    agent: LivebookDemo.AgentView.SupportAgent
-
-  @impl true
-  def conversation_id(session) do
-    session
-    |> Map.get("conversation_id", "demo")
-    |> Jidoka.AgentView.normalize_id("demo")
-  end
-
-  @impl true
-  def agent_id(session), do: "livebook-agent-view-#{conversation_id(session)}"
-
-  @impl true
-  def runtime_context(session) do
-    %{
-      channel: "livebook",
-      session: conversation_id(session),
-      actor: %{id: Map.get(session, "actor_id", "demo-user")}
-    }
-  end
+  use Jidoka.AgentView
 end
 ```
 
 ## Project Runtime State
 
 ```elixir
-session = %{"conversation_id" => "onboarding-demo", "actor_id" => "user-1"}
+session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.AgentView.SupportAgent,
+    id: "onboarding-demo",
+    context: %{channel: "livebook", actor: %{id: "user-1"}}
+  )
 
 {:ok, pid} = LivebookDemo.AgentView.SupportView.start_agent(session)
 {:ok, view} = LivebookDemo.AgentView.SupportView.snapshot(pid, session)
@@ -112,10 +98,6 @@ projection
 
 ```elixir
 Jidoka.Kino.chat("AgentView-backed chat", fn ->
-  LivebookDemo.AgentView.SupportAgent.chat(
-    pid,
-    "Explain the AgentView boundary in one sentence.",
-    context: LivebookDemo.AgentView.SupportView.runtime_context(session)
-  )
+  Jidoka.chat(session, "Explain the AgentView boundary in one sentence.")
 end)
 ```

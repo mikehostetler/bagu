@@ -156,25 +156,19 @@ returns a parsed map. Use `output: :raw` when you want to inspect the unparsed
 assistant answer during debugging.
 
 ```elixir
-{:ok, pid} =
-  Jidoka.Kino.start_or_reuse("livebook-ticket-classifier", fn ->
-    LivebookDemo.StructuredOutput.TicketClassifier.start_link(id: "livebook-ticket-classifier")
-  end)
+classifier_session =
+  Jidoka.Session.new!(
+    agent: LivebookDemo.StructuredOutput.TicketClassifier,
+    id: "livebook-ticket-classifier"
+  )
 
 Jidoka.Kino.chat("Structured classifier chat", fn ->
-  LivebookDemo.StructuredOutput.TicketClassifier.chat(
-    pid,
-    "I was double charged for my last invoice and need help."
-  )
+  Jidoka.chat(classifier_session, "I was double charged for my last invoice and need help.")
 end)
 ```
 
 ```elixir
 Jidoka.Kino.chat("Raw classifier answer", fn ->
-  LivebookDemo.StructuredOutput.TicketClassifier.chat(
-    pid,
-    "I cannot reset my password.",
-    output: :raw
-  )
+  Jidoka.chat(classifier_session, "I cannot reset my password.", output: :raw)
 end)
 ```

@@ -20,7 +20,7 @@ defmodule Jidoka.Schedule do
 
   @type callback :: (-> term()) | {module(), atom(), [term()]}
   @type resolvable(term_type) :: term_type | callback()
-  @type target :: pid() | String.t() | module()
+  @type target :: pid() | String.t() | module() | Jidoka.Session.t()
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -95,7 +95,7 @@ defmodule Jidoka.Schedule do
          {:ok, enabled?} <-
            normalize_boolean(Keyword.get(opts, :enabled?, Keyword.get(opts, :enabled, true)), :enabled?),
          {:ok, timeout} <- normalize_timeout(Keyword.get(opts, :timeout, @default_timeout)),
-         {:ok, agent_id} <- normalize_optional_id(Keyword.get(opts, :agent_id)),
+         {:ok, agent_id} <- normalize_schedule_agent_id(target, Keyword.get(opts, :agent_id)),
          {:ok, conversation} <- normalize_optional_string(Keyword.get(opts, :conversation), :conversation),
          {:ok, prompt} <- normalize_prompt(kind, Keyword.get(opts, :prompt)),
          {:ok, input} <- normalize_input(kind, Keyword.get(opts, :input)),
@@ -187,6 +187,25 @@ defmodule Jidoka.Schedule do
 
   defp normalize_optional_id(nil), do: {:ok, nil}
   defp normalize_optional_id(value), do: normalize_required_string(value, :agent_id)
+
+  defp normalize_schedule_agent_id(%Jidoka.Session{agent_id: agent_id}, nil), do: {:ok, agent_id}
+
+  defp normalize_schedule_agent_id(%Jidoka.Session{agent_id: agent_id}, value) do
+    with {:ok, explicit_agent_id} <- normalize_optional_id(value) do
+      if explicit_agent_id == agent_id do
+        {:ok, agent_id}
+      else
+        {:error,
+         Jidoka.Error.validation_error("Session schedule agent_id must match the session agent id.",
+           field: :agent_id,
+           value: explicit_agent_id,
+           details: %{reason: :session_agent_id_mismatch, expected: agent_id}
+         )}
+      end
+    end
+  end
+
+  defp normalize_schedule_agent_id(_target, value), do: normalize_optional_id(value)
 
   defp normalize_required_string(value, field) when is_atom(value),
     do: normalize_required_string(Atom.to_string(value), field)
