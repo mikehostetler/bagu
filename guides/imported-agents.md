@@ -56,6 +56,7 @@ How the imported spec compares to the Elixir DSL, by capability:
 | Workflows         | Full        | resolved via `available_workflows`                   |
 | Handoffs          | Full        | `auto` or `peer` targets                             |
 | Memory            | Full        | constrained lifecycle memory subset                  |
+| Compaction        | Full        | summary strategy, string prompt only                 |
 | Hooks             | Full        | resolved via `available_hooks`                       |
 | Guardrails        | Full        | resolved via `available_guardrails`                  |
 | Characters        | Full        | string ref or inline map                             |
@@ -358,6 +359,29 @@ namespaces, capture targets, and inject targets.
 
 See [memory.md](memory.md) for the conceptual feature.
 
+## Compaction
+
+`lifecycle.compaction` uses the portable summary-compaction shape. Strings
+select modes and strategies. Imported specs support static prompt strings only;
+module and MFA prompt builders are Elixir DSL features.
+
+```json
+{
+  "lifecycle": {
+    "compaction": {
+      "mode": "auto",
+      "strategy": "summary",
+      "max_messages": 40,
+      "keep_last": 12,
+      "max_summary_chars": 4000,
+      "prompt": "Summarize this conversation for future turns."
+    }
+  }
+}
+```
+
+See [compaction.md](compaction.md) for the conceptual feature.
+
 ## Hooks
 
 `lifecycle.hooks` lists hook names per stage that resolve through
@@ -421,4 +445,5 @@ in the Parity Status table above.
 - [errors.md](errors.md): how validation failures surface as `Jidoka.Error.ValidationError`
 - [inspection.md](inspection.md): inspecting an agent before starting it
 - [structured-output.md](structured-output.md): designing the JSON Schema you import
+- [compaction.md](compaction.md): configuring summary compaction
 - [overview.md](overview.md): where imported agents fit in the Jidoka surface

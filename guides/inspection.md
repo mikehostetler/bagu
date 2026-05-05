@@ -1,10 +1,11 @@
 # Inspection
 
-Jidoka exposes three inspection functions for getting structured visibility
-into agents, requests, and workflows: `Jidoka.inspect_agent/1`,
-`Jidoka.inspect_request/1`, and `Jidoka.inspect_workflow/1`. Each returns
-`{:ok, map}` with a stable, documented field set, or `{:error, reason}` in the
-normalized [error shapes](errors.md).
+Jidoka exposes inspection functions for getting structured visibility into
+agents, requests, workflows, and context compaction: `Jidoka.inspect_agent/1`,
+`Jidoka.inspect_request/1`, `Jidoka.inspect_workflow/1`, and
+`Jidoka.inspect_compaction/1`. Each returns `{:ok, value}` with a stable,
+documented field set, or `{:error, reason}` in the normalized
+[error shapes](errors.md).
 
 ## Minimal example
 
@@ -12,6 +13,7 @@ normalized [error shapes](errors.md).
 {:ok, definition} = Jidoka.inspect_agent(MyApp.SupportAgent)
 {:ok, summary}    = Jidoka.inspect_request(pid)
 {:ok, workflow}   = Jidoka.inspect_workflow(MyApp.Workflows.RefundReview)
+{:ok, compacted}  = Jidoka.inspect_compaction(pid)
 ```
 
 ## Inspect agents
@@ -30,6 +32,7 @@ definitions return the same field set:
 - `:workflow_names`
 - `:handoff_names`
 - `:memory`
+- `:compaction`
 - `:hooks`
 - `:guardrails`
 
@@ -66,13 +69,26 @@ Stable fields include:
 - `:model`, `:system_prompt`, `:message_count`
 - `:input_message`, `:user_message`, `:context_preview`
 - `:skills`, `:tool_names`, `:mcp_tools`, `:mcp_errors`
-- `:memory`, `:subagents`, `:workflows`, `:handoffs`
+- `:memory`, `:compaction`, `:subagents`, `:workflows`, `:handoffs`
 - `:usage`, `:interrupt`, `:error`
 
-Subagent, workflow, handoff, guardrail, hook, and memory entries are present
-when those features were involved in the turn. The capabilities used by an
-agent emit bounded metadata via `result: :structured` so request summaries
-stay safe to log.
+Subagent, workflow, handoff, guardrail, hook, memory, and compaction entries
+are present when those features were involved in the turn. The capabilities
+used by an agent emit bounded metadata via `result: :structured` so request
+summaries stay safe to log.
+
+## Inspect compaction
+
+`Jidoka.inspect_compaction/1` returns the latest `%Jidoka.Compaction{}` snapshot
+for a session, pid, registered agent id, or `%Jido.Agent{}` snapshot:
+
+```elixir
+{:ok, compaction} = Jidoka.inspect_compaction(session)
+```
+
+Use it to see whether the last evaluation was `:summarized`, `:skipped`, or
+`:error`, plus bounded counts and summary preview. The full original thread is
+still inspected through AgentView or request snapshots.
 
 For time-series telemetry data across many requests, see
 [tracing.md](tracing.md). For the normalized failure shape under `:error`,
@@ -120,6 +136,7 @@ callers to pattern-match on internal causes unless they own that boundary.
 - [errors.md](errors.md): normalized failure shapes returned alongside these
   inspection calls.
 - [tracing.md](tracing.md): time-series run data and telemetry.
+- [compaction.md](compaction.md): summary snapshots and provider-facing trim.
 - [agents.md](agents.md): the DSL surface that produces compiled definitions.
 - [chat-turn.md](chat-turn.md): the lifecycle that populates request
   summaries.

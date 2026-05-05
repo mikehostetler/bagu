@@ -145,6 +145,42 @@ defmodule Jidoka.Agent.Dsl.MemoryRetrieve do
   defstruct [:limit, :__spark_metadata__]
 end
 
+defmodule Jidoka.Agent.Dsl.CompactionMode do
+  @moduledoc false
+
+  defstruct [:value, :__spark_metadata__]
+end
+
+defmodule Jidoka.Agent.Dsl.CompactionStrategy do
+  @moduledoc false
+
+  defstruct [:value, :__spark_metadata__]
+end
+
+defmodule Jidoka.Agent.Dsl.CompactionMaxMessages do
+  @moduledoc false
+
+  defstruct [:value, :__spark_metadata__]
+end
+
+defmodule Jidoka.Agent.Dsl.CompactionKeepLast do
+  @moduledoc false
+
+  defstruct [:value, :__spark_metadata__]
+end
+
+defmodule Jidoka.Agent.Dsl.CompactionMaxSummaryChars do
+  @moduledoc false
+
+  defstruct [:value, :__spark_metadata__]
+end
+
+defmodule Jidoka.Agent.Dsl.CompactionPrompt do
+  @moduledoc false
+
+  defstruct [:value, :__spark_metadata__]
+end
+
 defmodule Jidoka.Agent.Dsl.BeforeTurnHook do
   @moduledoc false
 

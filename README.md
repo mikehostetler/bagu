@@ -16,8 +16,8 @@ The Jido ecosystem is powerful, but powerful is not the same as approachable.
 Jidoka is the opinionated layer that:
 
 - starts with a single agent module and a `chat/3` call
-- grows progressively when you actually need tools, memory, structured output,
-  workflows, subagents, or handoffs
+- grows progressively when you actually need tools, memory, compaction,
+  structured output, workflows, subagents, or handoffs
 - hides Jido's lower-level surface until you choose to opt in
 
 You can stay on the easy path indefinitely, or drop down into Jido directly when
@@ -28,8 +28,8 @@ your application needs it. Jidoka does not get in the way.
 - **A tiny DSL.** `use Jidoka.Agent`, name it, give it instructions, you have an
   agent.
 - **Fast time-to-first-agent.** Define, start, and chat in under thirty lines.
-- **Progressive opt-in.** Tools, structured output, memory, characters,
-  workflows, subagents, handoffs, MCP, web access, plugins, hooks, and
+- **Progressive opt-in.** Tools, structured output, memory, compaction,
+  characters, workflows, subagents, handoffs, MCP, web access, plugins, hooks, and
   guardrails are all available, but none are required.
 
 ## Your first agent
@@ -190,6 +190,9 @@ documented under `guides/`.
   the agent and have per-turn `context:` validated before the model is called.
 - **[Memory](guides/memory.md)**: opt-in conversation memory built on
   `jido_memory`, with simple namespace and capture/retrieve options.
+- **[Compaction](guides/compaction.md)**: opt-in summary compaction for long
+  sessions, trimming only provider-facing messages while preserving the
+  original thread.
 - **[Characters](guides/characters.md)**: structured persona data for voice,
   tone, and identity, rendered into the prompt before instructions.
 - **[Structured output](guides/structured-output.md)**: Zoi-validated final
@@ -225,6 +228,7 @@ documented under `guides/`.
   into a user-safe string. See [Errors](guides/errors.md).
 - **Inspection**: `Jidoka.inspect_agent/1`, `Jidoka.inspect_request/1`, and
   `Jidoka.inspect_workflow/1` expose stable views of definitions and runs.
+  `Jidoka.inspect_compaction/1` shows the latest context summary snapshot.
 - **Tracing**: first-class run traces through `Jidoka.Trace` and Livebook
   helpers.
 - **Testing**: provider-free contract, tool, guardrail, structured output, and
@@ -247,12 +251,13 @@ Recommended reading order:
 11. [Tools](guides/tools.md) (then see Capabilities for the rest)
 12. [Subagents](guides/subagents.md), [Workflows](guides/workflows.md), [Handoffs](guides/handoffs.md)
 13. [Memory](guides/memory.md)
-14. [Imported Agents](guides/imported-agents.md)
-15. [Errors](guides/errors.md), [Inspection](guides/inspection.md), and [Testing Agents](guides/testing-agents.md)
-16. [Examples](guides/examples.md)
-17. [Phoenix LiveView](guides/phoenix-liveview.md)
-18. [Graduating To Jido](guides/graduating-to-jido.md)
-19. [Production](guides/production.md)
+14. [Compaction](guides/compaction.md)
+15. [Imported Agents](guides/imported-agents.md)
+16. [Errors](guides/errors.md), [Inspection](guides/inspection.md), and [Testing Agents](guides/testing-agents.md)
+17. [Examples](guides/examples.md)
+18. [Phoenix LiveView](guides/phoenix-liveview.md)
+19. [Graduating To Jido](guides/graduating-to-jido.md)
+20. [Production](guides/production.md)
 
 The full guide index is at [guides/overview.md](guides/overview.md).
 

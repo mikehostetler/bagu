@@ -148,6 +148,11 @@ the running Jido agent process and its `Jido.Thread`. For UI-facing chat, pair a
 session with `AgentView` so projected messages and async turn state have one
 surface-neutral shape. See [Sessions](sessions.html) and [AgentView](agent-view.html).
 
+Session-scoped agents are also the natural place to enable
+[Compaction](compaction.html). The compaction snapshot lives on the running
+agent state, while the full `Jido.Thread` remains available to AgentView and
+inspection.
+
 ## App-Scoped
 
 For long-lived agents, start them from your application startup flow after the
@@ -250,7 +255,7 @@ scheduled execution on the same runtime path as ordinary calls.
 When the cron fires, Jidoka resolves the agent, then calls `Jidoka.chat/3` with
 the configured prompt, context, conversation, and generated request id. That
 means scheduled turns still run through context schemas, memory, hooks,
-guardrails, structured output, and tracing.
+guardrails, compaction, structured output, and tracing.
 
 For deterministic scheduled work, schedule a workflow:
 

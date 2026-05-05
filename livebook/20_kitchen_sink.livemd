@@ -4,8 +4,9 @@
 
 Build one advanced support router that composes the main Jidoka primitives:
 context, dynamic instructions, characters, tools, plugins, Ash resources, MCP,
-web tools, skills, hooks, guardrails, memory, workflows, subagents, handoffs,
-imports, sessions, AgentView, eval checks, and optional provider-backed chat.
+web tools, skills, hooks, guardrails, memory, compaction, workflows,
+subagents, handoffs, imports, sessions, AgentView, eval checks, and optional
+provider-backed chat.
 
 This is a capstone notebook. Start with the focused notebooks first if you are
 new to Jidoka.
@@ -554,6 +555,13 @@ defmodule LivebookDemo.KitchenSink.Agent do
       inject :instructions
     end
 
+    compaction do
+      max_messages 8
+      keep_last 4
+      max_summary_chars 1_200
+      prompt "Summarize the support router conversation for future turns. Preserve ticket facts, decisions, tool outcomes, handoffs, and next steps."
+    end
+
     before_turn LivebookDemo.KitchenSink.Hooks.ShapeTurn
     after_turn LivebookDemo.KitchenSink.Hooks.TagReply
     on_interrupt LivebookDemo.KitchenSink.Hooks.NotifyInterrupt
@@ -586,8 +594,8 @@ surface Jidoka generated.
 ## Chapter 9: Effective Prompt And Runtime Boundary
 
 The request transformer composes the character before the dynamic instructions.
-The runtime boundary applies context, hooks, skills, memory, guardrails, and MCP
-sync before a provider call.
+The runtime boundary applies context, hooks, skills, compaction, memory,
+guardrails, and MCP sync before a provider call.
 
 ```elixir
 request = %{messages: [%{role: :user, content: "hello"}], llm_opts: [], tools: %{}}
@@ -784,7 +792,93 @@ Jidoka.Kino.table("Retrieved memory", [
 ])
 ```
 
-## Chapter 12: Imported Agent Spec
+## Chapter 12: Summary Compaction
+
+Compaction is opt-in lifecycle policy for long sessions. It summarizes older
+messages, stores the latest snapshot on the running agent, injects the summary
+into future prompts, and keeps the original thread intact for AgentView.
+
+This cell uses a deterministic summarizer so it works without a provider key.
+
+```elixir
+compaction_runtime = LivebookDemo.KitchenSink.Agent.runtime_module()
+compaction_agent = compaction_runtime.new(id: "livebook-kitchen-compaction")
+
+compaction_messages = [
+  {"req-ks-compact-1", :user, "The enterprise customer says invoice INV-42 was double charged."},
+  {"req-ks-compact-1", :assistant, "I will route this as a billing issue."},
+  {"req-ks-compact-2", :user, "They prefer email updates and want a status by Friday."},
+  {"req-ks-compact-2", :assistant, "Noted: email updates and Friday status target."},
+  {"req-ks-compact-3", :user, "Please prepare the next triage step."},
+  {"req-ks-compact-3", :assistant, "I will keep the most recent turn visible."},
+  {"req-ks-compact-4", :user, "Also keep the account tier as enterprise."},
+  {"req-ks-compact-4", :assistant, "The retained tail should include this detail."},
+  {"req-ks-compact-5", :user, "What should we do next?"}
+]
+
+thread_entries =
+  Enum.map(compaction_messages, fn {request_id, role, content} ->
+    %{
+      kind: :ai_message,
+      payload: %{role: role, content: content, request_id: request_id, context_ref: "default"},
+      refs: %{request_id: request_id}
+    }
+  end)
+
+compaction_agent =
+  Jido.Thread.Agent.put(
+    compaction_agent,
+    Jido.Thread.new(id: "ks-compaction-thread") |> Jido.Thread.append(thread_entries)
+  )
+
+previous_summarizer = Application.get_env(:jidoka, :compaction_summarizer)
+
+{compaction_agent, compaction_params} =
+  try do
+    Application.put_env(:jidoka, :compaction_summarizer, fn input ->
+      {:ok,
+       "Earlier support context: #{input.source_message_count} older messages show an enterprise invoice double-charge, email-update preference, and a Friday status target."}
+    end)
+
+    {:ok, compacted_agent, {:ai_react_start, params}} =
+      compaction_runtime.on_before_cmd(
+        compaction_agent,
+        {:ai_react_start,
+         %{
+           query: "What should we do next?",
+           request_id: "req-ks-compact-live",
+           tool_context: %{
+             tenant: "acme",
+             channel: "livebook",
+             session: "ks-compaction",
+             account_tier: "enterprise",
+             actor: %{id: "agent-dev"}
+           }
+         }}
+      )
+
+    {compacted_agent, params}
+  after
+    if is_nil(previous_summarizer) do
+      Application.delete_env(:jidoka, :compaction_summarizer)
+    else
+      Application.put_env(:jidoka, :compaction_summarizer, previous_summarizer)
+    end
+  end
+
+{:ok, compaction_snapshot} = Jidoka.Kino.compaction(compaction_agent)
+
+Jidoka.Kino.context("Context after compaction", compaction_params.tool_context)
+
+%{
+  status: compaction_snapshot.status,
+  source_messages: compaction_snapshot.source_message_count,
+  retained_messages: compaction_snapshot.retained_message_count,
+  summary_preview: compaction_snapshot.summary_preview
+}
+```
+
+## Chapter 13: Imported Agent Spec
 
 Imported agents use explicit registries. This lets apps accept constrained
 JSON/YAML specs without letting the spec name arbitrary modules.
@@ -806,6 +900,14 @@ imported_spec = %{
     "plugins" => ["ks_showcase_plugin"]
   },
   "lifecycle" => %{
+    "compaction" => %{
+      "mode" => "auto",
+      "strategy" => "summary",
+      "max_messages" => 20,
+      "keep_last" => 6,
+      "max_summary_chars" => 1_000,
+      "prompt" => "Summarize this imported support conversation."
+    },
     "guardrails" => %{
       "input" => ["ks_block_classified_prompt"]
     }
@@ -824,12 +926,12 @@ imported_spec = %{
 {:ok, imported_yaml} = Jidoka.encode_agent(imported_agent, format: :yaml)
 
 %{
-  imported_definition: Map.take(imported_definition, [:id, :description, :context, :tool_names]),
+  imported_definition: Map.take(imported_definition, [:id, :description, :context, :tool_names, :compaction]),
   yaml: imported_yaml
 }
 ```
 
-## Chapter 13: Sessions, AgentView And Eval Checks
+## Chapter 14: Sessions, AgentView And Eval Checks
 
 `Jidoka.Session` names the conversation, runtime agent id, and trusted context.
 `Jidoka.AgentView` is the application boundary for UI surfaces. It is not a
@@ -901,7 +1003,7 @@ eval_cases = [
 Jidoka.Kino.table("Deterministic eval checks", eval_cases)
 ```
 
-## Chapter 14: Production Pre-Flight
+## Chapter 15: Production Pre-Flight
 
 Use a checklist before allowing advanced composition into a production path.
 
@@ -917,6 +1019,7 @@ preflight_rows = [
   %{area: "context", status: "schema defaults plus actor/account tier"},
   %{area: "tools", status: "#{length(LivebookDemo.KitchenSink.Agent.tool_names())} generated tools"},
   %{area: "memory", status: inspect(LivebookDemo.KitchenSink.Agent.memory())},
+  %{area: "compaction", status: inspect(LivebookDemo.KitchenSink.Agent.compaction())},
   %{area: "guardrails", status: inspect(LivebookDemo.KitchenSink.Agent.guardrails())},
   %{area: "mcp", status: "fake sync configured for notebook portability"},
   %{area: "handoff", status: "owner registry can be inspected and reset"}
@@ -929,8 +1032,9 @@ Jidoka.Kino.table("Kitchen-sink pre-flight", preflight_rows)
 
 This cell runs the full router through a provider-backed chat call. The
 structured trace timeline and call graph show the runtime path across model,
-tool, workflow, subagent, handoff, guardrail, memory, and MCP events. Without
-`ANTHROPIC_API_KEY`, it returns a friendly missing-provider result.
+tool, workflow, subagent, handoff, guardrail, memory, compaction, and MCP
+events. Without `ANTHROPIC_API_KEY`, it returns a friendly missing-provider
+result.
 
 ```elixir
 Application.put_env(:jidoka, :mcp_sync_module, LivebookDemo.KitchenSink.FakeMCPSync)
@@ -977,6 +1081,7 @@ result =
 
 Jidoka.Kino.context("Provider runtime context", provider_session.context)
 Jidoka.Kino.debug_agent(pid)
+Jidoka.Kino.compaction(provider_session)
 
 case Jidoka.inspect_trace(provider_session) do
   {:ok, trace} ->
@@ -1016,7 +1121,7 @@ The advanced story is not "turn everything on." It is:
 * deterministic tools and workflows for known application work
 * specialists for bounded subtasks
 * handoffs for ownership transfer
-* skills, characters, hooks, memory, and guardrails around the turn
+* skills, characters, hooks, memory, compaction, and guardrails around the turn
 * AgentView as the UI boundary
 * Kino helpers for trace output, context inspection, diagrams, and request debug summaries
 * eval checks and pre-flight tables before provider-backed behavior

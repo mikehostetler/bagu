@@ -150,6 +150,8 @@ defmodule Jidoka.ImportedAgent.Codec do
       "  plugins:",
       indent_lines(encode_yaml_plugins(spec.plugins), 2),
       "lifecycle:",
+      "  compaction:",
+      indent_lines(encode_yaml_compaction(spec.compaction), 2),
       "  memory:",
       indent_lines(encode_yaml_memory(spec.memory), 2),
       "  hooks:",
@@ -363,6 +365,26 @@ defmodule Jidoka.ImportedAgent.Codec do
 
   defp encode_yaml_plugins([]), do: "  []"
   defp encode_yaml_plugins(plugins), do: Enum.map_join(plugins, "\n", &"  - #{Jason.encode!(&1)}")
+
+  defp encode_yaml_compaction(nil), do: "  null"
+
+  defp encode_yaml_compaction(%{} = compaction) do
+    external = Jidoka.Compaction.externalize(compaction)
+
+    [
+      "  mode: #{Jason.encode!(external["mode"])}",
+      "  strategy: #{Jason.encode!(external["strategy"])}",
+      "  max_messages: #{external["max_messages"]}",
+      "  keep_last: #{external["keep_last"]}",
+      "  max_summary_chars: #{external["max_summary_chars"]}",
+      encode_yaml_compaction_prompt(external["prompt"])
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join("\n")
+  end
+
+  defp encode_yaml_compaction_prompt(nil), do: nil
+  defp encode_yaml_compaction_prompt(prompt), do: "  prompt: #{Jason.encode!(prompt)}"
 
   defp encode_yaml_memory(nil), do: "  null"
 

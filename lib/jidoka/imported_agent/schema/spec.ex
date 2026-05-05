@@ -19,6 +19,7 @@ defmodule Jidoka.ImportedAgent.Spec do
           model: model_input(),
           context: map(),
           output: Jidoka.Output.t() | nil,
+          compaction: Jidoka.Compaction.config() | nil,
           memory: Jidoka.Memory.config() | nil,
           tools: [String.t()],
           skills: [String.t()],
@@ -50,6 +51,7 @@ defmodule Jidoka.ImportedAgent.Spec do
     :model,
     context: %{},
     output: nil,
+    compaction: nil,
     memory: nil,
     tools: [],
     skills: [],
@@ -120,6 +122,7 @@ defmodule Jidoka.ImportedAgent.Spec do
         "plugins" => spec.plugins
       },
       "lifecycle" => %{
+        "compaction" => Jidoka.Compaction.externalize(spec.compaction),
         "memory" => externalize_memory(spec.memory),
         "hooks" => spec.hooks,
         "guardrails" => spec.guardrails
@@ -153,6 +156,7 @@ defmodule Jidoka.ImportedAgent.Spec do
       model: Map.get(defaults, :model, "fast"),
       context: Map.get(agent, :context, %{}),
       output: Map.get(attrs, :output),
+      compaction: Map.get(lifecycle, :compaction),
       memory: Map.get(lifecycle, :memory),
       tools: Map.get(capabilities, :tools, []),
       skills: Map.get(capabilities, :skills, []),

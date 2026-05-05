@@ -267,6 +267,7 @@ defmodule Jidoka.Trace.Collector do
   defp event_name_label(:guardrail, metadata), do: string_value(metadata, :guardrail) || string_value(metadata, :label)
   defp event_name_label(:hook, metadata), do: string_value(metadata, :hook) || string_value(metadata, :label)
   defp event_name_label(:memory, metadata), do: string_value(metadata, :namespace)
+  defp event_name_label(:compaction, metadata), do: string_value(metadata, :compaction) || string_value(metadata, :name)
   defp event_name_label(:mcp, metadata), do: string_value(metadata, :endpoint)
   defp event_name_label(:output, metadata), do: string_value(metadata, :output) || string_value(metadata, :name)
   defp event_name_label(:schedule, metadata), do: string_value(metadata, :schedule_id) || string_value(metadata, :name)
@@ -280,6 +281,8 @@ defmodule Jidoka.Trace.Collector do
 
   defp event_status(_category, event, _metadata) when event in [:stop, :complete, :completed, :ok, :allow],
     do: :completed
+
+  defp event_status(:compaction, event, _metadata) when event in [:summarized, :skipped], do: :completed
 
   defp event_status(_category, event, _metadata) when event in [:error, :failed, :timeout, :block], do: :failed
   defp event_status(_category, event, _metadata) when event in [:interrupt, :interrupted], do: :interrupted
@@ -352,6 +355,7 @@ defmodule Jidoka.Trace.Collector do
       handoff_events: count_category(events, :handoff),
       guardrail_events: count_category(events, :guardrail),
       memory_events: count_category(events, :memory),
+      compaction_events: count_category(events, :compaction),
       output_events: count_category(events, :output),
       schedule_events: count_category(events, :schedule),
       error_events: Enum.count(events, &(&1.status == :failed))

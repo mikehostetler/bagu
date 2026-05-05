@@ -19,6 +19,9 @@ a fresh LiveBook session.
   before release docs are cut.
 - Call `Jidoka.Kino.setup/1` after dependencies install, then use
   `Jidoka.Kino.start_or_reuse/2` for stable agent IDs.
+- Use `Jidoka.Kino.compaction/2` when a notebook demonstrates summary
+  compaction, so users can inspect the latest snapshot without reading raw
+  state.
 - Put deterministic inspection and direct tool/workflow calls before provider
   backed chat cells. Provider-backed cells should use LiveBook secrets such as
   `ANTHROPIC_API_KEY` and fail with a friendly note when the secret is missing.
@@ -65,6 +68,7 @@ dependency setup.
 
 - `Mix.install/2` resolves in a fresh LiveBook session.
 - `Jidoka.Kino` is available after setup.
+- `Jidoka.Kino.compaction/2` renders in notebooks that enable compaction.
 - Provider cells either succeed with the configured secret or show a friendly
   missing-secret result.
 - Trace output renders without horizontal-only log dumps or widget JavaScript

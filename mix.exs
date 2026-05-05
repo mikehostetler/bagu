@@ -192,6 +192,7 @@ defmodule Jidoka.MixProject do
         ],
         Lifecycle: [
           "guides/memory.md",
+          "guides/compaction.md",
           "guides/characters.md",
           "guides/hooks.md",
           "guides/guardrails.md"
@@ -236,6 +237,8 @@ defmodule Jidoka.MixProject do
           Jidoka.Runtime,
           Jidoka.Schedule,
           Jidoka.Schedule.Manager,
+          Jidoka.Compaction,
+          Jidoka.Compaction.Prompt,
           Jidoka.Trace,
           Jidoka.Trace.Event,
           Jidoka.Interrupt,
@@ -291,6 +294,7 @@ defmodule Jidoka.MixProject do
       "guides/handoffs.md",
       # Lifecycle
       "guides/memory.md",
+      "guides/compaction.md",
       "guides/characters.md",
       "guides/hooks.md",
       "guides/guardrails.md",

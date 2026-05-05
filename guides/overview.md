@@ -3,7 +3,8 @@
 Jidoka is a small, opinionated harness over [Jido](https://github.com/agentjido/jido)
 and [Jido.AI](https://github.com/agentjido/jido_ai). It gives you a single-agent
 DSL, a runtime import path for JSON/YAML specs, and progressive opt-in for
-tools, structured output, memory, workflows, subagents, and handoffs.
+tools, structured output, memory, compaction, workflows, subagents, and
+handoffs.
 
 These guides are organized in tiers. Each guide focuses on one topic so you can
 read only what your application needs.
@@ -24,9 +25,10 @@ For your first agent, read in this order:
 4. [Sessions](sessions.html): name multi-turn agent conversations.
 5. [Schedules](schedules.html): run agents and workflows from Jidoka's schedule manager.
 6. [AgentView](agent-view.html): adapt an agent to UI, API, job, or test boundaries.
-7. one capability guide that matches your use case (start with [Tools](tools.html)).
-8. [Structured Output](structured-output.html): typed JSON results with retries.
-9. [Chat Turn](chat-turn.html): the turn lifecycle and public return shapes.
+7. [Compaction](compaction.html): summarize long-running sessions when needed.
+8. one capability guide that matches your use case (start with [Tools](tools.html)).
+9. [Structured Output](structured-output.html): typed JSON results with retries.
+10. [Chat Turn](chat-turn.html): the turn lifecycle and public return shapes.
 
 Everything else is opt-in.
 
@@ -73,6 +75,7 @@ Everything else is opt-in.
 ### Lifecycle Policy
 
 - [Memory](memory.html): conversation memory, namespaces, capture, retrieve, inject.
+- [Compaction](compaction.html): opt-in summary compaction for long sessions.
 - [Characters](characters.html): structured persona data and runtime override.
 - [Hooks](hooks.html): `before_turn`, `after_turn`, `on_interrupt`.
 - [Guardrails](guardrails.html): input, output, and tool guardrails.
@@ -106,6 +109,7 @@ Use Jidoka when you want:
 - low-risk public web search and read-only page access
 - subagents for one-turn specialist delegation
 - handoffs for conversation ownership transfer
+- opt-in summary compaction for long-running sessions
 - JSON/YAML imported agents with explicit allowlists
 - structured runtime errors that can be formatted for users
 
@@ -159,6 +163,8 @@ The stable beta entrypoints are:
 - `Jidoka.inspect_agent/1`
 - `Jidoka.inspect_request/1`
 - `Jidoka.inspect_workflow/1`
+- `Jidoka.compact/2`
+- `Jidoka.inspect_compaction/1`
 - `Jidoka.handoff_owner/1`
 - `Jidoka.reset_handoff/1`
 - `Jidoka.Workflow.run/3`

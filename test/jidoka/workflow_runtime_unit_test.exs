@@ -182,12 +182,13 @@ defmodule JidokaTest.WorkflowRuntimeUnitTest do
 
   test "agent steps normalize raised chat failures without crashing the caller" do
     definition = %{id: "unit_workflow"}
+    state = %{@state | timeout: 1_000}
 
     assert {:error, %RuntimeError{message: "agent chat raised"}} =
              StepRunner.execute_step(
                definition,
                %{kind: :agent, target: RaisingAgent, prompt: "hello", context: %{}},
-               @state
+               state
              )
   end
 

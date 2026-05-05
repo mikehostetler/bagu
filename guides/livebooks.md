@@ -86,6 +86,7 @@ provides a small, stable set of functions:
   `Jidoka.Kino.agent_diagram/2`: deterministic inspection.
 - `Jidoka.Kino.timeline/2`, `Jidoka.Kino.call_graph/2`,
   `Jidoka.Kino.trace_table/2`: trace visualization.
+- `Jidoka.Kino.compaction/2`: latest compaction snapshot visualization.
 - `Jidoka.Kino.table/3`: small Markdown tables.
 
 For the underlying trace data and the non-Livebook view, see

@@ -53,6 +53,7 @@ defmodule Jidoka.ImportedAgent.Definition do
       context_schema: nil,
       context: spec.context,
       output: spec.output,
+      compaction: spec.compaction,
       memory: spec.memory,
       skills: %{refs: skill_refs, load_paths: spec.skill_paths},
       tools: tool_modules,

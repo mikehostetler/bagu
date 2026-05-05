@@ -5,6 +5,7 @@ defmodule Jidoka.ImportedAgent.Spec.Validator do
   def validate_existing(%{} = spec, opts) do
     with :ok <- validate_context(spec.context),
          {:ok, normalized_output} <- normalize_output(spec.output),
+         {:ok, normalized_compaction} <- Jidoka.Compaction.normalize_imported(spec.compaction),
          {:ok, normalized_memory} <- Jidoka.Memory.normalize_imported(spec.memory),
          {:ok, _character_spec} <- validate_character(spec.character, Keyword.get(opts, :available_characters, %{})),
          {:ok, normalized_skills} <- Jidoka.Skill.normalize_imported(spec.skills, spec.skill_paths),
@@ -20,6 +21,7 @@ defmodule Jidoka.ImportedAgent.Spec.Validator do
       spec
       |> Map.merge(%{
         memory: normalized_memory,
+        compaction: normalized_compaction,
         output: normalized_output,
         skills: (normalized_skills && normalized_skills.refs) || [],
         skill_paths: (normalized_skills && normalized_skills.load_paths) || [],
@@ -35,6 +37,7 @@ defmodule Jidoka.ImportedAgent.Spec.Validator do
          :ok <- validate_model(normalized_model),
          :ok <- validate_context(spec.context),
          {:ok, normalized_output} <- normalize_output(spec.output),
+         {:ok, normalized_compaction} <- Jidoka.Compaction.normalize_imported(spec.compaction),
          {:ok, normalized_memory} <- Jidoka.Memory.normalize_imported(spec.memory),
          {:ok, _character_spec} <- validate_character(spec.character, Keyword.get(opts, :available_characters, %{})),
          {:ok, normalized_skills} <- Jidoka.Skill.normalize_imported(spec.skills, spec.skill_paths),
@@ -44,6 +47,7 @@ defmodule Jidoka.ImportedAgent.Spec.Validator do
              Map.merge(spec, %{
                model: normalized_model,
                output: normalized_output,
+               compaction: normalized_compaction,
                memory: normalized_memory,
                skills: (normalized_skills && normalized_skills.refs) || [],
                skill_paths: (normalized_skills && normalized_skills.load_paths) || [],

@@ -269,9 +269,9 @@ Source:
 - `examples/kitchen_sink/README.md`
 
 The kitchen sink combines schema, dynamic prompts, tools, Ash resource
-expansion, skills, MCP sync, plugins, hooks, guardrails, memory, compiled
-subagents, and imported subagents. It is a showcase, not the recommended first
-copy/paste target.
+expansion, skills, MCP sync, plugins, hooks, guardrails, memory, compaction,
+compiled subagents, and imported subagents. It is a showcase, not the
+recommended first copy/paste target.
 
 ## Turning Dry-Runs Into Live Sessions
 

@@ -4,6 +4,7 @@ defmodule Jidoka.Agent.Definition do
   alias Jidoka.Agent.Definition.{
     Basics,
     Capabilities,
+    CompactionConfig,
     ContextConfig,
     Legacy,
     LifecycleConfig,
@@ -49,6 +50,7 @@ defmodule Jidoka.Agent.Definition do
     configured_context = ContextConfig.resolve_defaults!(owner_module, configured_context_schema)
     configured_output = OutputConfig.resolve!(owner_module)
     configured_schedules = ScheduleConfig.resolve!(owner_module)
+    configured_compaction = CompactionConfig.resolve!(owner_module)
 
     capability_entities = Spark.Dsl.Extension.get_entities(owner_module, [:capabilities])
 
@@ -216,6 +218,7 @@ defmodule Jidoka.Agent.Definition do
       context: configured_context,
       output: configured_output,
       schedules: configured_schedules,
+      compaction: configured_compaction,
       memory: configured_memory,
       skills: configured_skills,
       tools: tool_modules,
@@ -257,6 +260,7 @@ defmodule Jidoka.Agent.Definition do
       context: configured_context,
       output: configured_output,
       schedules: configured_schedules,
+      compaction: configured_compaction,
       memory: configured_memory,
       skills: configured_skills,
       skill_names: skill_names,

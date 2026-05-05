@@ -32,8 +32,13 @@ defmodule Jidoka.Agent.RequestTransformer do
     with {:ok, prompt} <- resolve_base_prompt(system_prompt_spec, input),
          {:ok, character_prompt} <- resolve_character_prompt(character_spec, input, runtime_context),
          combined <- combine_prompt_sections(character_prompt, prompt, skills_config, runtime_context) do
-      Jidoka.Debug.record_prompt_preview(runtime_context, combined, request)
-      {:ok, %{messages: apply_prompt(Map.get(request, :messages, []), combined)}}
+      messages =
+        request
+        |> Map.get(:messages, [])
+        |> Jidoka.Compaction.apply_to_messages(runtime_context)
+
+      Jidoka.Debug.record_prompt_preview(runtime_context, combined, Map.put(request, :messages, messages))
+      {:ok, %{messages: apply_prompt(messages, combined)}}
     end
   end
 
@@ -69,6 +74,7 @@ defmodule Jidoka.Agent.RequestTransformer do
       [
         normalize_prompt(character_prompt),
         normalize_prompt(prompt),
+        Jidoka.Compaction.prompt_text(runtime_context),
         skills_prompt(skills_config, runtime_context),
         Jidoka.Memory.prompt_text(runtime_context),
         Jidoka.Output.instructions(runtime_context)

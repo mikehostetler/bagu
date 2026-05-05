@@ -245,6 +245,23 @@ defmodule Jidoka do
   def inspect_trace(%Session{} = session, request_id), do: Jidoka.Trace.for_request(session.agent_id, request_id)
   def inspect_trace(target, request_id), do: Jidoka.Trace.for_request(target, request_id)
 
+  @doc """
+  Manually compacts the current conversation for a running Jidoka agent.
+
+  Agents must opt in with `lifecycle.compaction`. The original `Jido.Thread`
+  remains intact; compaction only affects future provider-facing turns.
+  """
+  @spec compact(Session.t() | pid() | String.t() | Jido.Agent.t(), keyword()) ::
+          {:ok, Jidoka.Compaction.t()} | {:error, term()}
+  defdelegate compact(target, opts \\ []), to: Jidoka.Compaction
+
+  @doc """
+  Returns the latest compaction snapshot for a running Jidoka agent, if any.
+  """
+  @spec inspect_compaction(Session.t() | pid() | String.t() | Jido.Agent.t(), keyword()) ::
+          {:ok, Jidoka.Compaction.t() | nil} | {:error, term()}
+  defdelegate inspect_compaction(target, opts \\ []), to: Jidoka.Compaction
+
   @doc false
   @spec chat_request(pid() | atom() | {:via, module(), term()}, String.t(), keyword()) ::
           {:ok, term()} | {:error, term()}

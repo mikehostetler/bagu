@@ -18,6 +18,7 @@ It demonstrates:
 - `before_turn`, `after_turn`, and `on_interrupt` hooks
 - input, output, and tool guardrails
 - conversation memory
+- summary compaction for long sessions
 - compiled subagents
 - imported JSON subagents
 - debug and inspection output through `mix jidoka`

@@ -259,6 +259,7 @@ defmodule Jidoka.ImportedAgent.RuntimeCompiler do
             hook_modules,
             spec.context,
             guardrail_modules,
+            spec.compaction,
             spec.memory,
             spec.output,
             skill_config,

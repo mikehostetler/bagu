@@ -78,6 +78,7 @@ Model-visible or model-reachable features:
 Non-capability runtime policy:
 
 - `memory`
+- `compaction`
 - `before_turn`
 - `after_turn`
 - `on_interrupt`
@@ -110,7 +111,7 @@ agents stay easy to inspect and import or export later. Examples:
 
 Treat these errors as structural feedback rather than friction. Verifiers cover
 tools, Ash resources, skills, plugins, subagents, hooks, guardrails, memory,
-and model resolution.
+compaction, and model resolution.
 
 ## Generated Functions
 
@@ -135,6 +136,7 @@ MyApp.SupportAgent.workflow_names()
 MyApp.SupportAgent.handoff_names()
 MyApp.SupportAgent.hooks()
 MyApp.SupportAgent.guardrails()
+MyApp.SupportAgent.compaction()
 MyApp.SupportAgent.schedules()
 ```
 
@@ -147,6 +149,7 @@ helpers like `Jidoka.inspect_request/1`.
 - [instructions.md](instructions.md): static, module, MFA, and dynamic prompts.
 - [models.md](models.md): aliases, direct strings, inline maps, runtime resolution.
 - [context.md](context.md): defining and parsing per-turn context.
+- [compaction.md](compaction.md): opt-in summary compaction for long sessions.
 - [chat-turn.md](chat-turn.md): the lifecycle of a single `Jidoka.chat/3` call.
 - [overview.md](overview.md) and [tools.md](tools.md): the capability index and
   the most common capability.

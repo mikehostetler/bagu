@@ -59,8 +59,9 @@ session =
   )
 ```
 
-That means schedules keep the same context validation, memory, hooks,
-guardrails, structured output, handoffs, and tracing as a normal chat turn.
+That means schedules keep the same context validation, memory, compaction,
+hooks, guardrails, structured output, handoffs, and tracing as a normal chat
+turn.
 
 ## Workflow Schedules
 

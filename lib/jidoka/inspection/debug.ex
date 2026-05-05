@@ -18,6 +18,7 @@ defmodule Jidoka.Debug do
           mcp_errors: [map()],
           context_preview: [String.t()],
           memory: map() | nil,
+          compaction: map() | nil,
           subagents: [map()],
           workflows: [map()],
           handoffs: [map()],
@@ -107,6 +108,7 @@ defmodule Jidoka.Debug do
     hook_meta = Map.get(request_meta, :jidoka_hooks, %{})
     guardrail_meta = Map.get(request_meta, :jidoka_guardrails, %{})
     memory_meta = Map.get(request_meta, :jidoka_memory, %{})
+    compaction_meta = Map.get(request_meta, :jidoka_compaction, %{})
 
     interrupt =
       case request.error do
@@ -127,6 +129,7 @@ defmodule Jidoka.Debug do
       mcp_errors: normalize_mcp_errors(debug_meta[:mcp_errors]),
       context_preview: context_preview(hook_meta, guardrail_meta, memory_meta),
       memory: memory_summary(memory_meta),
+      compaction: compaction_summary(compaction_meta),
       subagents: subagent_calls,
       workflows: workflow_calls,
       handoffs: handoff_calls,
@@ -232,6 +235,28 @@ defmodule Jidoka.Debug do
   end
 
   defp memory_summary(_), do: nil
+
+  defp compaction_summary(%{} = compaction_meta) do
+    compaction_meta
+    |> Map.take([
+      :id,
+      :status,
+      :strategy,
+      :summary_preview,
+      :source_message_count,
+      :retained_message_count,
+      :error,
+      :metadata
+    ])
+    |> Enum.reject(fn {_key, value} -> is_nil(value) or value == %{} end)
+    |> Map.new()
+    |> case do
+      empty when empty == %{} -> nil
+      summary -> summary
+    end
+  end
+
+  defp compaction_summary(_), do: nil
 
   defp usage_summary(%{} = usage) do
     %{

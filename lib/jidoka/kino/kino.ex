@@ -100,6 +100,36 @@ defmodule Jidoka.Kino do
   def trace_table(target, opts \\ []), do: TraceView.trace_table(target, opts)
 
   @doc """
+  Renders the latest Jidoka compaction snapshot, if any.
+  """
+  @spec compaction(Jidoka.Session.t() | pid() | String.t() | Jido.Agent.t(), keyword()) ::
+          {:ok, Jidoka.Compaction.t() | nil} | {:error, String.t()}
+  def compaction(target, opts \\ []) do
+    case Jidoka.inspect_compaction(target, opts) do
+      {:ok, nil} ->
+        Render.markdown("### Compaction\n\nNo compaction has run for this agent.")
+        {:ok, nil}
+
+      {:ok, %Jidoka.Compaction{} = compaction} ->
+        rows = [
+          %{property: "status", value: compaction.status},
+          %{property: "strategy", value: compaction.strategy},
+          %{property: "source messages", value: compaction.source_message_count},
+          %{property: "retained messages", value: compaction.retained_message_count},
+          %{property: "summary", value: compaction.summary_preview || "-"}
+        ]
+
+        Render.table("Compaction", rows, keys: [:property, :value])
+        {:ok, compaction}
+
+      {:error, reason} ->
+        message = Jidoka.Error.format(reason)
+        Render.markdown("### Compaction\n\n#{Render.escape_markdown(message)}")
+        {:error, message}
+    end
+  end
+
+  @doc """
   Renders a small Markdown table in Livebook.
 
   This avoids custom widget JavaScript, so it remains stable across Livebook and

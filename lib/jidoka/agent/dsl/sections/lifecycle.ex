@@ -10,7 +10,7 @@ defmodule Jidoka.Agent.Dsl.Sections.Lifecycle do
     ToolGuardrail
   }
 
-  alias Jidoka.Agent.Dsl.Sections.Memory
+  alias Jidoka.Agent.Dsl.Sections.{Compaction, Memory}
 
   @spec before_turn_hook_entity() :: Spark.Dsl.Entity.t()
   def before_turn_hook_entity do
@@ -198,7 +198,7 @@ defmodule Jidoka.Agent.Dsl.Sections.Lifecycle do
         output_guardrail_entity(),
         tool_guardrail_entity()
       ],
-      sections: [Memory.section()]
+      sections: [Memory.section(), Compaction.section()]
     }
   end
 end

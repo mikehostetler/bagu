@@ -29,6 +29,7 @@ defmodule Jidoka.Agent.Codegen do
             definition.hooks,
             definition.context,
             definition.guardrails,
+            definition.compaction,
             definition.memory,
             definition.output,
             definition.skills,
@@ -217,6 +218,12 @@ defmodule Jidoka.Agent.Codegen do
       """
       @spec schedules() :: [Jidoka.Schedule.t()]
       def schedules, do: unquote(Macro.escape(definition.schedules))
+
+      @doc """
+      Returns the configured compaction settings for this agent, if any.
+      """
+      @spec compaction() :: Jidoka.Compaction.config() | nil
+      def compaction, do: unquote(Macro.escape(definition.compaction))
 
       @doc """
       Returns the configured memory settings for this agent, if any.

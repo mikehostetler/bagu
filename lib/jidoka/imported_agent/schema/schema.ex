@@ -329,6 +329,32 @@ defmodule Jidoka.ImportedAgent.Spec.Schema do
                    unrecognized_keys: :error
                  )
 
+  @compaction_schema Zoi.object(
+                       %{
+                         mode:
+                           Zoi.string()
+                           |> Zoi.trim()
+                           |> Zoi.min(1)
+                           |> Zoi.default("auto"),
+                         strategy:
+                           Zoi.string()
+                           |> Zoi.trim()
+                           |> Zoi.min(1)
+                           |> Zoi.default("summary"),
+                         max_messages: Zoi.integer() |> Zoi.default(40),
+                         keep_last: Zoi.integer() |> Zoi.default(12),
+                         max_summary_chars: Zoi.integer() |> Zoi.default(4_000),
+                         prompt:
+                           Zoi.string()
+                           |> Zoi.trim()
+                           |> Zoi.min(1)
+                           |> Zoi.max(20_000)
+                           |> Zoi.optional()
+                       },
+                       coerce: true,
+                       unrecognized_keys: :error
+                     )
+
   @model_schema Zoi.union([
                   Zoi.string() |> Zoi.trim() |> Zoi.min(1) |> Zoi.max(256),
                   @model_map_schema
@@ -392,6 +418,7 @@ defmodule Jidoka.ImportedAgent.Spec.Schema do
   @lifecycle_schema Zoi.object(
                       %{
                         memory: Zoi.union([@memory_schema, Zoi.literal(nil)]) |> Zoi.default(nil),
+                        compaction: Zoi.union([@compaction_schema, Zoi.literal(nil)]) |> Zoi.default(nil),
                         hooks: @hooks_schema |> Zoi.default(@default_hooks),
                         guardrails: @guardrails_schema |> Zoi.default(@default_guardrails)
                       },

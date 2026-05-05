@@ -97,6 +97,12 @@ defmodule Jidoka.Kino.TraceView do
       :guardrail,
       :hook,
       :namespace,
+      :compaction,
+      :compaction_id,
+      :source_message_count,
+      :retained_message_count,
+      :summary_chars,
+      :trigger,
       :output,
       :schema_kind,
       :conversation_id,
@@ -148,8 +154,33 @@ defmodule Jidoka.Kino.TraceView do
   end
 
   defp trace_graph_event?(%Jidoka.Trace.Event{category: category, event: event})
-       when category in [:model, :tool, :workflow, :subagent, :handoff, :guardrail, :memory, :mcp, :output] do
-    event in [:start, :stop, :complete, :completed, :validated, :repair, :error, :interrupt, :retrieve, :capture, :sync]
+       when category in [
+              :model,
+              :tool,
+              :workflow,
+              :subagent,
+              :handoff,
+              :guardrail,
+              :memory,
+              :compaction,
+              :mcp,
+              :output
+            ] do
+    event in [
+      :start,
+      :stop,
+      :complete,
+      :completed,
+      :validated,
+      :repair,
+      :error,
+      :interrupt,
+      :retrieve,
+      :capture,
+      :sync,
+      :summarized,
+      :skipped
+    ]
   end
 
   defp trace_graph_event?(_event), do: false

@@ -3,8 +3,8 @@
 `Jidoka.Trace` is first-class run trace data, sitting alongside structured
 [errors](errors.md) and [inspection](inspection.md). A trace is a bounded,
 in-memory projection of Jido and Jido.AI telemetry, enriched with
-Jidoka-specific lifecycle events for hooks, guardrails, memory, workflows,
-subagents, handoffs, MCP, and structured output.
+Jidoka-specific lifecycle events for hooks, guardrails, memory, compaction,
+workflows, subagents, handoffs, MCP, and structured output.
 
 Tracing is always on for running Jidoka agents. There is no `start/0` to call
 and no collector to install: a trace accumulates automatically as a request
@@ -63,7 +63,7 @@ Stable fields:
 - `:source`: origin tag (for example, `:jido`, `:jido_ai`, `:jidoka`)
 - `:category`: lifecycle category (for example, `:chat`, `:tool`, `:hook`,
   `:guardrail`, `:memory`, `:workflow`, `:subagent`, `:handoff`, `:mcp`,
-  `:structured_output`)
+  `:structured_output`, `:compaction`)
 - `:event`: specific event atom within the category
 - `:phase`: `:start`, `:stop`, or a category-specific phase
 - `:name`: human-readable label, when available
@@ -85,6 +85,7 @@ Stable fields:
 - `Jidoka.Kino.timeline/2`: a compact, time-ordered table of events
 - `Jidoka.Kino.trace_table/2`: a denser event table with category and metadata
 - `Jidoka.Kino.call_graph/2`: a Mermaid call graph derived from spans
+- `Jidoka.Kino.compaction/2`: the latest compaction snapshot as a small table
 
 Each accepts a `%Jidoka.Trace{}`, a PID, an agent id, or a `%Jido.Agent{}`,
 plus an optional `request_id:` to target a specific request:
@@ -93,6 +94,7 @@ plus an optional `request_id:` to target a specific request:
 Jidoka.Kino.timeline(pid)
 Jidoka.Kino.trace_table(pid, request_id: "req-abc123")
 Jidoka.Kino.call_graph(trace)
+Jidoka.Kino.compaction(pid)
 ```
 
 For ad-hoc, log-based capture around a single block of code, use

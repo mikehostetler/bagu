@@ -113,6 +113,7 @@ defmodule Jidoka.Kino.AgentView do
 
   defp lifecycle_rows(definition) when is_map(definition) do
     [
+      %{surface: "compaction", summary: Render.inspect_value(Map.get(definition, :compaction))},
       %{surface: "memory", summary: Render.inspect_value(Map.get(definition, :memory))},
       %{surface: "output", summary: Render.inspect_value(Map.get(definition, :output))},
       %{surface: "hooks", summary: Render.inspect_value(Map.get(definition, :hooks, %{}))},
@@ -200,6 +201,7 @@ defmodule Jidoka.Kino.AgentView do
 
   defp lifecycle_labels(definition) do
     [
+      if_present(Map.get(definition, :compaction), "compaction"),
       if_present(Map.get(definition, :memory), "memory"),
       if_present(Map.get(definition, :output), "output"),
       if_present(Map.get(definition, :hooks), "hooks"),

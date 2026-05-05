@@ -56,6 +56,7 @@ Sessions work with the existing inspection and tracing helpers:
 {:ok, projection} = Jidoka.Session.snapshot(session)
 {:ok, request} = Jidoka.inspect_request(session)
 {:ok, trace} = Jidoka.inspect_trace(session)
+{:ok, compaction} = Jidoka.inspect_compaction(session)
 ```
 
 `snapshot/2` projects the running agent with `Jidoka.Agent.View`. It does not
@@ -94,19 +95,20 @@ Schedules can target a session:
 ```
 
 When the schedule runs, Jidoka calls `Jidoka.chat(session, prompt, opts)`, so
-hooks, guardrails, memory, structured output, handoffs, and tracing all behave
-the same way as a normal turn.
+hooks, guardrails, memory, compaction, structured output, handoffs, and tracing
+all behave the same way as a normal turn.
 
 ## What Sessions Do Not Do
 
 Sessions do not persist data by themselves. If the VM restarts, the running
-agent process and its in-memory thread are gone unless your application uses
-Jido persistence or a future Jidoka durability layer.
+agent process, its in-memory thread, and any latest compaction summary are gone
+unless your application uses Jido persistence or a future Jidoka durability
+layer.
 
 Your application still owns user identity, authorization, database schemas,
 retention policy, and business metadata. Jidoka sessions only standardize the
-addressing model used across chat, AgentView, schedules, handoffs, tracing, and
-inspection.
+addressing model used across chat, AgentView, schedules, handoffs, compaction,
+tracing, and inspection.
 
 ## See Also
 
@@ -114,4 +116,5 @@ inspection.
 - [agent-view.md](agent-view.md): projecting sessions for UI surfaces.
 - [schedules.md](schedules.md): recurring session turns.
 - [handoffs.md](handoffs.md): conversation ownership routing.
+- [compaction.md](compaction.md): summarizing long-running sessions.
 - [tracing.md](tracing.md): inspecting runtime execution.

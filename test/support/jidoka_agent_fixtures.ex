@@ -18,6 +18,20 @@ defmodule JidokaTest.ScheduleCallbacks do
   def support_digest_context, do: %{tenant: "demo", channel: "schedule"}
 end
 
+defmodule JidokaTest.CompactionPrompt do
+  @moduledoc false
+
+  def build_compaction_prompt(input) do
+    "Custom compact #{input.source_message_count} messages."
+  end
+end
+
+defmodule JidokaTest.CompactionPromptCallbacks do
+  @moduledoc false
+
+  def build(input, prefix), do: "#{prefix}: #{input.retained_message_count} retained."
+end
+
 defmodule JidokaTest.ScheduledAgent do
   use Jidoka.Agent
 
@@ -80,6 +94,49 @@ defmodule JidokaTest.RequiredContextAgent do
   defaults do
     model :fast
     instructions "You require account context."
+  end
+end
+
+defmodule JidokaTest.CompactionAgent do
+  use Jidoka.Agent
+
+  agent do
+    id :compaction_agent
+  end
+
+  defaults do
+    model :fast
+    instructions "You have compaction."
+  end
+
+  lifecycle do
+    compaction do
+      max_messages(4)
+      keep_last(2)
+      max_summary_chars(120)
+      prompt("Compact the transcript for this test.")
+    end
+  end
+end
+
+defmodule JidokaTest.ManualCompactionAgent do
+  use Jidoka.Agent
+
+  agent do
+    id :manual_compaction_agent
+  end
+
+  defaults do
+    model :fast
+    instructions "You have manual compaction."
+  end
+
+  lifecycle do
+    compaction do
+      mode :manual
+      max_messages(4)
+      keep_last(2)
+    end
   end
 end
 

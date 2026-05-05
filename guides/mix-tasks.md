@@ -23,7 +23,7 @@ dispatcher:
 | `mix jidoka orchestrator` | Manager agent that delegates to subagents. |
 | `mix jidoka structured_output` | Typed output validation, including an invalid-output path. |
 | `mix jidoka trace` | Provider-free smoke test for the structured trace collector. |
-| `mix jidoka kitchen_sink` | Showcase combining schema, tools, Ash, skills, MCP, plugins, hooks, guardrails, memory, and subagents. |
+| `mix jidoka kitchen_sink` | Showcase combining schema, tools, Ash, skills, MCP, plugins, hooks, guardrails, memory, compaction, and subagents. |
 
 Every built-in demo accepts the standard flags below. `--dry-run` prints the
 compiled agent inventory and exits without contacting a provider.

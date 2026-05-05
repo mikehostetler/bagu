@@ -72,7 +72,7 @@ The DSL has five sections:
 - `agent do`: stable identity and optional context schema
 - `defaults do`: model and required instructions
 - `capabilities do`: tools and orchestration features, when needed
-- `lifecycle do`: memory, hooks, and guardrails, when needed
+- `lifecycle do`: memory, compaction, hooks, and guardrails, when needed
 - `schedules do`: recurring agent turns, when needed
 
 Only `agent.id` and `defaults.instructions` are required for a basic agent.

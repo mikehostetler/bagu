@@ -52,6 +52,13 @@ defmodule Jidoka.Examples.KitchenSink.Agents.KitchenSinkAgent do
       inject :instructions
     end
 
+    compaction do
+      max_messages(40)
+      keep_last(12)
+      max_summary_chars(4_000)
+      prompt("Summarize this kitchen-sink support conversation for future turns.")
+    end
+
     before_turn Jidoka.Examples.KitchenSink.Hooks.ShapeTurn
     after_turn Jidoka.Examples.KitchenSink.Hooks.TagReply
     on_interrupt Jidoka.Examples.KitchenSink.Hooks.NotifyInterrupt

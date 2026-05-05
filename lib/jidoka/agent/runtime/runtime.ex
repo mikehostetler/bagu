@@ -5,6 +5,7 @@ defmodule Jidoka.Agent.Runtime do
           Jidoka.Hooks.stage_map(),
           map(),
           Jidoka.Guardrails.stage_map(),
+          Jidoka.Compaction.config() | nil,
           Jidoka.Memory.config() | nil,
           Jidoka.Output.t() | nil,
           Jidoka.Skill.config() | nil,
@@ -14,6 +15,7 @@ defmodule Jidoka.Agent.Runtime do
         default_hooks,
         default_context \\ %{},
         default_guardrails \\ Jidoka.Guardrails.default_stage_map(),
+        default_compaction \\ nil,
         default_memory \\ nil,
         default_output \\ nil,
         default_skills \\ nil,
@@ -23,6 +25,7 @@ defmodule Jidoka.Agent.Runtime do
       @jidoka_hook_defaults unquote(Macro.escape(default_hooks))
       @jidoka_context_defaults unquote(Macro.escape(default_context))
       @jidoka_guardrail_defaults unquote(Macro.escape(default_guardrails))
+      @jidoka_compaction_defaults unquote(Macro.escape(default_compaction))
       @jidoka_memory_defaults unquote(Macro.escape(default_memory))
       @jidoka_output_defaults unquote(Macro.escape(default_output))
       @jidoka_skill_defaults unquote(Macro.escape(default_skills))
@@ -31,6 +34,13 @@ defmodule Jidoka.Agent.Runtime do
       @impl true
       def on_before_cmd(agent, action) do
         with {:ok, agent, action} <- super(agent, action),
+             {:ok, agent, action} <-
+               Jidoka.Compaction.on_before_cmd(
+                 agent,
+                 action,
+                 @jidoka_compaction_defaults,
+                 @jidoka_context_defaults
+               ),
              {:ok, agent, action} <-
                Jidoka.Memory.on_before_cmd(
                  agent,

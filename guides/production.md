@@ -123,6 +123,22 @@ Before production, decide:
 Use tools or databases for authoritative facts. Use memory for conversational
 continuity.
 
+## Context Compaction
+
+Compaction is opt-in and summary-only in this beta. It is useful for
+long-running sessions because it trims provider-facing history while preserving
+the original in-memory `Jido.Thread`.
+
+Before production, decide:
+
+- which session-scoped agents need compaction
+- whether the default prompt preserves the facts your domain needs
+- how `max_messages`, `keep_last`, and `max_summary_chars` should be tuned
+- whether summaries need durable storage outside the running agent process
+
+Compaction failures fail open, emit trace metadata, and continue without
+trimming. See [Compaction](compaction.html).
+
 ## Handoff Registry
 
 Handoffs currently use an in-memory registry for `conversation_id => owner`.
@@ -175,4 +191,5 @@ Before shipping a Jidoka-based application:
 - review context forwarding policies
 - review imported-agent registries
 - review memory namespaces
+- review compaction thresholds and summary prompt
 - review handoff persistence expectations

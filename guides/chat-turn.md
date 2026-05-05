@@ -32,8 +32,9 @@ A typical `Jidoka.chat/3` call performs these steps in order:
    through the compiled Zoi schema (when one is declared) and merged with
    schema defaults.
 5. **Apply runtime policy.** Character rendering, before-turn hooks, input
-   guardrails, memory capture and retrieval, MCP synchronization, and the
-   per-tool generated context are layered onto the request.
+   guardrails, auto-compaction, memory capture and retrieval, MCP
+   synchronization, and the per-tool generated context are layered onto the
+   request.
 6. **Send the request through Jido.AI.** The model is invoked with the
    composed prompt, tool catalog, and structured output settings.
 7. **Normalize the response.** Interruptions, handoffs, errors, and successful
@@ -46,6 +47,11 @@ memory, skills, and tool descriptions expose. To make a context value visible
 to the model, project it through dynamic instructions
 (see [instructions.md](instructions.md)), a hook, a tool description, or a
 memory inject step.
+
+Compaction is also model-visible when enabled: Jidoka injects the latest
+summary into the system prompt and trims only the provider-facing message
+window. The original `Jido.Thread` remains intact. See
+[compaction.md](compaction.md).
 
 ## Return shapes
 
@@ -80,6 +86,8 @@ the model, and `Jidoka.inspect_agent/1` for static configuration. See
 - [instructions.md](instructions.md): how the system prompt is resolved in
   step 5.
 - [context.md](context.md): how `context:` is parsed in step 4.
+- [compaction.md](compaction.md): how long sessions are summarized before the
+  provider call.
 - [errors.md](errors.md): error class details for step 7.
 - [inspection.md](inspection.md): debugging and tracing helpers.
 
