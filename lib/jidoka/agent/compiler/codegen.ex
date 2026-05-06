@@ -125,7 +125,11 @@ defmodule Jidoka.Agent.Codegen do
       Convenience alias for `ask_sync/3`.
       """
       @spec chat(pid(), String.t(), keyword()) ::
-              {:ok, term()} | {:error, term()} | {:interrupt, Jidoka.Interrupt.t()} | {:handoff, Jidoka.Handoff.t()}
+              {:ok, term()}
+              | {:ok, Jidoka.Chat.Stream.t()}
+              | {:error, term()}
+              | {:interrupt, Jidoka.Interrupt.t()}
+              | {:handoff, Jidoka.Handoff.t()}
       def chat(pid, message, opts \\ []) when is_pid(pid) and is_binary(message) do
         Jidoka.Chat.chat(pid, message, opts)
       end

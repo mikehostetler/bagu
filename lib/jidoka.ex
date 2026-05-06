@@ -122,10 +122,28 @@ defmodule Jidoka do
   Sends a chat request to a running Jidoka agent and waits for the result.
 
   Accepts a PID, server reference, or Jidoka agent ID string.
+
+  Pass `stream: true` to return a `Jidoka.Chat.Stream` enumerable immediately
+  instead of waiting for the final result.
   """
   @spec chat(Session.t() | pid() | atom() | {:via, module(), term()} | String.t(), String.t(), keyword()) ::
-          {:ok, term()} | {:error, term()} | {:interrupt, Jidoka.Interrupt.t()} | {:handoff, Jidoka.Handoff.t()}
+          {:ok, term()}
+          | {:ok, Jidoka.Chat.Stream.t()}
+          | {:error, term()}
+          | {:interrupt, Jidoka.Interrupt.t()}
+          | {:handoff, Jidoka.Handoff.t()}
   defdelegate chat(server_or_id, message, opts \\ []), to: Jidoka.Chat
+
+  @doc """
+  Starts a streaming chat request and returns an enumerable of runtime events.
+
+  This is equivalent to `chat(target, message, stream: true)`, but makes the
+  streaming shape explicit at the call site. Use `Jidoka.Chat.Stream.await/2`
+  to wait for the normalized final result.
+  """
+  @spec chat_stream(Session.t() | pid() | atom() | {:via, module(), term()} | String.t(), String.t(), keyword()) ::
+          {:ok, Jidoka.Chat.Stream.t()} | {:error, term()}
+  defdelegate chat_stream(server_or_id, message, opts \\ []), to: Jidoka.Chat
 
   @doc false
   @spec start_chat_request(Session.t() | pid() | atom() | {:via, module(), term()} | String.t(), String.t(), keyword()) ::

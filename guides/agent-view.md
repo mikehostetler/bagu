@@ -10,6 +10,11 @@ If `Jidoka.chat/3` is enough for your caller, use it directly. Reach for
 `AgentView` when the caller needs projected messages, async turns, streaming
 drafts, or a stable application-facing shape.
 
+If the caller only needs raw request events, `Jidoka.chat(pid, message,
+stream: true)` returns a `Jidoka.Chat.Stream` enumerable. `AgentView` sits above
+that lower-level stream and is usually a better fit for product surfaces because
+it owns visible transcripts and final result mapping.
+
 When your surface already has a `%Jidoka.Session{}`, AgentView can use it
 directly. Session inputs provide the agent, conversation id, runtime agent id,
 and runtime context defaults without adding a separate session process.

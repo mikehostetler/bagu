@@ -51,7 +51,10 @@ defmodule Jidoka.ImportedAgent.Subagent do
       end
 
       @spec chat(pid(), String.t(), keyword()) ::
-              {:ok, term()} | {:error, term()} | {:interrupt, Jidoka.Interrupt.t()}
+              {:ok, term()}
+              | {:ok, Jidoka.Chat.Stream.t()}
+              | {:error, term()}
+              | {:interrupt, Jidoka.Interrupt.t()}
       def chat(pid, message, opts \\ []) when is_pid(pid) and is_binary(message) do
         Jidoka.Chat.chat(pid, message, opts)
       end

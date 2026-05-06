@@ -10,6 +10,10 @@ directives, state operations, strategy internals, or request plumbing on day one
 If you have looked at the broader Jido ecosystem and felt it was a lot to absorb
 just to ship one agent, Jidoka is for you.
 
+> **Beta status:** Jidoka is in beta. We are actively refining, trimming, and
+> reshaping the package before a stable release. APIs, behaviors, and feature
+> boundaries can change without notice while this work continues.
+
 ## Why this exists
 
 The Jido ecosystem is powerful, but powerful is not the same as approachable.
@@ -90,6 +94,18 @@ state, and final result mapping.
 If you need an application-owned Jido instance instead of the shared
 `Jidoka.Runtime`, start the generated `runtime_module/0` under your own
 `use Jido, otp_app: :my_app` runtime and keep calling `Jidoka.chat/3`.
+
+For event-level streaming, keep the same API and opt in per turn:
+
+```elixir
+{:ok, stream} = Jidoka.chat(session, "Draft a reply.", stream: true)
+
+for event <- stream do
+  if delta = Jidoka.Chat.Stream.text_delta(event), do: IO.write(delta)
+end
+
+{:ok, final_reply} = Jidoka.Chat.Stream.await(stream)
+```
 
 See [Running Agents](guides/running-agents.md), [Sessions](guides/sessions.md),
 [AgentView](guides/agent-view.md), [Schedules](guides/schedules.md),

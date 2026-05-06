@@ -2,20 +2,48 @@ defmodule Jidoka.Chat do
   @moduledoc false
 
   alias Jido.AI.Request
+  alias Jidoka.Chat.Stream, as: ChatStream
 
   @spec chat(Jidoka.Session.t() | pid() | atom() | {:via, module(), term()} | String.t(), String.t(), keyword()) ::
-          {:ok, term()} | {:error, term()} | {:interrupt, Jidoka.Interrupt.t()} | {:handoff, Jidoka.Handoff.t()}
+          {:ok, term()}
+          | {:ok, ChatStream.t()}
+          | {:error, term()}
+          | {:interrupt, Jidoka.Interrupt.t()}
+          | {:handoff, Jidoka.Handoff.t()}
   def chat(server_or_id, message, opts \\ [])
 
   def chat(%Jidoka.Session{} = session, message, opts) when is_binary(message) and is_list(opts) do
-    with {:ok, request} <- start_chat_request(session, message, opts) do
-      await_chat_request(request, opts)
+    if stream_requested?(opts) do
+      chat_stream(session, message, opts)
+    else
+      with {:ok, request} <- start_chat_request(session, message, opts) do
+        await_chat_request(request, opts)
+      end
     end
   end
 
-  def chat(server_or_id, message, opts) when is_binary(message) do
-    with {:ok, request} <- start_chat_request(server_or_id, message, opts) do
-      await_chat_request(request, opts)
+  def chat(server_or_id, message, opts) when is_binary(message) and is_list(opts) do
+    if stream_requested?(opts) do
+      chat_stream(server_or_id, message, opts)
+    else
+      with {:ok, request} <- start_chat_request(server_or_id, message, opts) do
+        await_chat_request(request, opts)
+      end
+    end
+  end
+
+  @spec chat_stream(
+          Jidoka.Session.t() | pid() | atom() | {:via, module(), term()} | String.t(),
+          String.t(),
+          keyword()
+        ) ::
+          {:ok, ChatStream.t()} | {:error, term()}
+  def chat_stream(server_or_id, message, opts \\ [])
+
+  def chat_stream(server_or_id, message, opts) when is_binary(message) and is_list(opts) do
+    with {:ok, stream_opts} <- prepare_stream_opts(opts),
+         {:ok, request} <- start_chat_request(server_or_id, message, stream_opts) do
+      {:ok, ChatStream.new(request, ChatStream.events(request, stream_opts))}
     end
   end
 
@@ -217,5 +245,29 @@ defmodule Jidoka.Chat do
          fallback_result
        ) do
     finalize_chat_request(server, request_id, fallback_result)
+  end
+
+  defp stream_requested?(opts), do: Keyword.get(opts, :stream) == true
+
+  defp prepare_stream_opts(opts) do
+    case Keyword.get(opts, :stream_to) do
+      nil ->
+        {:ok, opts |> Keyword.delete(:stream) |> Keyword.put(:stream_to, {:pid, self()})}
+
+      {:pid, pid} when pid == self() ->
+        {:ok, Keyword.delete(opts, :stream)}
+
+      pid when is_pid(pid) and pid == self() ->
+        {:ok, opts |> Keyword.delete(:stream) |> Keyword.put(:stream_to, {:pid, pid})}
+
+      stream_to ->
+        {:error,
+         Jidoka.Error.validation_error(
+           "Streaming chat delivers events to the caller process. Omit `:stream_to` or pass `self()`.",
+           field: :stream_to,
+           value: stream_to,
+           details: %{operation: :chat_stream, reason: :stream_to_must_be_caller}
+         )}
+    end
   end
 end

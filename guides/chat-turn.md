@@ -53,12 +53,42 @@ summary into the system prompt and trims only the provider-facing message
 window. The original `Jido.Thread` remains intact. See
 [compaction.md](compaction.md).
 
+## Streaming events
+
+For UIs, CLIs, and debugging tools that need incremental runtime events, pass
+`stream: true`:
+
+```elixir
+{:ok, stream} = Jidoka.chat(pid, "Draft a short reply.", stream: true)
+
+for event <- stream do
+  if delta = Jidoka.Chat.Stream.text_delta(event) do
+    IO.write(delta)
+  end
+end
+
+{:ok, final_reply} = Jidoka.Chat.Stream.await(stream)
+```
+
+The stream is request-scoped and yields Jido.AI runtime events such as model
+deltas, tool starts/completions, and terminal request events. It also terminates
+when Jidoka lifecycle code blocks the turn before the provider runs, for
+example an input guardrail failure.
+
+Use `Jidoka.chat_stream/3` when you want the streaming shape to be explicit.
+For a full application-facing chat surface, `AgentView` remains the higher-level
+choice because it projects visible messages, active request ids, and in-flight
+draft text.
+
 ## Return shapes
 
 Every chat call returns one of:
 
 - `{:ok, value}`: the agent produced a reply (a string, or the parsed
   structured-output value when an `output do` block is declared).
+- `{:ok, %Jidoka.Chat.Stream{}}`: returned only when `stream: true` is passed.
+  Enumerate it for runtime events and call `Jidoka.Chat.Stream.await/2` for the
+  normalized final result.
 - `{:interrupt, %Jidoka.Interrupt{}}`: a tool, hook, or guardrail paused the
   turn and is waiting for an outside response.
 - `{:handoff, %Jidoka.Handoff{}}`: the agent transferred conversation
