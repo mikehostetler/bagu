@@ -39,7 +39,7 @@ defmodule Jidoka.Adapter.Runic.Workflow do
          outcomes: %{},
          workflow_id: spec.id,
          workflow_spec: spec,
-         action_runner: &Actions.invoke_action/3,
+         action_runner: {Actions, :invoke_action, 3},
          agent_opts: runtime_opts.agent_opts,
          max_concurrency: runtime_opts.max_concurrency,
          error: nil
@@ -62,7 +62,7 @@ defmodule Jidoka.Adapter.Runic.Workflow do
         outcomes: snapshot.outcomes,
         workflow_id: spec.id,
         workflow_spec: spec,
-        action_runner: &Actions.invoke_action/3,
+        action_runner: {Actions, :invoke_action, 3},
         agent_opts: runtime_opts.agent_opts,
         max_concurrency: runtime_opts.max_concurrency,
         error: nil
@@ -207,7 +207,7 @@ defmodule Jidoka.Adapter.Runic.Workflow do
           outcomes: %{},
           workflow_id: nil,
           workflow_spec: nil,
-          action_runner: &Actions.invoke_action/3,
+          action_runner: {Actions, :invoke_action, 3},
           agent_opts: [],
           max_concurrency: nil,
           error: {:invalid_workflow_state_join, states}
@@ -226,7 +226,7 @@ defmodule Jidoka.Adapter.Runic.Workflow do
       outcomes: %{},
       workflow_id: nil,
       workflow_spec: nil,
-      action_runner: &Actions.invoke_action/3,
+      action_runner: {Actions, :invoke_action, 3},
       agent_opts: [],
       max_concurrency: nil,
       error: {:invalid_workflow_state_join, state}

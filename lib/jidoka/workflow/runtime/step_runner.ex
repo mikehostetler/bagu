@@ -265,6 +265,11 @@ defmodule Jidoka.Workflow.Runtime.StepRunner do
   defp action_runner(%{action_runner: action_runner}) when is_function(action_runner, 3),
     do: {:ok, action_runner}
 
+  defp action_runner(%{action_runner: {module, function, 3}})
+       when is_atom(module) and is_atom(function) do
+    {:ok, fn target, params, context -> apply(module, function, [target, params, context]) end}
+  end
+
   defp action_runner(_state), do: {:error, :missing_workflow_action_runner}
 
   defp ensure_prompt(prompt) when is_binary(prompt), do: {:ok, prompt}

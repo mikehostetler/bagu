@@ -13,6 +13,8 @@ config :jidoka,
 
 config :req_llm, load_dotenv: false
 
+config :ash, default_string_length_count: :codepoints
+
 if config_env() == :dev do
   config :git_ops,
     mix_project: Jidoka.MixProject,
